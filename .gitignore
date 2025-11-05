@@ -1,0 +1,31 @@
+# Build outputs
+bin/
+obj/
+**/bin/
+**/obj/
+
+# Visual Studio user data
+.vs/
+*.user
+*.suo
+
+# Test results
+TestResult*/
+
+# Logs and databases
+*.log
+*.ldb
+*.sqlite
+*.dbmdl
+*.mdf
+*.ldf
+
+# Tooling caches
+*.pdb
+*.cache
+*.nupkg
+*.snupkg
+
+# OS artifacts
+Thumbs.db
+.DS_Store
