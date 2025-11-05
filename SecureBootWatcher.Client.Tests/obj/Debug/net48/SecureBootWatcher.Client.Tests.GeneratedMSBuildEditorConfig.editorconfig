@@ -1,4 +1,5 @@
 is_global = true
+build_property.IsMSTestTestAdapterReferenced = true
 build_property.RootNamespace = SecureBootWatcher.Client.Tests
 build_property.ProjectDir = C:\Users\robgrame\source\repos\SecureBootCertificate\SecureBootWatcher.Client.Tests\
 build_property.EnableComHosting = 

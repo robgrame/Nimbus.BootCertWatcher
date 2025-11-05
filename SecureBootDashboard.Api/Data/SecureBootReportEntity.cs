@@ -11,15 +11,17 @@ namespace SecureBootDashboard.Api.Data
 
         public DeviceEntity? Device { get; set; }
 
-    public string RegistryStateJson { get; set; } = string.Empty;
+        public string RegistryStateJson { get; set; } = string.Empty;
 
-    public string? AlertsJson { get; set; }
+        public string? CertificatesJson { get; set; }
 
-    public string? DeploymentState { get; set; }
+        public string? AlertsJson { get; set; }
 
-    public string? ClientVersion { get; set; }
+        public string? DeploymentState { get; set; }
 
-    public string? CorrelationId { get; set; }
+        public string? ClientVersion { get; set; }
+
+        public string? CorrelationId { get; set; }
 
         public DateTimeOffset CreatedAtUtc { get; set; }
 

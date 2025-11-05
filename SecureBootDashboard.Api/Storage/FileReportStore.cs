@@ -116,7 +116,7 @@ namespace SecureBootDashboard.Api.Storage
             return Path.Combine(_options.BasePath, $"{id:N}.json");
         }
 
-        private sealed record FileReportDocument(Guid Id, DeviceDocument Device, string RegistryStateJson, string? AlertsJson, string? DeploymentState, string? ClientVersion, string? CorrelationId, DateTimeOffset CreatedAtUtc, IReadOnlyList<EventDocument> Events)
+        private sealed record FileReportDocument(Guid Id, DeviceDocument Device, string RegistryStateJson, string? CertificatesJson, string? AlertsJson, string? DeploymentState, string? ClientVersion, string? CorrelationId, DateTimeOffset CreatedAtUtc, IReadOnlyList<EventDocument> Events)
         {
             public static FileReportDocument FromReport(SecureBootStatusReport report)
             {
@@ -151,6 +151,7 @@ namespace SecureBootDashboard.Api.Storage
                     Guid.NewGuid(),
                     device,
                     JsonSerializer.Serialize(report.Registry, SerializerOptions),
+                    report.Certificates != null ? JsonSerializer.Serialize(report.Certificates, SerializerOptions) : null,
                     JsonSerializer.Serialize(report.Alerts ?? Array.Empty<string>(), SerializerOptions),
                     report.Registry?.DeploymentState.ToString(),
                     report.ClientVersion,
@@ -183,6 +184,7 @@ namespace SecureBootDashboard.Api.Storage
                     Id,
                     deviceSnapshot,
                     RegistryStateJson,
+                    CertificatesJson,
                     AlertsJson,
                     DeploymentState,
                     ClientVersion,

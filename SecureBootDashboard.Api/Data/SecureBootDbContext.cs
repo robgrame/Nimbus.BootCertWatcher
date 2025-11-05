@@ -39,6 +39,7 @@ namespace SecureBootDashboard.Api.Data
                 entity.ToTable("SecureBootReports");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.RegistryStateJson).HasColumnType("nvarchar(max)");
+                entity.Property(e => e.CertificatesJson).HasColumnType("nvarchar(max)");
                 entity.Property(e => e.AlertsJson).HasColumnType("nvarchar(max)");
                 entity.Property(e => e.DeploymentState).HasMaxLength(64);
                 entity.Property(e => e.ClientVersion).HasMaxLength(64);

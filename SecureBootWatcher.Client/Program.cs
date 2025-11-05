@@ -79,6 +79,7 @@ namespace SecureBootWatcher.Client
 			services.AddSingleton<IRegistrySnapshotProvider, RegistrySnapshotProvider>();
 			services.AddSingleton<IEventLogReader, EventLogReader>();
 			services.AddSingleton<IEventCheckpointStore, FileEventCheckpointStore>();
+			services.AddSingleton<ISecureBootCertificateEnumerator, PowerShellSecureBootCertificateEnumerator>();
 			services.AddSingleton<IReportBuilder, ReportBuilder>();
 			services.AddSingleton<SecureBootWatcherService>();
 
@@ -86,34 +87,21 @@ namespace SecureBootWatcher.Client
 			services.AddSingleton<AzureQueueReportSink>();
 			services.AddSingleton<WebApiReportSink>();
 
+			// Register SinkCoordinator as the main IReportSink
 			services.AddSingleton<IReportSink>(sp =>
 			{
+				var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger<SinkCoordinator>();
 				var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<SecureBootWatcherOptions>>();
-				var sinks = new List<IReportSink>();
-				var options = optionsMonitor.CurrentValue;
-
-				if (options.Sinks.EnableFileShare)
+				
+				// Get all sink instances
+				var allSinks = new List<IReportSink>
 				{
-					sinks.Add(sp.GetRequiredService<FileShareReportSink>());
-				}
+					sp.GetRequiredService<FileShareReportSink>(),
+					sp.GetRequiredService<AzureQueueReportSink>(),
+					sp.GetRequiredService<WebApiReportSink>()
+				};
 
-				if (options.Sinks.EnableAzureQueue)
-				{
-					sinks.Add(sp.GetRequiredService<AzureQueueReportSink>());
-				}
-
-				if (options.Sinks.EnableWebApi)
-				{
-					sinks.Add(sp.GetRequiredService<WebApiReportSink>());
-				}
-
-				if (sinks.Count == 0)
-				{
-					var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("SecureBootWatcher");
-					logger.LogWarning("No report sinks are enabled. Reports will be built but not forwarded.");
-				}
-
-				return new CompositeReportSink(sinks);
+				return new SinkCoordinator(logger, optionsMonitor, allSinks);
 			});
 
 			return services.BuildServiceProvider();

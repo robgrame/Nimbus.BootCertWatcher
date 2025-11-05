@@ -107,11 +107,12 @@ namespace SecureBootWatcher.Shared.Storage
 
     public sealed class ReportDetail
     {
-        public ReportDetail(Guid id, DeviceSnapshot device, string registryStateJson, string? alertsJson, string? deploymentState, string? clientVersion, string? correlationId, DateTimeOffset createdAtUtc, IReadOnlyList<EventSnapshot> events)
+        public ReportDetail(Guid id, DeviceSnapshot device, string registryStateJson, string? certificatesJson, string? alertsJson, string? deploymentState, string? clientVersion, string? correlationId, DateTimeOffset createdAtUtc, IReadOnlyList<EventSnapshot> events)
         {
             Id = id;
             Device = device;
             RegistryStateJson = registryStateJson;
+            CertificatesJson = certificatesJson;
             AlertsJson = alertsJson;
             DeploymentState = deploymentState;
             ClientVersion = clientVersion;
@@ -125,6 +126,8 @@ namespace SecureBootWatcher.Shared.Storage
         public DeviceSnapshot Device { get; }
 
         public string RegistryStateJson { get; }
+
+        public string? CertificatesJson { get; }
 
         public string? AlertsJson { get; }
 

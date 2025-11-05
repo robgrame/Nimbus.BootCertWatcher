@@ -121,6 +121,9 @@ namespace SecureBootDashboard.Api.Data.Migrations
                     b.Property<string>("AlertsJson")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("CertificatesJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ClientVersion")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");

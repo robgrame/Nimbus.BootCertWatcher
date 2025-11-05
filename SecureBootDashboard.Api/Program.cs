@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using SecureBootDashboard.Api.Configuration;
 using SecureBootDashboard.Api.Data;
+using SecureBootDashboard.Api.Services;
 using SecureBootDashboard.Api.Storage;
 using SecureBootWatcher.Shared.Storage;
 
@@ -26,6 +28,10 @@ builder.Services.AddScoped<IReportStore>(sp =>
         ? sp.GetRequiredService<FileReportStore>()
         : sp.GetRequiredService<EfCoreReportStore>();
 });
+
+// Configure Azure Queue Processor
+builder.Services.Configure<QueueProcessorOptions>(builder.Configuration.GetSection("QueueProcessor"));
+builder.Services.AddHostedService<QueueProcessorService>();
 
 var app = builder.Build();
 

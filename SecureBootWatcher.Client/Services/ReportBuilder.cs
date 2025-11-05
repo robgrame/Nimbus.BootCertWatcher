@@ -17,17 +17,20 @@ namespace SecureBootWatcher.Client.Services
         private readonly ILogger<ReportBuilder> _logger;
         private readonly IRegistrySnapshotProvider _registrySnapshotProvider;
         private readonly IEventLogReader _eventLogReader;
+        private readonly ISecureBootCertificateEnumerator _certificateEnumerator;
         private readonly IOptionsMonitor<SecureBootWatcherOptions> _options;
 
         public ReportBuilder(
             ILogger<ReportBuilder> logger,
             IRegistrySnapshotProvider registrySnapshotProvider,
             IEventLogReader eventLogReader,
+            ISecureBootCertificateEnumerator certificateEnumerator,
             IOptionsMonitor<SecureBootWatcherOptions> options)
         {
             _logger = logger;
             _registrySnapshotProvider = registrySnapshotProvider;
             _eventLogReader = eventLogReader;
+            _certificateEnumerator = certificateEnumerator;
             _options = options;
         }
 
@@ -35,11 +38,23 @@ namespace SecureBootWatcher.Client.Services
         {
             var registrySnapshot = await _registrySnapshotProvider.CaptureAsync(cancellationToken).ConfigureAwait(false);
             var recentEvents = await _eventLogReader.ReadRecentEventsAsync(cancellationToken).ConfigureAwait(false);
+ 
+            // Enumerate certificates
+            SecureBootCertificateCollection? certificates = null;
+            try
+            {
+                certificates = await _certificateEnumerator.EnumerateAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to enumerate Secure Boot certificates. Report will continue without certificate details.");
+            }
 
             var report = new SecureBootStatusReport
             {
                 Device = BuildDeviceIdentity(),
                 Registry = registrySnapshot,
+                Certificates = certificates,
                 Events = recentEvents.ToList(),
                 CreatedAtUtc = DateTimeOffset.UtcNow,
                 ClientVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0",
@@ -122,6 +137,30 @@ namespace SecureBootWatcher.Client.Services
             if (report.Events.Count == 0 && report.Registry.DeploymentState != SecureBootDeploymentState.Updated)
             {
                 alerts.Add("No Secure Boot events detected within the lookback window.");
+            }
+
+            // Add certificate-related alerts
+            if (report.Certificates != null)
+            {
+                if (report.Certificates.SecureBootEnabled == false)
+                {
+                    alerts.Add("Secure Boot is not enabled on this device.");
+                }
+
+                if (report.Certificates.ExpiredCertificateCount > 0)
+                {
+                    alerts.Add($"{report.Certificates.ExpiredCertificateCount} expired certificate(s) detected in Secure Boot databases.");
+                }
+
+                if (report.Certificates.ExpiringCertificateCount > 0)
+                {
+                    alerts.Add($"{report.Certificates.ExpiringCertificateCount} certificate(s) expiring within 90 days.");
+                }
+
+                if (!string.IsNullOrEmpty(report.Certificates.ErrorMessage))
+                {
+                    alerts.Add($"Certificate enumeration error: {report.Certificates.ErrorMessage}");
+                }
             }
 
             foreach (var alert in alerts)
