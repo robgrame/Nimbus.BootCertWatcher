@@ -1,0 +1,133 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Management;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using SecureBootWatcher.Shared.Configuration;
+using SecureBootWatcher.Shared.Models;
+
+namespace SecureBootWatcher.Client.Services
+{
+    internal sealed class ReportBuilder : IReportBuilder
+    {
+        private readonly ILogger<ReportBuilder> _logger;
+        private readonly IRegistrySnapshotProvider _registrySnapshotProvider;
+        private readonly IEventLogReader _eventLogReader;
+        private readonly IOptionsMonitor<SecureBootWatcherOptions> _options;
+
+        public ReportBuilder(
+            ILogger<ReportBuilder> logger,
+            IRegistrySnapshotProvider registrySnapshotProvider,
+            IEventLogReader eventLogReader,
+            IOptionsMonitor<SecureBootWatcherOptions> options)
+        {
+            _logger = logger;
+            _registrySnapshotProvider = registrySnapshotProvider;
+            _eventLogReader = eventLogReader;
+            _options = options;
+        }
+
+        public async Task<SecureBootStatusReport> BuildAsync(CancellationToken cancellationToken)
+        {
+            var registrySnapshot = await _registrySnapshotProvider.CaptureAsync(cancellationToken).ConfigureAwait(false);
+            var recentEvents = await _eventLogReader.ReadRecentEventsAsync(cancellationToken).ConfigureAwait(false);
+
+            var report = new SecureBootStatusReport
+            {
+                Device = BuildDeviceIdentity(),
+                Registry = registrySnapshot,
+                Events = recentEvents.ToList(),
+                CreatedAtUtc = DateTimeOffset.UtcNow,
+                ClientVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0",
+                CorrelationId = Guid.NewGuid().ToString("N")
+            };
+
+            PopulateAlerts(report);
+
+            return report;
+        }
+
+        private DeviceIdentity BuildDeviceIdentity()
+        {
+            var identity = new DeviceIdentity
+            {
+                DomainName = Environment.UserDomainName,
+                UserPrincipalName = Environment.UserName,
+            };
+
+            var options = _options.CurrentValue;
+            if (!string.IsNullOrWhiteSpace(options.FleetId))
+            {
+                identity.Tags["FleetId"] = options.FleetId!;
+            }
+
+            TryPopulateHardwareInfo(identity);
+
+            return identity;
+        }
+
+        private void TryPopulateHardwareInfo(DeviceIdentity identity)
+        {
+            try
+            {
+                using var systemSearcher = new ManagementObjectSearcher("SELECT Manufacturer, Model FROM Win32_ComputerSystem");
+                foreach (var system in systemSearcher.Get())
+                {
+                    identity.Manufacturer = system["Manufacturer"]?.ToString();
+                    identity.Model = system["Model"]?.ToString();
+                    break;
+                }
+
+                using var biosSearcher = new ManagementObjectSearcher("SELECT SMBIOSBIOSVersion FROM Win32_BIOS");
+                foreach (var bios in biosSearcher.Get())
+                {
+                    identity.FirmwareVersion = bios["SMBIOSBIOSVersion"]?.ToString();
+                    break;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to populate hardware metadata for Secure Boot report.");
+            }
+        }
+
+        private static void PopulateAlerts(SecureBootStatusReport report)
+        {
+            var alerts = new List<string>();
+
+            if (report.Registry.DeploymentState == SecureBootDeploymentState.Error)
+            {
+                alerts.Add($"Secure Boot update reported error code {report.Registry.UefiCa2023ErrorCode ?? 0}.");
+            }
+
+            if (report.Registry.DeploymentState == SecureBootDeploymentState.NotStarted)
+            {
+                alerts.Add("Secure Boot certificate update has not started on this device.");
+            }
+
+            if (report.Registry.HighConfidenceOptOut == true)
+            {
+                alerts.Add("Device is opted out of high-confidence automatic deployments.");
+            }
+
+            if (report.Registry.MicrosoftUpdateManagedOptIn == true)
+            {
+                alerts.Add("Device is opted in to Microsoft managed deployment (CFR).");
+            }
+
+            if (report.Events.Count == 0 && report.Registry.DeploymentState != SecureBootDeploymentState.Updated)
+            {
+                alerts.Add("No Secure Boot events detected within the lookback window.");
+            }
+
+            foreach (var alert in alerts)
+            {
+                report.Alerts.Add(alert);
+            }
+        }
+    }
+}
