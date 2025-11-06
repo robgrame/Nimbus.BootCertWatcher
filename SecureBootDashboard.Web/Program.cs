@@ -1,3 +1,4 @@
+using Microsoft.Identity.Web;
 using SecureBootDashboard.Web.Services;
 using Serilog;
 using Serilog.Events;
@@ -44,6 +45,37 @@ try
     // Add services to the container.
     builder.Services.AddRazorPages();
 
+    // Configure authentication based on provider
+    var authProvider = builder.Configuration["Authentication:Provider"];
+    Log.Information("Authentication Provider: {AuthProvider}", authProvider ?? "None");
+
+    if (string.Equals(authProvider, "EntraId", StringComparison.OrdinalIgnoreCase))
+    {
+        // Configure Entra ID (Azure AD) authentication
+        builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectDefaults.AuthenticationScheme)
+            .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("Authentication:EntraId"));
+        
+        Log.Information("Entra ID authentication configured");
+    }
+    else if (string.Equals(authProvider, "Windows", StringComparison.OrdinalIgnoreCase))
+    {
+        // Configure Windows authentication
+        builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Negotiate.NegotiateDefaults.AuthenticationScheme)
+            .AddNegotiate();
+        
+        Log.Information("Windows authentication configured");
+    }
+    else
+    {
+        // Default: Add cookie authentication for fallback
+        builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme)
+            .AddCookie();
+        
+        Log.Information("Cookie authentication configured (fallback)");
+    }
+
+    builder.Services.AddAuthorization();
+
     // Configure API settings
     builder.Services.Configure<ApiSettings>(builder.Configuration.GetSection("ApiSettings"));
     
@@ -88,9 +120,13 @@ try
 
     app.UseRouting();
 
+    app.UseAuthentication();
     app.UseAuthorization();
 
     app.MapRazorPages();
+    
+    // Redirect root to Welcome page
+    app.MapGet("/", () => Results.Redirect("/Welcome"));
 
     Log.Information("========================================");
     Log.Information("SecureBootDashboard.Web started successfully");
