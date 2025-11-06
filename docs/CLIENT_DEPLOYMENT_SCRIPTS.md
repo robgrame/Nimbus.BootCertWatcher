@@ -21,7 +21,7 @@ The client deployment toolkit includes:
 ## Deploy-Client.ps1
 
 ### Purpose
-Builds the SecureBootWatcher client, creates a deployment package, and optionally installs it locally with a scheduled task.
+Builds the SecureBootWatcher client, creates a deployment package, and optionally installs it locally with a scheduled task. **NEW**: Supports installation from precompiled ZIP packages.
 
 ### Parameters
 
@@ -35,6 +35,7 @@ Builds the SecureBootWatcher client, creates a deployment package, and optionall
 | `-InstallPath` | Installation directory | `C:\Program Files\SecureBootWatcher` | No |
 | `-TaskTime` | Scheduled task run time | `09:00AM` | No |
 | `-SkipBuild` | Skip build step (use existing binaries) | False | No |
+| `-PackageZipPath` | **NEW**: Path to precompiled ZIP package | Empty | No |
 
 ### Usage Examples
 
@@ -54,7 +55,44 @@ Builds the SecureBootWatcher client, creates a deployment package, and optionall
 
 Output: Creates `.\client-package\SecureBootWatcher-Client.zip`
 
-#### 2. Local Installation (for testing)
+#### 2. Install from Precompiled Package (NEW)
+
+**This is the main new feature!** Install directly from a ZIP file without needing the source code or build tools.
+
+```powershell
+# Install from default package location
+.\scripts\Deploy-Client.ps1 `
+    -PackageZipPath ".\client-package\SecureBootWatcher-Client.zip" `
+    -CreateScheduledTask
+
+# Install from custom location with API configuration
+.\scripts\Deploy-Client.ps1 `
+    -PackageZipPath "C:\Temp\SecureBootWatcher-Client.zip" `
+    -ApiBaseUrl "https://api.contoso.com" `
+    -CreateScheduledTask
+
+# Install from network share
+.\scripts\Deploy-Client.ps1 `
+    -PackageZipPath "\\fileserver\packages\SecureBootWatcher-Client.zip" `
+    -ApiBaseUrl "https://app-secureboot-api-prod.azurewebsites.net" `
+    -FleetId "fleet-prod" `
+    -CreateScheduledTask
+
+# Install to custom location
+.\scripts\Deploy-Client.ps1 `
+    -PackageZipPath ".\client-package\SecureBootWatcher-Client.zip" `
+    -InstallPath "C:\Apps\SecureBootWatcher" `
+    -CreateScheduledTask
+```
+
+**Benefits:**
+- ? No build tools required on target machine
+- ? Faster deployment (no compilation)
+- ? Consistent binaries across all devices
+- ? Works on machines without .NET SDK or Visual Studio
+- ? Perfect for production deployments
+
+#### 3. Local Installation (for testing)
 ```powershell
 # Install on current machine with scheduled task
 .\scripts\Deploy-Client.ps1 `
@@ -74,13 +112,18 @@ Output: Creates `.\client-package\SecureBootWatcher-Client.zip`
     -TaskTime "3:00PM"
 ```
 
-#### 3. Re-package Without Rebuilding
+#### 4. Re-package Without Rebuilding
 ```powershell
 # Use existing build artifacts
 .\scripts\Deploy-Client.ps1 -SkipBuild
+
+# Note: -SkipBuild requires existing publish directory
+# If you only have the ZIP, use -PackageZipPath instead
 ```
 
 ### What It Does
+
+#### Mode 1: Build from Source (Default)
 
 1. **Builds Client** (unless `-SkipBuild`):
    - Publishes to `win-x86` (32-bit for compatibility)
@@ -98,11 +141,30 @@ Output: Creates `.\client-package\SecureBootWatcher-Client.zip`
 
 4. **Installs Locally** (if `-CreateScheduledTask`):
    - Extracts package to `InstallPath`
+   - Creates Windows Scheduled Task
+
+#### Mode 2: Install from Precompiled Package (NEW)
+
+When `-PackageZipPath` is specified:
+
+1. **Validates Package**:
+   - Checks if file exists
+   - Verifies it's a ZIP file
+
+2. **Extracts to Temporary Directory**:
+   - Unpacks ZIP to temp folder
+   - Applies configuration changes (ApiBaseUrl, FleetId)
+
+3. **Installs to Target** (if `-CreateScheduledTask`):
+   - Copies configured files to `InstallPath`
    - Creates Windows Scheduled Task:
      - **Name**: `SecureBootWatcher`
      - **Runs as**: `SYSTEM`
      - **Schedule**: Daily at specified time
      - **Elevation**: Highest privileges
+
+4. **Cleanup**:
+   - Removes temporary extraction directory
 
 ### Post-Deployment
 
@@ -125,6 +187,128 @@ Get-ScheduledTaskInfo -TaskName SecureBootWatcher
 **Check Logs:**
 ```powershell
 Get-Content "C:\Program Files\SecureBootWatcher\logs\client-*.log" -Tail 50
+```
+
+---
+
+## Typical Deployment Workflows
+
+### Workflow 1: Centralized Build + Distributed Installation
+
+**Step 1: Build on Build Server**
+```powershell
+# On build/deployment server (with .NET SDK)
+.\scripts\Deploy-Client.ps1 `
+    -ApiBaseUrl "https://app-secureboot-api-prod.azurewebsites.net" `
+    -FleetId "fleet-corporate" `
+    -OutputPath "\\fileserver\Software\SecureBootWatcher"
+```
+
+**Step 2: Distribute Package**
+- Package is now at: `\\fileserver\Software\SecureBootWatcher\SecureBootWatcher-Client.zip`
+- Available to all domain computers
+
+**Step 3: Install on Target Devices**
+```powershell
+# On each target device (via GPO startup script or manual)
+# No build tools required!
+.\Deploy-Client.ps1 `
+    -PackageZipPath "\\fileserver\Software\SecureBootWatcher\SecureBootWatcher-Client.zip" `
+    -CreateScheduledTask
+```
+
+**Benefits:**
+- ? Build once, deploy many
+- ? Consistent binaries
+- ? No SDK required on endpoints
+
+### Workflow 2: Group Policy Deployment with Precompiled Package
+
+**Step 1: Build Package**
+```powershell
+.\scripts\Deploy-Client.ps1 `
+    -ApiBaseUrl "https://app-secureboot-api-prod.azurewebsites.net" `
+    -FleetId "fleet-corporate" `
+    -OutputPath "\\fileserver\NETLOGON\SecureBootWatcher"
+```
+
+**Step 2: Create GPO Startup Script** (`install-secureboot.ps1`):
+```powershell
+# GPO Startup Script
+$packagePath = "\\fileserver\NETLOGON\SecureBootWatcher\SecureBootWatcher-Client.zip"
+$scriptPath = "\\fileserver\NETLOGON\SecureBootWatcher\Deploy-Client.ps1"
+
+# Download script and run
+Set-ExecutionPolicy Bypass -Scope Process -Force
+& $scriptPath -PackageZipPath $packagePath -CreateScheduledTask
+```
+
+**Step 3: Attach to GPO:**
+- Computer Configuration ? Policies ? Windows Settings ? Scripts ? Startup
+- Add `install-secureboot.ps1`
+
+### Workflow 3: Microsoft Endpoint Manager (Intune)
+
+**Step 1: Build Client Package**
+```powershell
+.\scripts\Deploy-Client.ps1 `
+    -ApiBaseUrl "https://app-secureboot-api-prod.azurewebsites.net" `
+    -FleetId "fleet-remote-workers"
+```
+
+**Step 2: Create Intunewin Package**
+```powershell
+# Use Microsoft Win32 Content Prep Tool
+.\IntuneWinAppUtil.exe `
+    -c ".\client-package" `
+    -s "SecureBootWatcher-Client.zip" `
+    -o ".\intune-package"
+```
+
+**Step 3: Create Win32 App in Intune**
+- **Install command**:
+  ```powershell
+  powershell.exe -ExecutionPolicy Bypass -File Deploy-Client.ps1 -PackageZipPath "%cd%\SecureBootWatcher-Client.zip" -CreateScheduledTask
+  ```
+- **Detection rule**: File exists at `C:\Program Files\SecureBootWatcher\SecureBootWatcher.Client.exe`
+
+### Workflow 4: SCCM/ConfigMgr
+
+**Step 1: Build Package**
+```powershell
+.\scripts\Deploy-Client.ps1 -ApiBaseUrl "https://api.contoso.com"
+```
+
+**Step 2: Create SCCM Application**
+- **Source**: `.\client-package\`
+- **Install command**:
+  ```powershell
+  powershell.exe -ExecutionPolicy Bypass -File Deploy-Client.ps1 -PackageZipPath "SecureBootWatcher-Client.zip" -CreateScheduledTask
+  ```
+- **Uninstall command**:
+  ```powershell
+  powershell.exe -ExecutionPolicy Bypass -File Uninstall-Client.ps1 -Force
+  ```
+- **Detection method**: Registry key or file existence
+
+### Workflow 5: Manual Deployment (IT Admin)
+
+**Scenario**: Deploy to a single machine for testing
+
+```powershell
+# Step 1: Copy package to target machine
+Copy-Item "\\fileserver\packages\SecureBootWatcher-Client.zip" -Destination "C:\Temp\"
+
+# Step 2: Run script as Administrator
+cd C:\Temp
+.\Deploy-Client.ps1 `
+    -PackageZipPath "C:\Temp\SecureBootWatcher-Client.zip" `
+    -ApiBaseUrl "https://app-secureboot-api-prod.azurewebsites.net" `
+    -FleetId "test-fleet" `
+    -CreateScheduledTask
+
+# Step 3: Test immediately
+Start-ScheduledTask -TaskName SecureBootWatcher
 ```
 
 ---
@@ -190,98 +374,6 @@ Removes the SecureBootWatcher client, scheduled task, and running processes from
 - **Does not remove reports** already sent to the API
 - Device records can be managed via the dashboard web interface
 - Run as Administrator for best results
-
----
-
-## Enterprise Deployment Workflows
-
-### Workflow 1: Group Policy Deployment
-
-1. **Build and package client:**
-   ```powershell
-   .\scripts\Deploy-Client.ps1 `
-       -ApiBaseUrl "https://app-secureboot-api-prod.azurewebsites.net" `
-       -FleetId "fleet-corporate" `
-       -OutputPath "\\fileserver\NETLOGON\SecureBootWatcher"
-   ```
-
-2. **Create GPO startup script** (`install-secureboot.ps1`):
-   ```powershell
-   $installPath = "C:\Program Files\SecureBootWatcher"
-   $packagePath = "\\fileserver\NETLOGON\SecureBootWatcher\SecureBootWatcher-Client.zip"
-   
-   # Extract client
-   Expand-Archive -Path $packagePath -DestinationPath $installPath -Force
-   
-   # Create scheduled task
-   $action = New-ScheduledTaskAction -Execute "$installPath\SecureBootWatcher.Client.exe"
-   $trigger = New-ScheduledTaskTrigger -Daily -At "9:00AM"
-   $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-   
-   Register-ScheduledTask -TaskName "SecureBootWatcher" -Action $action -Trigger $trigger -Principal $principal -Force
-   ```
-
-3. **Attach script to GPO:**
-   - Computer Configuration ? Policies ? Windows Settings ? Scripts ? Startup
-   - Add `install-secureboot.ps1`
-
-### Workflow 2: Microsoft Endpoint Manager (Intune)
-
-1. **Build client package:**
-   ```powershell
-   .\scripts\Deploy-Client.ps1 `
-       -ApiBaseUrl "https://app-secureboot-api-prod.azurewebsites.net" `
-       -FleetId "fleet-remote-workers"
-   ```
-
-2. **Create Intune Win32 app:**
-   - Use Microsoft Win32 Content Prep Tool to convert ZIP to `.intunewin`
-   - Install command: `powershell.exe -ExecutionPolicy Bypass -File install.ps1`
-   - Detection rule: File exists at `C:\Program Files\SecureBootWatcher\SecureBootWatcher.Client.exe`
-
-3. **Create installation script** (`install.ps1`):
-   ```powershell
-   $installPath = "C:\Program Files\SecureBootWatcher"
-   Expand-Archive -Path "SecureBootWatcher-Client.zip" -DestinationPath $installPath -Force
-   
-   # Create scheduled task (same as GPO example)
-   ```
-
-### Workflow 3: SCCM/ConfigMgr
-
-1. **Build package:**
-   ```powershell
-   .\scripts\Deploy-Client.ps1 -ApiBaseUrl "https://api.contoso.com"
-   ```
-
-2. **Create SCCM Application:**
-   - Source: `.\client-package\`
-   - Install command: `powershell.exe -ExecutionPolicy Bypass -File Deploy-Client.ps1 -CreateScheduledTask -SkipBuild`
-   - Uninstall command: `powershell.exe -ExecutionPolicy Bypass -File Uninstall-Client.ps1 -Force`
-   - Detection method: Registry key or file existence
-
-### Workflow 4: Manual Deployment
-
-1. **Build package:**
-   ```powershell
-   .\scripts\Deploy-Client.ps1
-   ```
-
-2. **Copy ZIP to target device**
-
-3. **On target device (as Administrator):**
-   ```powershell
-   # Extract
-   Expand-Archive -Path "SecureBootWatcher-Client.zip" -DestinationPath "C:\Program Files\SecureBootWatcher"
-   
-   # Configure
-   notepad "C:\Program Files\SecureBootWatcher\appsettings.json"
-   # Update ApiBaseUrl and other settings
-   
-   # Create scheduled task
-   cd "C:\Program Files\SecureBootWatcher"
-   .\Deploy-Client.ps1 -CreateScheduledTask -SkipBuild
-   ```
 
 ---
 
@@ -360,7 +452,27 @@ cd "C:\Program Files\SecureBootWatcher"
 .\SecureBootWatcher.Client.exe
 ```
 
-### Build Failures
+### Package Not Found Error
+
+**Error**: `Package not found at: <path>`
+
+**Solutions:**
+1. Verify the ZIP file exists at the specified path
+2. Check network connectivity to UNC paths
+3. Ensure correct file name and extension (.zip)
+4. Use absolute paths to avoid confusion
+
+```powershell
+# Test if package is accessible
+Test-Path "\\fileserver\packages\SecureBootWatcher-Client.zip"
+
+# If False, check:
+# - Network connectivity
+# - File permissions
+# - Correct path syntax
+```
+
+### Build Failures (when not using precompiled package)
 
 **Ensure prerequisites installed:**
 - .NET SDK 8.0+
@@ -391,6 +503,18 @@ Get-ExecutionPolicy
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
 
+### Temp Directory Cleanup Errors
+
+If deployment fails partway through, temporary files may remain:
+
+```powershell
+# List temp SecureBootWatcher directories
+Get-ChildItem $env:TEMP | Where-Object { $_.Name -like "SecureBootWatcher-Deploy-*" }
+
+# Remove manually if needed
+Remove-Item "$env:TEMP\SecureBootWatcher-Deploy-*" -Recurse -Force
+```
+
 ---
 
 ## Security Considerations
@@ -400,17 +524,48 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 - **Credentials**: Use Managed Identity or certificate-based auth for Azure Queue (avoid connection strings in config)
 - **File Share**: Use UNC paths with appropriate NTFS permissions (client needs Write access)
 - **Logs**: May contain sensitive system information; protect log directory
+- **Package Integrity**: Verify ZIP package checksums in production environments
 
 ---
 
 ## Best Practices
 
-1. **Test First**: Deploy to pilot group before organization-wide rollout
-2. **Configure Centrally**: Use consistent `FleetId` per environment
-3. **Monitor Logs**: Set up log collection (e.g., splunk, Azure Monitor)
-4. **Schedule Wisely**: Avoid peak hours; stagger task times across fleets
-5. **Version Control**: Track client versions deployed to each fleet
-6. **Document Changes**: Record configuration changes and deployment dates
+1. **Build Once, Deploy Many**: Create package on build server, distribute to all devices
+2. **Test First**: Deploy to pilot group before organization-wide rollout
+3. **Configure Centrally**: Pre-configure API URL and Fleet ID in package
+4. **Monitor Logs**: Set up log collection (e.g., Splunk, Azure Monitor)
+5. **Schedule Wisely**: Avoid peak hours; stagger task times across fleets
+6. **Version Control**: Track client versions deployed to each fleet
+7. **Document Changes**: Record configuration changes and deployment dates
+8. **Use Precompiled Packages**: Simplifies deployment and ensures consistency
+
+---
+
+## Quick Reference
+
+### Common Commands
+
+```powershell
+# Build and create package
+.\Deploy-Client.ps1
+
+# Install from precompiled package
+.\Deploy-Client.ps1 -PackageZipPath ".\client-package\SecureBootWatcher-Client.zip" -CreateScheduledTask
+
+# Install with API configuration
+.\Deploy-Client.ps1 `
+    -PackageZipPath "\\server\share\SecureBootWatcher-Client.zip" `
+    -ApiBaseUrl "https://api.contoso.com" `
+    -FleetId "prod" `
+    -CreateScheduledTask
+
+# Uninstall
+.\Uninstall-Client.ps1 -Force
+
+# Test client
+Start-ScheduledTask -TaskName SecureBootWatcher
+Get-ScheduledTaskInfo -TaskName SecureBootWatcher
+```
 
 ---
 
