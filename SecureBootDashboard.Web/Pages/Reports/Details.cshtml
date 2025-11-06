@@ -1,0 +1,212 @@
+@page
+@model SecureBootDashboard.Web.Pages.Reports.DetailsModel
+@{
+    ViewData["Title"] = "Report Details";
+    var alerts = Model.Report != null ? Model.GetAlerts() : new List<string>();
+}
+
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-page="/Index">Dashboard</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Report Details</li>
+        </ol>
+    </nav>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger">
+            ?? @Model.ErrorMessage
+        </div>
+    }
+
+    @if (Model.Report != null)
+    {
+        <div class="row mb-4">
+            <div class="col">
+                <h1 class="display-5">
+                    ??? @Model.Report.Device.MachineName
+                </h1>
+                <p class="text-muted">Report ID: @Model.Report.Id</p>
+            </div>
+            <div class="col-auto">
+                <a asp-page="/Index" class="btn btn-secondary">? Torna alla Dashboard</a>
+            </div>
+        </div>
+
+        <!-- Device Information -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">?? Informazioni Dispositivo</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Machine Name:</dt>
+                            <dd class="col-sm-8"><strong>@Model.Report.Device.MachineName</strong></dd>
+
+                            <dt class="col-sm-4">Domain:</dt>
+                            <dd class="col-sm-8">@(Model.Report.Device.DomainName ?? "N/A")</dd>
+
+                            <dt class="col-sm-4">User Principal:</dt>
+                            <dd class="col-sm-8">@(Model.Report.Device.UserPrincipalName ?? "N/A")</dd>
+
+                            <dt class="col-sm-4">Fleet ID:</dt>
+                            <dd class="col-sm-8">@(Model.Report.Device.FleetId ?? "N/A")</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Manufacturer:</dt>
+                            <dd class="col-sm-8">@(Model.Report.Device.Manufacturer ?? "N/A")</dd>
+
+                            <dt class="col-sm-4">Model:</dt>
+                            <dd class="col-sm-8">@(Model.Report.Device.Model ?? "N/A")</dd>
+
+                            <dt class="col-sm-4">Firmware:</dt>
+                            <dd class="col-sm-8">@(Model.Report.Device.FirmwareVersion ?? "N/A")</dd>
+
+                            <dt class="col-sm-4">First Seen:</dt>
+                            <dd class="col-sm-8">@Model.Report.Device.FirstSeenUtc.ToString("yyyy-MM-dd HH:mm:ss")</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Report Information -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">?? Informazioni Report</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">Deployment State:</dt>
+                    <dd class="col-sm-9">
+                        @switch (Model.Report.DeploymentState)
+                        {
+                            case "Deployed":
+                                <span class="badge bg-success">? Deployed</span>
+                                break;
+                            case "Pending":
+                                <span class="badge bg-warning text-dark">? Pending</span>
+                                break;
+                            case "Error":
+                                <span class="badge bg-danger">? Error</span>
+                                break;
+                            default:
+                                <span class="badge bg-secondary">@(Model.Report.DeploymentState ?? "Unknown")</span>
+                                break;
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">Client Version:</dt>
+                    <dd class="col-sm-9">@(Model.Report.ClientVersion ?? "N/A")</dd>
+
+                    <dt class="col-sm-3">Correlation ID:</dt>
+                    <dd class="col-sm-9"><code>@(Model.Report.CorrelationId ?? "N/A")</code></dd>
+
+                    <dt class="col-sm-3">Created At (UTC):</dt>
+                    <dd class="col-sm-9">@Model.Report.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Alerts -->
+        @if (alerts.Any())
+        {
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">?? Alerts</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        @foreach (var alert in alerts)
+                        {
+                            <li class="list-group-item">
+                                @alert
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        }
+
+        <!-- Registry State -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">?? Registry State</h5>
+            </div>
+            <div class="card-body">
+                <pre class="bg-light p-3 rounded"><code>@Model.GetRegistryStateFormatted()</code></pre>
+            </div>
+        </div>
+
+        <!-- Certificates -->
+        @if (!string.IsNullOrEmpty(Model.Report.CertificatesJson))
+        {
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">?? Certificates</h5>
+                </div>
+                <div class="card-body">
+                    <pre class="bg-light p-3 rounded" style="max-height: 500px; overflow-y: auto;"><code>@Model.GetCertificatesFormatted()</code></pre>
+                </div>
+            </div>
+        }
+
+        <!-- Events -->
+        @if (Model.Report.Events.Any())
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">?? Events (@Model.Report.Events.Count)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp (UTC)</th>
+                                    <th>Provider</th>
+                                    <th>Event ID</th>
+                                    <th>Level</th>
+                                    <th>Message</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var evt in Model.Report.Events)
+                                {
+                                    <tr>
+                                        <td>@evt.TimestampUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                        <td><code>@evt.ProviderName</code></td>
+                                        <td>@evt.EventId</td>
+                                        <td>
+                                            @switch (evt.Level)
+                                            {
+                                                case "Error":
+                                                    <span class="badge bg-danger">@evt.Level</span>
+                                                    break;
+                                                case "Warning":
+                                                    <span class="badge bg-warning text-dark">@evt.Level</span>
+                                                    break;
+                                                case "Information":
+                                                    <span class="badge bg-info">@evt.Level</span>
+                                                    break;
+                                                default:
+                                                    <span class="badge bg-secondary">@(evt.Level ?? "N/A")</span>
+                                                    break;
+                                            }
+                                        </td>
+                                        <td>@(evt.Message ?? "N/A")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>

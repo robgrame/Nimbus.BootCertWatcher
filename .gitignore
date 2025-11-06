@@ -13,6 +13,7 @@ obj/
 TestResult*/
 
 # Logs and databases
+logs/
 *.log
 *.ldb
 *.sqlite

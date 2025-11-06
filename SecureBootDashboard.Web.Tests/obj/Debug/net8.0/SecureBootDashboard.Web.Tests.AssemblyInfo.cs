@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SecureBootDashboard.Web.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e8fdc5b861e3614737c394aae787bd1ad766909c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cdb0220f77134d8e7fbcb5f31661510c7e76178a")]
 [assembly: System.Reflection.AssemblyProductAttribute("SecureBootDashboard.Web.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SecureBootDashboard.Web.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

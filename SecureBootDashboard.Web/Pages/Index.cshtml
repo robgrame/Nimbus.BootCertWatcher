@@ -1,10 +1,142 @@
 ﻿@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Secure Boot Dashboard";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-4">
+                🛡️ Secure Boot Dashboard
+            </h1>
+            <p class="lead text-muted">Monitoraggio certificati Secure Boot su dispositivi Windows</p>
+        </div>
+        <div class="col-auto">
+            @if (Model.ApiHealthy)
+            {
+                <span class="badge bg-success fs-6">
+                    ✓ API Online
+                </span>
+            }
+            else
+            {
+                <span class="badge bg-danger fs-6">
+                    ✗ API Offline
+                </span>
+            }
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            ⚠️ @Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (Model.Reports.Any())
+    {
+        var grouped = Model.Reports
+            .GroupBy(r => r.DeploymentState)
+            .ToDictionary(g => g.Key ?? "Unknown", g => g.Count());
+
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center bg-light">
+                    <div class="card-body">
+                        <h5 class="card-title text-muted">Totale Dispositivi</h5>
+                        <p class="display-4">@Model.Reports.Count</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center bg-success text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">Deployed</h5>
+                        <p class="display-4">@(grouped.GetValueOrDefault("Deployed", 0))</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center bg-warning text-dark">
+                    <div class="card-body">
+                        <h5 class="card-title">Pending</h5>
+                        <p class="display-4">@(grouped.GetValueOrDefault("Pending", 0))</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center bg-danger text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">Error</h5>
+                        <p class="display-4">@(grouped.GetValueOrDefault("Error", 0))</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">📋 Report Recenti</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Machine Name</th>
+                                <th>Domain</th>
+                                <th>Deployment State</th>
+                                <th>Created At (UTC)</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var report in Model.Reports.OrderByDescending(r => r.CreatedAtUtc))
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@report.MachineName</strong>
+                                    </td>
+                                    <td>@(report.DomainName ?? "-")</td>
+                                    <td>
+                                        @switch (report.DeploymentState)
+                                        {
+                                            case "Deployed":
+                                                <span class="badge bg-success">✓ Deployed</span>
+                                                break;
+                                            case "Pending":
+                                                <span class="badge bg-warning text-dark">⏳ Pending</span>
+                                                break;
+                                            case "Error":
+                                                <span class="badge bg-danger">✗ Error</span>
+                                                break;
+                                            default:
+                                                <span class="badge bg-secondary">@(report.DeploymentState ?? "Unknown")</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>@report.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                    <td>
+                                        <a asp-page="/Reports/Details" asp-route-id="@report.Id" class="btn btn-sm btn-primary">
+                                            Dettagli
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+    else if (Model.ApiHealthy)
+    {
+        <div class="alert alert-info">
+            <h4 class="alert-heading">ℹ️ Nessun Report Disponibile</h4>
+            <p>Non ci sono report da visualizzare. I client devono ancora inviare i dati all'API.</p>
+        </div>
+    }
 </div>
