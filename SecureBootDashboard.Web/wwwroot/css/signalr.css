@@ -1,0 +1,112 @@
+/* SignalR Connection Status Indicator */
+
+.signalr-status-indicator {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    z-index: 1000;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.3);
+}
+
+.signalr-status-indicator.connected {
+    background-color: #28a745;
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.3);
+}
+
+.signalr-status-indicator.reconnecting {
+    background-color: #ffc107;
+    box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.3);
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.signalr-status-indicator.disconnected {
+    background-color: #6c757d;
+    box-shadow: 0 0 0 3px rgba(108, 117, 125, 0.3);
+}
+
+.signalr-status-indicator.error {
+    background-color: #dc3545;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.3);
+    animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 0.8;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .signalr-status-indicator {
+        top: 60px;
+        right: 15px;
+        width: 10px;
+        height: 10px;
+    }
+}
+
+/* Toast container for real-time notifications */
+#toast-container {
+    z-index: 11 !important;
+}
+
+/* Real-time update animation for elements */
+@keyframes highlight-update {
+    0% {
+        background-color: rgba(23, 162, 184, 0.3);
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+.realtime-updated {
+    animation: highlight-update 0.8s ease-out;
+}
+
+/* Loading indicator for SignalR connection */
+.signalr-connecting-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.signalr-connecting-message {
+    background: white;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    text-align: center;
+}
+
+.signalr-connecting-spinner {
+    width: 3rem;
+    height: 3rem;
+    border: 0.3rem solid #f3f3f3;
+    border-top: 0.3rem solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
