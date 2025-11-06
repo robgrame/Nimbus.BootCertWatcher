@@ -39,7 +39,12 @@ namespace SecureBootDashboard.Api.Controllers
             try
             {
                 var id = await _reportStore.SaveAsync(report, HttpContext.RequestAborted).ConfigureAwait(false);
-                return CreatedAtAction(nameof(GetReportAsync), new { id }, new { id });
+                
+                _logger.LogInformation("Successfully ingested report {ReportId} for device {MachineName}", 
+                    id, report.Device.MachineName);
+                
+                // Usa CreatedAtRoute invece di CreatedAtAction per evitare problemi di routing
+                return CreatedAtRoute("GetReport", new { id }, new { id });
             }
             catch (Exception ex)
             {
@@ -48,7 +53,7 @@ namespace SecureBootDashboard.Api.Controllers
             }
         }
 
-        [HttpGet("{id:guid}")]
+        [HttpGet("{id:guid}", Name = "GetReport")]
         public async Task<IActionResult> GetReportAsync(Guid id)
         {
             var report = await _reportStore.GetAsync(id, HttpContext.RequestAborted).ConfigureAwait(false);

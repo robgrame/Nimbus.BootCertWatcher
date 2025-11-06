@@ -4,25 +4,34 @@
     ViewData["Title"] = "Secure Boot Dashboard";
 }
 
+<!-- Hero Banner - Hidden on mobile (< 768px) -->
+<div class="hero-banner mb-4 d-none d-md-block">
+    <img src="~/images/banner.webp" 
+         alt="Secure Boot Dashboard Banner" 
+         class="img-fluid w-100 rounded shadow-sm"
+         loading="eager">
+</div>
+
 <div class="container-fluid mt-4">
     <div class="row mb-4">
         <div class="col">
-            <h1 class="display-4">
-                🛡️ Secure Boot Dashboard
+            <!-- Title - Only visible on mobile (< 768px) -->
+            <h1 class="display-4 d-md-none">
+                <i class="fas fa-shield-alt text-primary"></i> Secure Boot Dashboard
             </h1>
-            <p class="lead text-muted">Monitoraggio certificati Secure Boot su dispositivi Windows</p>
+            <p class="lead text-muted d-none d-md-block">Monitoraggio certificati Secure Boot su dispositivi Windows</p>
         </div>
         <div class="col-auto">
             @if (Model.ApiHealthy)
             {
                 <span class="badge bg-success fs-6">
-                    ✓ API Online
+                    <i class="fas fa-check-circle"></i> API Online
                 </span>
             }
             else
             {
                 <span class="badge bg-danger fs-6">
-                    ✗ API Offline
+                    <i class="fas fa-times-circle"></i> API Offline
                 </span>
             }
         </div>
@@ -31,47 +40,59 @@
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            ⚠️ @Model.ErrorMessage
+            <i class="fas fa-exclamation-triangle"></i> @Model.ErrorMessage
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
 
-    @if (Model.Reports.Any())
+    @if (Model.Devices.Any())
     {
-        var grouped = Model.Reports
-            .GroupBy(r => r.DeploymentState)
-            .ToDictionary(g => g.Key ?? "Unknown", g => g.Count());
-
         <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card text-center bg-light">
+            <div class="col-md-2">
+                <div class="card text-center bg-primary text-white">
                     <div class="card-body">
-                        <h5 class="card-title text-muted">Totale Dispositivi</h5>
-                        <p class="display-4">@Model.Reports.Count</p>
+                        <h5 class="card-title"><i class="fas fa-desktop"></i> Totale Dispositivi</h5>
+                        <p class="display-4">@Model.TotalDevices</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
+                <div class="card text-center bg-info text-white">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-heartbeat"></i> Attivi (24h)</h5>
+                        <p class="display-4">@Model.ActiveDevices</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center bg-secondary text-white">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-moon"></i> Inattivi (>7d)</h5>
+                        <p class="display-4">@Model.InactiveDevices</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
                 <div class="card text-center bg-success text-white">
                     <div class="card-body">
-                        <h5 class="card-title">Deployed</h5>
-                        <p class="display-4">@(grouped.GetValueOrDefault("Deployed", 0))</p>
+                        <h5 class="card-title"><i class="fas fa-check"></i> Deployed</h5>
+                        <p class="display-4">@Model.DeployedDevices</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="card text-center bg-warning text-dark">
                     <div class="card-body">
-                        <h5 class="card-title">Pending</h5>
-                        <p class="display-4">@(grouped.GetValueOrDefault("Pending", 0))</p>
+                        <h5 class="card-title"><i class="fas fa-clock"></i> Pending</h5>
+                        <p class="display-4">@Model.PendingDevices</p>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <div class="card text-center bg-danger text-white">
                     <div class="card-body">
-                        <h5 class="card-title">Error</h5>
-                        <p class="display-4">@(grouped.GetValueOrDefault("Error", 0))</p>
+                        <h5 class="card-title"><i class="fas fa-times"></i> Error</h5>
+                        <p class="display-4">@Model.ErrorDevices</p>
                     </div>
                 </div>
             </div>
@@ -79,49 +100,95 @@
 
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">📋 Report Recenti</h5>
+                <h5 class="mb-0"><i class="fas fa-laptop"></i> Dispositivi Monitorati</h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>Machine Name</th>
-                                <th>Domain</th>
-                                <th>Deployment State</th>
-                                <th>Created At (UTC)</th>
-                                <th>Actions</th>
+                                <th><i class="fas fa-desktop"></i> Machine Name</th>
+                                <th><i class="fas fa-network-wired"></i> Domain</th>
+                                <th><i class="fas fa-layer-group"></i> Fleet</th>
+                                <th><i class="fas fa-industry"></i> Manufacturer / Model</th>
+                                <th><i class="fas fa-file-alt"></i> Report Count</th>
+                                <th><i class="fas fa-traffic-light"></i> Latest State</th>
+                                <th><i class="fas fa-clock"></i> Last Seen</th>
+                                <th><i class="fas fa-cog"></i> Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var report in Model.Reports.OrderByDescending(r => r.CreatedAtUtc))
+                            @foreach (var device in Model.Devices.OrderByDescending(d => d.LastSeenUtc))
                             {
-                                <tr>
+                                var timeSinceLastSeen = DateTimeOffset.UtcNow - device.LastSeenUtc;
+                                var lastSeenText = timeSinceLastSeen.TotalMinutes < 60 
+                                    ? $"{(int)timeSinceLastSeen.TotalMinutes} min ago"
+                                    : timeSinceLastSeen.TotalHours < 24 
+                                        ? $"{(int)timeSinceLastSeen.TotalHours} hours ago"
+                                        : $"{(int)timeSinceLastSeen.TotalDays} days ago";
+
+                                var isInactive = timeSinceLastSeen.TotalDays > 7;
+                                var rowClass = isInactive ? "table-secondary" : "";
+
+                                <tr class="@rowClass">
                                     <td>
-                                        <strong>@report.MachineName</strong>
+                                        <a asp-page="/Devices/Details" asp-route-id="@device.Id" class="text-decoration-none machine-name-link" title="View device details">
+                                            <strong>@device.MachineName</strong>
+                                        </a>
+                                        @if (isInactive)
+                                        {
+                                            <span class="badge bg-secondary ms-2" title="Device inactive for more than 7 days">
+                                                <i class="fas fa-moon"></i> Inactive
+                                            </span>
+                                        }
                                     </td>
-                                    <td>@(report.DomainName ?? "-")</td>
+                                    <td>@(device.DomainName ?? "-")</td>
                                     <td>
-                                        @switch (report.DeploymentState)
+                                        @if (!string.IsNullOrEmpty(device.FleetId))
+                                        {
+                                            <span class="badge bg-info"><i class="fas fa-tag"></i> @device.FleetId</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            @(device.Manufacturer ?? "Unknown") / @(device.Model ?? "Unknown")
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">@device.ReportCount</span>
+                                    </td>
+                                    <td>
+                                        @switch (device.LatestDeploymentState)
                                         {
                                             case "Deployed":
-                                                <span class="badge bg-success">✓ Deployed</span>
+                                                <span class="badge bg-success"><i class="fas fa-check"></i> Deployed</span>
                                                 break;
                                             case "Pending":
-                                                <span class="badge bg-warning text-dark">⏳ Pending</span>
+                                                <span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> Pending</span>
                                                 break;
                                             case "Error":
-                                                <span class="badge bg-danger">✗ Error</span>
+                                                <span class="badge bg-danger"><i class="fas fa-times"></i> Error</span>
                                                 break;
                                             default:
-                                                <span class="badge bg-secondary">@(report.DeploymentState ?? "Unknown")</span>
+                                                <span class="badge bg-secondary">@(device.LatestDeploymentState ?? "Unknown")</span>
                                                 break;
                                         }
                                     </td>
-                                    <td>@report.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
                                     <td>
-                                        <a asp-page="/Reports/Details" asp-route-id="@report.Id" class="btn btn-sm btn-primary">
-                                            Dettagli
+                                        <span title="@device.LastSeenUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC">
+                                            @lastSeenText
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a asp-page="/Devices/Details" asp-route-id="@device.Id" class="btn btn-sm btn-primary" title="View device details">
+                                            <i class="fas fa-info-circle"></i> Details
+                                        </a>
+                                        <a asp-page="/Devices/Reports" asp-route-id="@device.Id" class="btn btn-sm btn-secondary ms-1" title="View report history">
+                                            <i class="fas fa-history"></i> History
                                         </a>
                                     </td>
                                 </tr>
@@ -135,8 +202,75 @@
     else if (Model.ApiHealthy)
     {
         <div class="alert alert-info">
-            <h4 class="alert-heading">ℹ️ Nessun Report Disponibile</h4>
-            <p>Non ci sono report da visualizzare. I client devono ancora inviare i dati all'API.</p>
+            <h4 class="alert-heading"><i class="fas fa-info-circle"></i> Nessun Dispositivo Registrato</h4>
+            <p>Non ci sono dispositivi da visualizzare. I client devono ancora inviare i dati all'API.</p>
+            <hr>
+            <p class="mb-0">
+                <strong>Prossimi passi:</strong>
+            </p>
+            <ol class="mb-0">
+                <li>Configura il client SecureBootWatcher sui dispositivi Windows</li>
+                <li>Verifica che i client possano raggiungere l'API</li>
+                <li>Attendi che i client inviino il primo report</li>
+            </ol>
         </div>
     }
 </div>
+
+@section Styles {
+    <style>
+        .table-secondary {
+            opacity: 0.6;
+        }
+        .card-body i {
+            margin-right: 0.25rem;
+        }
+        
+        /* Hero banner styling */
+        .hero-banner {
+            max-height: 400px;
+            overflow: hidden;
+        }
+        
+        .hero-banner img {
+            object-fit: cover;
+            width: 100%;
+            height: auto;
+            max-height: 400px;
+        }
+        
+        /* Responsive hero banner */
+        @@media (max-width: 768px) {
+            .hero-banner {
+                max-height: 250px;
+            }
+            .hero-banner img {
+                max-height: 250px;
+            }
+        }
+        
+        @@media (max-width: 576px) {
+            .hero-banner {
+                max-height: 200px;
+            }
+            .hero-banner img {
+                max-height: 200px;
+            }
+        }
+        
+        /* Machine name clickable link styling */
+        .machine-name-link {
+            color: inherit;
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .machine-name-link:hover {
+            color: #0d6efd !important;
+            text-decoration: underline !important;
+        }
+        
+        .machine-name-link strong {
+            cursor: pointer;
+        }
+    </style>
+}

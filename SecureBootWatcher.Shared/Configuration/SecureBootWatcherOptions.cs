@@ -48,6 +48,24 @@ namespace SecureBootWatcher.Shared.Configuration
         /// Only enabled sinks are executed.
         /// </summary>
         public string SinkPriority { get; set; } = "AzureQueue,WebApi,FileShare";
+
+        /// <summary>
+        /// Maximum number of retry attempts for each sink before moving to the next one.
+        /// Default: 3 retries
+        /// </summary>
+        public int MaxRetryAttempts { get; set; } = 3;
+
+        /// <summary>
+        /// Delay between retry attempts for each sink.
+        /// Default: 5 minutes
+        /// </summary>
+        public TimeSpan RetryDelay { get; set; } = TimeSpan.FromMinutes(5);
+
+        /// <summary>
+        /// Whether to use exponential backoff for retries (delay doubles each attempt).
+        /// Default: false (fixed delay)
+        /// </summary>
+        public bool UseExponentialBackoff { get; set; } = false;
     }
 
     public sealed class FileShareSinkOptions
@@ -148,7 +166,7 @@ namespace SecureBootWatcher.Shared.Configuration
     {
         public Uri? BaseAddress { get; set; }
 
-        public string IngestionRoute { get; set; } = "/api/secureboot/reports";
+        public string IngestionRoute { get; set; } = "/api/SecureBootReports";
 
         public TimeSpan HttpTimeout { get; set; } = TimeSpan.FromSeconds(30);
     }

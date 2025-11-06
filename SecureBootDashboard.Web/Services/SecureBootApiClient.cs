@@ -72,6 +72,78 @@ public sealed class SecureBootApiClient : ISecureBootApiClient
         }
     }
 
+    public async Task<IReadOnlyList<DeviceSummary>> GetDevicesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching devices list");
+            
+            var devices = await _httpClient.GetFromJsonAsync<List<DeviceSummary>>(
+                "/api/Devices",
+                cancellationToken);
+
+            if (devices == null)
+            {
+                return new List<DeviceSummary>();
+            }
+
+            return devices;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to fetch devices from API");
+            return new List<DeviceSummary>();
+        }
+    }
+
+    public async Task<DeviceDetail?> GetDeviceAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching device detail for ID: {DeviceId}", id);
+            
+            var response = await _httpClient.GetAsync($"/api/Devices/{id}", cancellationToken);
+            
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+
+            response.EnsureSuccessStatusCode();
+            
+            return await response.Content.ReadFromJsonAsync<DeviceDetail>(cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to fetch device detail for ID: {DeviceId}", id);
+            return null;
+        }
+    }
+
+    public async Task<IReadOnlyList<ReportHistoryItem>> GetDeviceReportsAsync(Guid deviceId, int limit = 50, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching reports for device {DeviceId} (limit: {Limit})", deviceId, limit);
+            
+            var reports = await _httpClient.GetFromJsonAsync<List<ReportHistoryItem>>(
+                $"/api/Devices/{deviceId}/reports?limit={limit}",
+                cancellationToken);
+
+            if (reports == null)
+            {
+                return new List<ReportHistoryItem>();
+            }
+
+            return reports;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to fetch reports for device {DeviceId}", deviceId);
+            return new List<ReportHistoryItem>();
+        }
+    }
+
     public async Task<bool> IsHealthyAsync(CancellationToken cancellationToken = default)
     {
         try

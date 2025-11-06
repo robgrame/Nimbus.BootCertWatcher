@@ -1,0 +1,190 @@
+@page
+@model ReportsModel
+@{
+    ViewData["Title"] = Model.Device != null ? $"Report History: {Model.Device.MachineName}" : "Report History";
+}
+
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-page="/Index"><i class="fas fa-home"></i> Dashboard</a></li>
+            @if (Model.Device != null)
+            {
+                <li class="breadcrumb-item">
+                    <a asp-page="/Devices/Details" asp-route-id="@Model.Device.Id">
+                        <i class="fas fa-desktop"></i> @Model.Device.MachineName
+                    </a>
+                </li>
+            }
+            <li class="breadcrumb-item active" aria-current="page">Report History</li>
+        </ol>
+    </nav>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i> @Model.ErrorMessage
+        </div>
+        <a asp-page="/Index" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+    }
+    else if (Model.Device != null)
+    {
+        <div class="row mb-4">
+            <div class="col">
+                <h1 class="display-5">
+                    <i class="fas fa-chart-bar text-primary"></i> Report History: @Model.Device.MachineName
+                </h1>
+                @if (!string.IsNullOrEmpty(Model.Device.DomainName))
+                {
+                    <p class="text-muted"><i class="fas fa-network-wired"></i> @Model.Device.DomainName</p>
+                }
+            </div>
+            <div class="col-auto">
+                <a asp-page="/Devices/Details" asp-route-id="@Model.Device.Id" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Device Details
+                </a>
+            </div>
+        </div>
+
+        @if (Model.Reports.Any())
+        {
+            <!-- State Change Detection -->
+            @if (Model.StateChanges.Any())
+            {
+                <div class="alert alert-info">
+                    <h5 class="alert-heading">
+                        <i class="fas fa-exchange-alt"></i> State Changes Detected
+                    </h5>
+                    <ul class="mb-0">
+                        @foreach (var change in Model.StateChanges)
+                        {
+                            <li>
+                                <strong><i class="fas fa-calendar-alt"></i> @change.Timestamp.ToString("yyyy-MM-dd HH:mm:ss") UTC:</strong>
+                                <span class="badge bg-secondary">@change.FromState</span>
+                                <i class="fas fa-arrow-right"></i>
+                                <span class="badge bg-primary">@change.ToState</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-list"></i> All Reports (@Model.Reports.Count)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th><i class="fas fa-calendar"></i> Date/Time (UTC)</th>
+                                    <th><i class="fas fa-traffic-light"></i> Deployment State</th>
+                                    <th><i class="fas fa-code-branch"></i> Client Version</th>
+                                    <th><i class="fas fa-stopwatch"></i> Time Since Previous</th>
+                                    <th><i class="fas fa-cog"></i> Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{
+                                    var reportList = Model.Reports.OrderByDescending(r => r.CreatedAtUtc).ToList();
+                                    DateTimeOffset? previousTimestamp = null;
+                                }
+                                @for (int i = 0; i < reportList.Count; i++)
+                                {
+                                    var report = reportList[i];
+                                    var timeSincePrevious = previousTimestamp.HasValue 
+                                        ? (previousTimestamp.Value - report.CreatedAtUtc)
+                                        : TimeSpan.Zero;
+
+                                    <tr>
+                                        <td><strong>@(reportList.Count - i)</strong></td>
+                                        <td>@report.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                        <td>
+                                            @switch (report.DeploymentState)
+                                            {
+                                                case "Deployed":
+                                                    <span class="badge bg-success"><i class="fas fa-check"></i> Deployed</span>
+                                                    break;
+                                                case "Pending":
+                                                    <span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> Pending</span>
+                                                    break;
+                                                case "Error":
+                                                    <span class="badge bg-danger"><i class="fas fa-times"></i> Error</span>
+                                                    break;
+                                                default:
+                                                    <span class="badge bg-secondary">@(report.DeploymentState ?? "Unknown")</span>
+                                                    break;
+                                            }
+                                        </td>
+                                        <td><code>@(report.ClientVersion ?? "-")</code></td>
+                                        <td>
+                                            @if (previousTimestamp.HasValue)
+                                            {
+                                                if (timeSincePrevious.TotalMinutes < 60)
+                                                {
+                                                    <small class="text-muted"><i class="fas fa-clock"></i> @((int)timeSincePrevious.TotalMinutes) min</small>
+                                                }
+                                                else if (timeSincePrevious.TotalHours < 24)
+                                                {
+                                                    <small class="text-muted"><i class="fas fa-clock"></i> @((int)timeSincePrevious.TotalHours) hours</small>
+                                                }
+                                                else
+                                                {
+                                                    <small class="text-muted"><i class="fas fa-clock"></i> @((int)timeSincePrevious.TotalDays) days</small>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <small class="text-muted">-</small>
+                                            }
+                                        </td>
+                                        <td>
+                                            <a asp-page="/Reports/Details" asp-route-id="@report.ReportId" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-eye"></i> View Details
+                                            </a>
+                                        </td>
+                                    </tr>
+
+                                    previousTimestamp = report.CreatedAtUtc;
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <form method="get" class="row g-3 align-items-center">
+                    <div class="col-auto">
+                        <label for="limit" class="form-label"><i class="fas fa-filter"></i> Show:</label>
+                    </div>
+                    <div class="col-auto">
+                        <select name="limit" id="limit" class="form-select" onchange="this.form.submit()">
+                            <option value="10" selected="@(Model.Limit == 10)">Last 10</option>
+                            <option value="25" selected="@(Model.Limit == 25)">Last 25</option>
+                            <option value="50" selected="@(Model.Limit == 50)">Last 50</option>
+                            <option value="100" selected="@(Model.Limit == 100)">Last 100</option>
+                            <option value="200" selected="@(Model.Limit == 200)">Last 200</option>
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <span class="text-muted">reports</span>
+                    </div>
+                </form>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                <h4 class="alert-heading"><i class="fas fa-info-circle"></i> No Reports Found</h4>
+                <p class="mb-0">This device has not sent any reports yet.</p>
+            </div>
+        }
+    }
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+}

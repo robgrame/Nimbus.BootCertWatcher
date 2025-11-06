@@ -57,13 +57,35 @@ namespace SecureBootWatcher.Client.Services
                 Certificates = certificates,
                 Events = recentEvents.ToList(),
                 CreatedAtUtc = DateTimeOffset.UtcNow,
-                ClientVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0",
+                ClientVersion = GetClientVersion(),
                 CorrelationId = Guid.NewGuid().ToString("N")
             };
 
             PopulateAlerts(report);
 
             return report;
+        }
+
+        private static string GetClientVersion()
+        {
+            // Try to get version from AssemblyInformationalVersionAttribute first (GitVersioning)
+            var assembly = Assembly.GetExecutingAssembly();
+            var informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            
+            if (!string.IsNullOrWhiteSpace(informationalVersion))
+            {
+                return informationalVersion;
+            }
+            
+            // Fallback to AssemblyVersion
+            var version = assembly.GetName().Version;
+            if (version != null)
+            {
+                return version.ToString();
+            }
+            
+            // Final fallback
+            return "1.0.0.0";
         }
 
         private DeviceIdentity BuildDeviceIdentity()

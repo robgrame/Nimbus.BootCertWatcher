@@ -16,9 +16,17 @@ public class IndexModel : PageModel
         _logger = logger;
     }
 
-    public IReadOnlyList<ReportSummary> Reports { get; private set; } = Array.Empty<ReportSummary>();
+    public IReadOnlyList<DeviceSummary> Devices { get; private set; } = Array.Empty<DeviceSummary>();
     public bool ApiHealthy { get; private set; }
     public string? ErrorMessage { get; private set; }
+
+    // Statistics
+    public int TotalDevices => Devices.Count;
+    public int ActiveDevices => Devices.Count(d => d.LastSeenUtc > DateTimeOffset.UtcNow.AddHours(-24));
+    public int InactiveDevices => Devices.Count(d => d.LastSeenUtc < DateTimeOffset.UtcNow.AddDays(-7));
+    public int DeployedDevices => Devices.Count(d => d.LatestDeploymentState == "Deployed");
+    public int PendingDevices => Devices.Count(d => d.LatestDeploymentState == "Pending");
+    public int ErrorDevices => Devices.Count(d => d.LatestDeploymentState == "Error");
 
     public async Task OnGetAsync()
     {
@@ -32,7 +40,9 @@ public class IndexModel : PageModel
                 return;
             }
 
-            Reports = await _apiClient.GetRecentReportsAsync(100, HttpContext.RequestAborted);
+            Devices = await _apiClient.GetDevicesAsync(HttpContext.RequestAborted);
+            
+            _logger.LogInformation("Loaded {Count} devices for dashboard", Devices.Count);
         }
         catch (Exception ex)
         {

@@ -8,7 +8,7 @@
 <div class="container-fluid mt-4">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a asp-page="/Index">Dashboard</a></li>
+            <li class="breadcrumb-item"><a asp-page="/Index"><i class="fas fa-home"></i> Dashboard</a></li>
             <li class="breadcrumb-item active" aria-current="page">Report Details</li>
         </ol>
     </nav>
@@ -16,7 +16,7 @@
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
         <div class="alert alert-danger">
-            ?? @Model.ErrorMessage
+            <i class="fas fa-exclamation-triangle"></i> @Model.ErrorMessage
         </div>
     }
 
@@ -25,49 +25,49 @@
         <div class="row mb-4">
             <div class="col">
                 <h1 class="display-5">
-                    ??? @Model.Report.Device.MachineName
+                    <i class="fas fa-desktop text-primary"></i> @Model.Report.Device.MachineName
                 </h1>
                 <p class="text-muted">Report ID: @Model.Report.Id</p>
             </div>
             <div class="col-auto">
-                <a asp-page="/Index" class="btn btn-secondary">? Torna alla Dashboard</a>
+                <a asp-page="/Index" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Torna alla Dashboard</a>
             </div>
         </div>
 
         <!-- Device Information -->
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">?? Informazioni Dispositivo</h5>
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Informazioni Dispositivo</h5>
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
                         <dl class="row">
-                            <dt class="col-sm-4">Machine Name:</dt>
+                            <dt class="col-sm-4"><i class="fas fa-desktop"></i> Machine Name:</dt>
                             <dd class="col-sm-8"><strong>@Model.Report.Device.MachineName</strong></dd>
 
-                            <dt class="col-sm-4">Domain:</dt>
+                            <dt class="col-sm-4"><i class="fas fa-network-wired"></i> Domain:</dt>
                             <dd class="col-sm-8">@(Model.Report.Device.DomainName ?? "N/A")</dd>
 
-                            <dt class="col-sm-4">User Principal:</dt>
+                            <dt class="col-sm-4"><i class="fas fa-user"></i> User Principal:</dt>
                             <dd class="col-sm-8">@(Model.Report.Device.UserPrincipalName ?? "N/A")</dd>
 
-                            <dt class="col-sm-4">Fleet ID:</dt>
+                            <dt class="col-sm-4"><i class="fas fa-layer-group"></i> Fleet ID:</dt>
                             <dd class="col-sm-8">@(Model.Report.Device.FleetId ?? "N/A")</dd>
                         </dl>
                     </div>
                     <div class="col-md-6">
                         <dl class="row">
-                            <dt class="col-sm-4">Manufacturer:</dt>
+                            <dt class="col-sm-4"><i class="fas fa-industry"></i> Manufacturer:</dt>
                             <dd class="col-sm-8">@(Model.Report.Device.Manufacturer ?? "N/A")</dd>
 
-                            <dt class="col-sm-4">Model:</dt>
+                            <dt class="col-sm-4"><i class="fas fa-laptop"></i> Model:</dt>
                             <dd class="col-sm-8">@(Model.Report.Device.Model ?? "N/A")</dd>
 
-                            <dt class="col-sm-4">Firmware:</dt>
+                            <dt class="col-sm-4"><i class="fas fa-microchip"></i> Firmware:</dt>
                             <dd class="col-sm-8">@(Model.Report.Device.FirmwareVersion ?? "N/A")</dd>
 
-                            <dt class="col-sm-4">First Seen:</dt>
+                            <dt class="col-sm-4"><i class="fas fa-calendar-plus"></i> First Seen:</dt>
                             <dd class="col-sm-8">@Model.Report.Device.FirstSeenUtc.ToString("yyyy-MM-dd HH:mm:ss")</dd>
                         </dl>
                     </div>
@@ -78,22 +78,22 @@
         <!-- Report Information -->
         <div class="card mb-4">
             <div class="card-header bg-info text-white">
-                <h5 class="mb-0">?? Informazioni Report</h5>
+                <h5 class="mb-0"><i class="fas fa-file-alt"></i> Informazioni Report</h5>
             </div>
             <div class="card-body">
                 <dl class="row">
-                    <dt class="col-sm-3">Deployment State:</dt>
+                    <dt class="col-sm-3"><i class="fas fa-traffic-light"></i> Deployment State:</dt>
                     <dd class="col-sm-9">
                         @switch (Model.Report.DeploymentState)
                         {
                             case "Deployed":
-                                <span class="badge bg-success">? Deployed</span>
+                                <span class="badge bg-success"><i class="fas fa-check"></i> Deployed</span>
                                 break;
                             case "Pending":
-                                <span class="badge bg-warning text-dark">? Pending</span>
+                                <span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> Pending</span>
                                 break;
                             case "Error":
-                                <span class="badge bg-danger">? Error</span>
+                                <span class="badge bg-danger"><i class="fas fa-times"></i> Error</span>
                                 break;
                             default:
                                 <span class="badge bg-secondary">@(Model.Report.DeploymentState ?? "Unknown")</span>
@@ -101,13 +101,13 @@
                         }
                     </dd>
 
-                    <dt class="col-sm-3">Client Version:</dt>
+                    <dt class="col-sm-3"><i class="fas fa-code-branch"></i> Client Version:</dt>
                     <dd class="col-sm-9">@(Model.Report.ClientVersion ?? "N/A")</dd>
 
-                    <dt class="col-sm-3">Correlation ID:</dt>
+                    <dt class="col-sm-3"><i class="fas fa-fingerprint"></i> Correlation ID:</dt>
                     <dd class="col-sm-9"><code>@(Model.Report.CorrelationId ?? "N/A")</code></dd>
 
-                    <dt class="col-sm-3">Created At (UTC):</dt>
+                    <dt class="col-sm-3"><i class="fas fa-calendar-alt"></i> Created At (UTC):</dt>
                     <dd class="col-sm-9">@Model.Report.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</dd>
                 </dl>
             </div>
@@ -118,14 +118,14 @@
         {
             <div class="card mb-4">
                 <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">?? Alerts</h5>
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Alerts</h5>
                 </div>
                 <div class="card-body">
                     <ul class="list-group list-group-flush">
                         @foreach (var alert in alerts)
                         {
                             <li class="list-group-item">
-                                @alert
+                                <i class="fas fa-bell"></i> @alert
                             </li>
                         }
                     </ul>
@@ -136,7 +136,7 @@
         <!-- Registry State -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0">?? Registry State</h5>
+                <h5 class="mb-0"><i class="fas fa-database"></i> Registry State</h5>
             </div>
             <div class="card-body">
                 <pre class="bg-light p-3 rounded"><code>@Model.GetRegistryStateFormatted()</code></pre>
@@ -148,7 +148,7 @@
         {
             <div class="card mb-4">
                 <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">?? Certificates</h5>
+                    <h5 class="mb-0"><i class="fas fa-certificate"></i> Certificates</h5>
                 </div>
                 <div class="card-body">
                     <pre class="bg-light p-3 rounded" style="max-height: 500px; overflow-y: auto;"><code>@Model.GetCertificatesFormatted()</code></pre>
@@ -161,18 +161,18 @@
         {
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5 class="mb-0">?? Events (@Model.Report.Events.Count)</h5>
+                    <h5 class="mb-0"><i class="fas fa-list-ul"></i> Events (@Model.Report.Events.Count)</h5>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-sm table-striped">
                             <thead>
                                 <tr>
-                                    <th>Timestamp (UTC)</th>
-                                    <th>Provider</th>
-                                    <th>Event ID</th>
-                                    <th>Level</th>
-                                    <th>Message</th>
+                                    <th><i class="fas fa-calendar"></i> Timestamp (UTC)</th>
+                                    <th><i class="fas fa-tag"></i> Provider</th>
+                                    <th><i class="fas fa-hashtag"></i> Event ID</th>
+                                    <th><i class="fas fa-signal"></i> Level</th>
+                                    <th><i class="fas fa-comment"></i> Message</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -186,13 +186,13 @@
                                             @switch (evt.Level)
                                             {
                                                 case "Error":
-                                                    <span class="badge bg-danger">@evt.Level</span>
+                                                    <span class="badge bg-danger"><i class="fas fa-times-circle"></i> @evt.Level</span>
                                                     break;
                                                 case "Warning":
-                                                    <span class="badge bg-warning text-dark">@evt.Level</span>
+                                                    <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> @evt.Level</span>
                                                     break;
                                                 case "Information":
-                                                    <span class="badge bg-info">@evt.Level</span>
+                                                    <span class="badge bg-info"><i class="fas fa-info-circle"></i> @evt.Level</span>
                                                     break;
                                                 default:
                                                     <span class="badge bg-secondary">@(evt.Level ?? "N/A")</span>
