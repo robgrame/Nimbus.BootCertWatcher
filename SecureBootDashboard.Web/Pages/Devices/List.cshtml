@@ -1,0 +1,324 @@
+@page
+@model ListModel
+@{
+    ViewData["Title"] = "Dispositivi Monitorati";
+}
+
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-5">
+                <i class="fas fa-laptop"></i> Dispositivi Monitorati
+            </h1>
+            <p class="lead text-muted">Lista completa dei dispositivi Windows con certificati Secure Boot</p>
+        </div>
+        <div class="col-auto">
+            <a asp-page="/Index" class="btn btn-outline-primary">
+                <i class="fas fa-chart-line"></i> Torna alla Dashboard
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle"></i> @Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (Model.Devices.Any())
+    {
+        <!-- Statistics Cards (Mini) -->
+        <div class="row mb-4">
+            <div class="col-md-2">
+                <div class="card text-center border-primary">
+                    <div class="card-body py-2">
+                        <small class="text-muted d-block">Totale</small>
+                        <h4 class="mb-0">@Model.TotalDevices</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center border-success">
+                    <div class="card-body py-2">
+                        <small class="text-muted d-block">Deployed</small>
+                        <h4 class="mb-0 text-success">@Model.DeployedDevices</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center border-warning">
+                    <div class="card-body py-2">
+                        <small class="text-muted d-block">Pending</small>
+                        <h4 class="mb-0 text-warning">@Model.PendingDevices</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center border-danger">
+                    <div class="card-body py-2">
+                        <small class="text-muted d-block">Error</small>
+                        <h4 class="mb-0 text-danger">@Model.ErrorDevices</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center border-info">
+                    <div class="card-body py-2">
+                        <small class="text-muted d-block">Attivi (24h)</small>
+                        <h4 class="mb-0 text-info">@Model.ActiveDevices</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card text-center border-secondary">
+                    <div class="card-body py-2">
+                        <small class="text-muted d-block">Inattivi (>7d)</small>
+                        <h4 class="mb-0 text-secondary">@Model.InactiveDevices</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-4">
+                        <label for="search" class="form-label">
+                            <i class="fas fa-search"></i> Cerca
+                        </label>
+                        <input type="text" class="form-control" id="search" name="search" 
+                               placeholder="Nome macchina, dominio, produttore..." 
+                               value="@Model.SearchTerm">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="state" class="form-label">
+                            <i class="fas fa-filter"></i> Stato
+                        </label>
+                        <select class="form-select" id="state" name="state">
+                            <option value="">Tutti</option>
+                            <option value="Deployed" selected="@(Model.FilterState == "Deployed")">Deployed</option>
+                            <option value="Pending" selected="@(Model.FilterState == "Pending")">Pending</option>
+                            <option value="Error" selected="@(Model.FilterState == "Error")">Error</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="fleet" class="form-label">
+                            <i class="fas fa-layer-group"></i> Fleet
+                        </label>
+                        <select class="form-select" id="fleet" name="fleet">
+                            <option value="">Tutte</option>
+                            @foreach (var fleetId in Model.AvailableFleets)
+                            {
+                                <option value="@fleetId" selected="@(Model.FilterFleet == fleetId)">@fleetId</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-filter"></i> Applica
+                        </button>
+                        <a asp-page="/Devices/List" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Reset
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Devices Table -->
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-list"></i> 
+                    @Model.FilteredDevices.Count dispositivi
+                    @if (!string.IsNullOrEmpty(Model.SearchTerm) || !string.IsNullOrEmpty(Model.FilterState) || !string.IsNullOrEmpty(Model.FilterFleet))
+                    {
+                        <span class="badge bg-light text-dark ms-2">Filtrato</span>
+                    }
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped">
+                        <thead class="table-light">
+                            <tr>
+                                <th><i class="fas fa-desktop"></i> Machine Name</th>
+                                <th><i class="fas fa-network-wired"></i> Domain</th>
+                                <th><i class="fas fa-layer-group"></i> Fleet</th>
+                                <th><i class="fas fa-industry"></i> Manufacturer / Model</th>
+                                <th><i class="fas fa-file-alt"></i> Reports</th>
+                                <th><i class="fas fa-traffic-light"></i> State</th>
+                                <th><i class="fas fa-clock"></i> Last Seen</th>
+                                <th class="text-end"><i class="fas fa-cog"></i> Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var device in Model.FilteredDevices.OrderByDescending(d => d.LastSeenUtc))
+                            {
+                                var timeSinceLastSeen = DateTimeOffset.UtcNow - device.LastSeenUtc;
+                                var lastSeenText = timeSinceLastSeen.TotalMinutes < 60
+                                    ? $"{(int)timeSinceLastSeen.TotalMinutes} min ago"
+                                    : timeSinceLastSeen.TotalHours < 24
+                                        ? $"{(int)timeSinceLastSeen.TotalHours} hours ago"
+                                        : $"{(int)timeSinceLastSeen.TotalDays} days ago";
+
+                                var isInactive = timeSinceLastSeen.TotalDays > 7;
+                                var rowClass = isInactive ? "table-secondary" : "";
+
+                                <tr class="@rowClass">
+                                    <td>
+                                        <a asp-page="/Devices/Details" asp-route-id="@device.Id" 
+                                           class="text-decoration-none fw-bold machine-name-link" 
+                                           title="View device details">
+                                            @device.MachineName
+                                        </a>
+                                        @if (isInactive)
+                                        {
+                                            <span class="badge bg-secondary ms-2" title="Device inactive for more than 7 days">
+                                                <i class="fas fa-moon"></i> Inactive
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>@(device.DomainName ?? "-")</td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(device.FleetId))
+                                        {
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-tag"></i> @device.FleetId
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            @(device.Manufacturer ?? "Unknown") / @(device.Model ?? "Unknown")
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">@device.ReportCount</span>
+                                    </td>
+                                    <td>
+                                        @switch (device.LatestDeploymentState)
+                                        {
+                                            case "Deployed":
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check"></i> Deployed
+                                                </span>
+                                                break;
+                                            case "Pending":
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="fas fa-clock"></i> Pending
+                                                </span>
+                                                break;
+                                            case "Error":
+                                                <span class="badge bg-danger">
+                                                    <i class="fas fa-times"></i> Error
+                                                </span>
+                                                break;
+                                            default:
+                                                <span class="badge bg-secondary">
+                                                    @(device.LatestDeploymentState ?? "Unknown")
+                                                </span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        <span title="@device.LastSeenUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC">
+                                            @lastSeenText
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a asp-page="/Devices/Details" asp-route-id="@device.Id" 
+                                               class="btn btn-outline-primary" 
+                                               title="View device details">
+                                                <i class="fas fa-info-circle"></i>
+                                            </a>
+                                            <a asp-page="/Devices/Reports" asp-route-id="@device.Id" 
+                                               class="btn btn-outline-secondary" 
+                                               title="View report history">
+                                                <i class="fas fa-history"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+    else if (Model.ApiHealthy)
+    {
+        <div class="alert alert-info">
+            <h4 class="alert-heading"><i class="fas fa-info-circle"></i> Nessun Dispositivo Registrato</h4>
+            <p>Non ci sono dispositivi da visualizzare. I client devono ancora inviare i dati all'API.</p>
+            <hr>
+            <p class="mb-0">
+                <strong>Prossimi passi:</strong>
+            </p>
+            <ol class="mb-0">
+                <li>Configura il client SecureBootWatcher sui dispositivi Windows</li>
+                <li>Verifica che i client possano raggiungere l'API</li>
+                <li>Attendi che i client inviino il primo report</li>
+            </ol>
+        </div>
+    }
+</div>
+
+@section Styles {
+    <style>
+        .table-secondary {
+            opacity: 0.7;
+        }
+
+        .machine-name-link {
+            color: inherit;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .machine-name-link:hover {
+            color: #0d6efd !important;
+            text-decoration: underline !important;
+        }
+
+        /* Mini stat cards */
+        .card-body.py-2 {
+            padding-top: 0.5rem !important;
+            padding-bottom: 0.5rem !important;
+        }
+
+        .card-body.py-2 small {
+            font-size: 0.75rem;
+        }
+
+        .card-body.py-2 h4 {
+            font-size: 1.5rem;
+        }
+
+        /* Filter form */
+        .form-label {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Table styling */
+        .table thead th {
+            border-bottom: 2px solid #dee2e6;
+            font-weight: 600;
+        }
+
+        .btn-group-sm .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+    </style>
+}

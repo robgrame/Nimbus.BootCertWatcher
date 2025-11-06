@@ -6,6 +6,7 @@
     <title>@ViewData["Title"] - Secure Boot Dashboard</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/splash.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/SecureBootDashboard.Web.styles.css" asp-append-version="true" />
     
     @* Font Awesome for icons *@
@@ -40,9 +41,18 @@
             }
         }
     </style>
-<link rel="icon" type="image/png" href="~/lock.png">
+    <link rel="icon" type="image/png" href="~/lock.png">
 </head>
 <body>
+    @* Splash Screen *@
+    <div id="splash-screen" class="splash-screen">
+        <img src="~/images/logo.webp" alt="Secure Boot Dashboard" class="splash-logo">
+        <h1 class="splash-title">Secure Boot Dashboard</h1>
+        <p class="splash-subtitle">Monitoraggio Certificati Secure Boot</p>
+        <div class="splash-loader"></div>
+        <p class="splash-loading-text">Caricamento in corso...</p>
+    </div>
+
     <header>
         <nav class="navbar navbar-expand-sm navbar-dark bg-dark border-bottom box-shadow mb-3">
             <div class="container-fluid">
@@ -58,7 +68,17 @@
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
                             <a class="nav-link text-light" asp-area="" asp-page="/Index">
-                                <i class="fas fa-tachometer-alt"></i> Dashboard
+                                <i class="fas fa-chart-line"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-light" asp-area="" asp-page="/Devices/List">
+                                <i class="fas fa-laptop"></i> Dispositivi
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-light" asp-area="" asp-page="/About">
+                                <i class="fas fa-info-circle"></i> About
                             </a>
                         </li>
                         <li class="nav-item">
@@ -80,7 +100,7 @@
     <footer class="border-top footer text-muted mt-5">
         <div class="container-fluid d-flex align-items-center">
             <div>
-                &copy; 2025 - Secure Boot Dashboard - <a asp-area="" asp-page="/Privacy">Privacy</a>
+                &copy; 2025 - Secure Boot Dashboard - <a asp-area="" asp-page="/Privacy">Privacy</a> | <a asp-area="" asp-page="/About">About</a>
             </div>
             <small class="text-muted ms-auto">
                 <i class="fas fa-heart me-1 text-danger"></i> Made with passion for IT Community
@@ -90,6 +110,7 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/splash.js" asp-append-version="true"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
 
     @await RenderSectionAsync("Scripts", required: false)

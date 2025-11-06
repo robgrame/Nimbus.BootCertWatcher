@@ -1,0 +1,339 @@
+@page
+@model AboutModel
+@{
+    ViewData["Title"] = "About";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            
+            <!-- Header with Logo -->
+            <div class="text-center mb-5">
+                <img src="~/images/logo.webp" alt="Secure Boot Dashboard Logo" style="height: 80px;" class="mb-3">
+                <h1 class="display-4">Secure Boot Dashboard</h1>
+                <p class="lead text-muted">Monitor and govern Secure Boot certificate compliance across your Windows fleet</p>
+                <p class="text-muted">Version <span class="badge bg-primary">@Model.Version</span></p>
+            </div>
+
+            <!-- Overview Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-info-circle"></i> Overview</h4>
+                </div>
+                <div class="card-body">
+                    <p class="lead">
+                        <strong>Secure Boot Certificate Watcher</strong> è una soluzione completa per il monitoraggio 
+                        e la gestione dei certificati Secure Boot su dispositivi Windows enterprise.
+                    </p>
+                    <p>
+                        Il sistema cattura automaticamente lo stato dei certificati dai registri Windows e dagli event log,
+                        centralizzando le informazioni in una dashboard web per analisi, reporting e compliance tracking.
+                    </p>
+                    <hr>
+                    <h5><i class="fas fa-bullseye"></i> Scopo Principale</h5>
+                    <p>
+                        Tracciare il rollout del <strong>UEFI CA 2023 certificate</strong> e identificare dispositivi 
+                        che richiedono intervento prima della scadenza dei certificati legacy.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Architecture Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0"><i class="fas fa-sitemap"></i> Architettura</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="border rounded p-3 h-100">
+                                <h5><i class="fas fa-desktop text-secondary"></i> Client (.NET Framework 4.8)</h5>
+                                <ul class="mb-0">
+                                    <li>Polling registri Secure Boot</li>
+                                    <li>Cattura Windows Event Log</li>
+                                    <li>Invio dati via HTTP/Queue/File</li>
+                                    <li>Esecuzione schedulata (Task Scheduler)</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="border rounded p-3 h-100">
+                                <h5><i class="fas fa-server text-primary"></i> API (ASP.NET Core 8)</h5>
+                                <ul class="mb-0">
+                                    <li>Ingestion endpoint REST</li>
+                                    <li>Azure Queue processor</li>
+                                    <li>EF Core / File storage</li>
+                                    <li>Health checks & monitoring</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="border rounded p-3 h-100">
+                                <h5><i class="fas fa-chart-line text-success"></i> Dashboard (Razor Pages)</h5>
+                                <ul class="mb-0">
+                                    <li>Visualizzazione compliance</li>
+                                    <li>Grafici interattivi (Chart.js)</li>
+                                    <li>Filtri e ricerca dispositivi</li>
+                                    <li>Report history & details</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="border rounded p-3 h-100">
+                                <h5><i class="fas fa-database text-warning"></i> Storage</h5>
+                                <ul class="mb-0">
+                                    <li>SQL Server (Azure SQL / on-prem)</li>
+                                    <li>Azure Queue Storage (optional)</li>
+                                    <li>File-based storage (air-gapped)</li>
+                                    <li>Deduplication automatica</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="fas fa-star"></i> Funzionalità Principali</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-chart-pie text-primary"></i> Dashboard Analytics</h5>
+                            <ul>
+                                <li>Grafici compliance status (pie/doughnut)</li>
+                                <li>Trend temporale (ultimi 7 giorni)</li>
+                                <li>Deployment state distribution</li>
+                                <li>Card statistiche cliccabili</li>
+                            </ul>
+                            
+                            <h5><i class="fas fa-laptop text-info"></i> Device Management</h5>
+                            <ul>
+                                <li>Lista completa dispositivi</li>
+                                <li>Filtri per stato, fleet, manufacturer</li>
+                                <li>Ricerca testuale avanzata</li>
+                                <li>Badge per stati e compliance</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-file-alt text-success"></i> Reporting</h5>
+                            <ul>
+                                <li>Report history per dispositivo</li>
+                                <li>Dettagli registro Secure Boot</li>
+                                <li>Certificate chain visualization</li>
+                                <li>Event log capture</li>
+                            </ul>
+                            
+                            <h5><i class="fas fa-shield-alt text-warning"></i> Security & Compliance</h5>
+                            <ul>
+                                <li>Managed Identity support</li>
+                                <li>Certificate-based auth</li>
+                                <li>TLS/HTTPS enforcement</li>
+                                <li>RBAC & Network isolation</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Technology Stack Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h4 class="mb-0"><i class="fas fa-code"></i> Technology Stack</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h5>Frontend</h5>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success"></i> ASP.NET Core 8 Razor Pages</li>
+                                <li><i class="fas fa-check text-success"></i> Bootstrap 5</li>
+                                <li><i class="fas fa-check text-success"></i> Chart.js 4.4.1</li>
+                                <li><i class="fas fa-check text-success"></i> Font Awesome 6.5</li>
+                                <li><i class="fas fa-check text-success"></i> jQuery 3.x</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <h5>Backend</h5>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success"></i> ASP.NET Core 8 Web API</li>
+                                <li><i class="fas fa-check text-success"></i> Entity Framework Core 8</li>
+                                <li><i class="fas fa-check text-success"></i> Azure SDK for .NET</li>
+                                <li><i class="fas fa-check text-success"></i> Serilog logging</li>
+                                <li><i class="fas fa-check text-success"></i> Polly resilience</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <h5>Client</h5>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success"></i> .NET Framework 4.8</li>
+                                <li><i class="fas fa-check text-success"></i> Windows Registry API</li>
+                                <li><i class="fas fa-check text-success"></i> Event Log API</li>
+                                <li><i class="fas fa-check text-success"></i> Azure Storage SDK</li>
+                                <li><i class="fas fa-check text-success"></i> Task Scheduler</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h5>Infrastructure</h5>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-primary"></i> Azure App Service</li>
+                                <li><i class="fas fa-check text-primary"></i> Azure SQL Database</li>
+                                <li><i class="fas fa-check text-primary"></i> Azure Queue Storage</li>
+                                <li><i class="fas fa-check text-primary"></i> Azure Monitor</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <h5>Development</h5>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-info"></i> Visual Studio 2022</li>
+                                <li><i class="fas fa-check text-info"></i> Git & GitHub</li>
+                                <li><i class="fas fa-check text-info"></i> Nerdbank.GitVersioning</li>
+                                <li><i class="fas fa-check text-info"></i> xUnit testing</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-4">
+                            <h5>Deployment</h5>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-warning"></i> PowerShell scripts</li>
+                                <li><i class="fas fa-check text-warning"></i> Group Policy / Intune</li>
+                                <li><i class="fas fa-check text-warning"></i> Azure CLI</li>
+                                <li><i class="fas fa-check text-warning"></i> EF Migrations</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- License & Credits Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h4 class="mb-0"><i class="fas fa-balance-scale"></i> License & Credits</h4>
+                </div>
+                <div class="card-body">
+                    <h5><i class="fas fa-certificate"></i> License</h5>
+                    <p>
+                        This project is licensed under the <strong>MIT License</strong>.
+                        <br>
+                        <a href="https://github.com/robgrame/Nimbus.BootCertWatcher/blob/main/LICENSE" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
+                            <i class="fas fa-external-link-alt"></i> View License
+                        </a>
+                    </p>
+                    
+                    <hr>
+                    
+                    <h5><i class="fas fa-heart text-danger"></i> Open Source Dependencies</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><strong>Chart.js</strong> - MIT License</li>
+                                <li><strong>Bootstrap</strong> - MIT License</li>
+                                <li><strong>Font Awesome</strong> - SIL OFL 1.1 / MIT</li>
+                                <li><strong>jQuery</strong> - MIT License</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><strong>Serilog</strong> - Apache 2.0</li>
+                                <li><strong>Polly</strong> - BSD 3-Clause</li>
+                                <li><strong>Entity Framework Core</strong> - MIT License</li>
+                                <li><strong>Azure SDK</strong> - MIT License</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h5><i class="fas fa-users"></i> Contributors</h5>
+                    <p>
+                        Developed with <i class="fas fa-heart text-danger"></i> by the IT Community.
+                        <br>
+                        <a href="https://github.com/robgrame/Nimbus.BootCertWatcher/graphs/contributors" target="_blank" class="btn btn-sm btn-outline-secondary mt-2">
+                            <i class="fab fa-github"></i> View Contributors
+                        </a>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Links Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-link"></i> Useful Links</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5><i class="fab fa-github"></i> GitHub Repository</h5>
+                            <p>
+                                <a href="https://github.com/robgrame/Nimbus.BootCertWatcher" target="_blank" class="btn btn-outline-dark">
+                                    <i class="fab fa-github"></i> View on GitHub
+                                </a>
+                            </p>
+                            
+                            <h5><i class="fas fa-bug"></i> Report Issues</h5>
+                            <p>
+                                <a href="https://github.com/robgrame/Nimbus.BootCertWatcher/issues" target="_blank" class="btn btn-outline-danger">
+                                    <i class="fas fa-bug"></i> Report a Bug
+                                </a>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5><i class="fas fa-book"></i> Documentation</h5>
+                            <p>
+                                <a href="https://github.com/robgrame/Nimbus.BootCertWatcher/tree/main/docs" target="_blank" class="btn btn-outline-info">
+                                    <i class="fas fa-book"></i> View Docs
+                                </a>
+                            </p>
+                            
+                            <h5><i class="fas fa-comment"></i> Discussions</h5>
+                            <p>
+                                <a href="https://github.com/robgrame/Nimbus.BootCertWatcher/discussions" target="_blank" class="btn btn-outline-success">
+                                    <i class="fas fa-comments"></i> Join Discussion
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Back to Dashboard -->
+            <div class="text-center mb-5">
+                <a asp-page="/Index" class="btn btn-primary btn-lg">
+                    <i class="fas fa-arrow-left"></i> Torna alla Dashboard
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .card {
+            transition: transform 0.2s ease-in-out;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .list-unstyled li {
+            padding: 0.25rem 0;
+        }
+        
+        h5 {
+            color: #2c3e50;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        h5:first-child {
+            margin-top: 0;
+        }
+    </style>
+}
