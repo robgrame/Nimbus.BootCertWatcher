@@ -9,6 +9,9 @@ namespace SecureBootDashboard.Api.GraphQL.Queries;
 /// </summary>
 public class Query
 {
+    private const int MinLimit = 1;
+    private const int MaxLimit = 200;
+
     /// <summary>
     /// Get all devices with their latest report summary.
     /// </summary>
@@ -129,5 +132,5 @@ public class Query
     /// <summary>
     /// Clamps the limit parameter to valid range (1-200).
     /// </summary>
-    private static int ClampLimit(int limit) => Math.Clamp(limit, 1, 200);
+    private static int ClampLimit(int limit) => Math.Clamp(limit, MinLimit, MaxLimit);
 }
