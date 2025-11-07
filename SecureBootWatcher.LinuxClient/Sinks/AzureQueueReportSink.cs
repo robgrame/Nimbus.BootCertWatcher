@@ -91,7 +91,7 @@ namespace SecureBootWatcher.LinuxClient.Sinks
  return new QueueClient(options.ConnectionString, options.QueueName);
  }
 
-  // Valida che QueueServiceUri sia configurato per autenticazione Entra ID
+  // Validate that QueueServiceUri is configured for Entra ID authentication
              if (options.QueueServiceUri == null)
           {
        _logger.LogError("QueueServiceUri is required for Entra ID authentication.");
@@ -117,7 +117,7 @@ return null;
        return new QueueClient(queueUri, credential);
      }
 
-     // Metodo 3: Certificate-based authentication (PIÙ SICURO - raccomandato per produzione)
+     // Metodo 3: Certificate-based authentication (PIÃ™ SICURO - raccomandato per produzione)
        if (options.AuthenticationMethod.Equals("Certificate", StringComparison.OrdinalIgnoreCase))
       {
                if (string.IsNullOrWhiteSpace(options.TenantId) || string.IsNullOrWhiteSpace(options.ClientId))
@@ -224,7 +224,7 @@ options.CertificateThumbprint, storeLocation, storeName);
        return new QueueClient(queueUri, credential);
      }
 
-   // Metodo 5: DefaultAzureCredential (prova più metodi automaticamente)
+   // Metodo 5: DefaultAzureCredential (prova piÃ¹ metodi automaticamente)
     if (options.AuthenticationMethod.Equals("DefaultAzureCredential", StringComparison.OrdinalIgnoreCase) ||
      string.IsNullOrWhiteSpace(options.AuthenticationMethod))
       {
@@ -232,7 +232,7 @@ options.CertificateThumbprint, storeLocation, storeName);
            
   var credentialOptions = new DefaultAzureCredentialOptions();
        
-    // Se è specificato un ClientId, usa quello per Managed Identity
+    // Se Ã¨ specificato un ClientId, usa quello per Managed Identity
  if (!string.IsNullOrWhiteSpace(options.ClientId))
       {
              credentialOptions.ManagedIdentityClientId = options.ClientId;
