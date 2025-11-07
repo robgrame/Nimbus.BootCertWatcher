@@ -53,7 +53,7 @@ if ($usePrecompiledPackage) {
     
     # Validate package exists
     if (-not (Test-Path $PackageZipPath)) {
-        Write-Host "? Error: Package not found at: $PackageZipPath" -ForegroundColor Red
+        Write-Host "Error: Package not found at: $PackageZipPath" -ForegroundColor Red
         Write-Host ""
         Write-Host "Please specify a valid path to the client package ZIP file." -ForegroundColor Yellow
         Write-Host "Example: .\Deploy-Client.ps1 -PackageZipPath `".\client-package\SecureBootWatcher-Client.zip`" -CreateScheduledTask" -ForegroundColor Cyan
@@ -62,11 +62,11 @@ if ($usePrecompiledPackage) {
     
     # Validate it's a ZIP file
     if (-not ($PackageZipPath -like "*.zip")) {
-        Write-Host "? Error: Package must be a ZIP file" -ForegroundColor Red
+        Write-Host "Error: Package must be a ZIP file" -ForegroundColor Red
         exit 1
     }
     
-    Write-Host "? Package validated" -ForegroundColor Green
+    Write-Host "Package validated" -ForegroundColor Green
     Write-Host ""
     
     # Extract package to temporary directory for configuration
@@ -78,10 +78,10 @@ if ($usePrecompiledPackage) {
     try {
         New-Item -ItemType Directory -Path $tempExtractPath -Force | Out-Null
         Expand-Archive -Path $PackageZipPath -DestinationPath $tempExtractPath -Force
-        Write-Host "  ? Package extracted" -ForegroundColor Green
+        Write-Host "  Package extracted" -ForegroundColor Green
     }
     catch {
-        Write-Host "  ? Extraction failed: $_" -ForegroundColor Red
+        Write-Host "  Extraction failed: $_" -ForegroundColor Red
         exit 1
     }
     Write-Host ""
@@ -115,11 +115,11 @@ if ($usePrecompiledPackage) {
             }
         
             Pop-Location
-            Write-Host "  ? Build successful" -ForegroundColor Green
+            Write-Host "  Build successful" -ForegroundColor Green
             Write-Host "     Output: $publishPath" -ForegroundColor Gray
         }
         catch {
-            Write-Host "  ? Build failed: $_" -ForegroundColor Red
+            Write-Host "  Build failed: $_" -ForegroundColor Red
             exit 1
         }
     } else {
@@ -128,7 +128,7 @@ if ($usePrecompiledPackage) {
         
         # Validate publish directory exists
         if (-not (Test-Path $publishPath)) {
-            Write-Host "? Error: Publish directory not found at: $publishPath" -ForegroundColor Red
+            Write-Host "Error: Publish directory not found at: $publishPath" -ForegroundColor Red
             Write-Host ""
             Write-Host "Options:" -ForegroundColor Yellow
             Write-Host "1. Build first: .\Deploy-Client.ps1 (without -SkipBuild)" -ForegroundColor Cyan
@@ -153,25 +153,25 @@ if (Test-Path $appsettingsPath) {
             if ($appsettings.SecureBootWatcher.Sinks.WebApi) {
                 $appsettings.SecureBootWatcher.Sinks.WebApi.BaseAddress = $ApiBaseUrl
                 $appsettings.SecureBootWatcher.Sinks.EnableWebApi = $true
-                Write-Host "  ? API Base URL: $ApiBaseUrl" -ForegroundColor Green
+                Write-Host "  API Base URL: $ApiBaseUrl" -ForegroundColor Green
             }
         }
         
         # Update Fleet ID if provided
         if (-not [string]::IsNullOrEmpty($FleetId)) {
             $appsettings.SecureBootWatcher.FleetId = $FleetId
-            Write-Host "  ? Fleet ID: $FleetId" -ForegroundColor Green
+            Write-Host "  Fleet ID: $FleetId" -ForegroundColor Green
         }
         
         # Save updated configuration
         $appsettings | ConvertTo-Json -Depth 10 | Set-Content $appsettingsPath -Encoding UTF8
-        Write-Host "  ? Configuration updated" -ForegroundColor Green
+        Write-Host "  Configuration updated" -ForegroundColor Green
     }
     catch {
-        Write-Host "  ??  Warning: Could not update appsettings.json: $_" -ForegroundColor Yellow
+        Write-Host "  Warning: Could not update appsettings.json: $_" -ForegroundColor Yellow
     }
 } else {
-    Write-Host "  ??  Warning: appsettings.json not found in publish directory" -ForegroundColor Yellow
+    Write-Host "  Warning: appsettings.json not found in publish directory" -ForegroundColor Yellow
 }
 Write-Host ""
 
@@ -194,12 +194,12 @@ if (-not $usePrecompiledPackage) {
         Compress-Archive -Path "$publishPath\*" -DestinationPath $packagePath -Force
         
         $packageSize = (Get-Item $packagePath).Length / 1MB
-        Write-Host "  ? Package created" -ForegroundColor Green
+        Write-Host "  Package created" -ForegroundColor Green
         Write-Host "     Path: $packagePath" -ForegroundColor Gray
         Write-Host "     Size: $([math]::Round($packageSize, 2)) MB" -ForegroundColor Gray
     }
     catch {
-        Write-Host "  ? Package creation failed: $_" -ForegroundColor Red
+        Write-Host "  Package creation failed: $_" -ForegroundColor Red
         exit 1
     }
 } else {
@@ -221,7 +221,7 @@ if ($CreateScheduledTask) {
         # Copy files from publish/temp path to install directory
         Copy-Item -Path "$publishPath\*" -Destination $InstallPath -Recurse -Force
         
-        Write-Host "  ? Client installed" -ForegroundColor Green
+        Write-Host "  Client installed" -ForegroundColor Green
         Write-Host "     Location: $InstallPath" -ForegroundColor Gray
         
         # Create scheduled task
@@ -238,7 +238,7 @@ if ($CreateScheduledTask) {
         $existingTask = Get-ScheduledTask -TaskName "SecureBootWatcher" -ErrorAction SilentlyContinue
         
         if ($existingTask) {
-            Write-Host "  ??  Scheduled task already exists, removing..." -ForegroundColor Yellow
+            Write-Host "  Scheduled task already exists, removing..." -ForegroundColor Yellow
             Unregister-ScheduledTask -TaskName "SecureBootWatcher" -Confirm:$false
         }
         
@@ -256,14 +256,14 @@ if ($CreateScheduledTask) {
             -Settings $settings `
             -Description "Monitors Secure Boot certificate status and reports to dashboard" | Out-Null
         
-        Write-Host "  ? Scheduled task created" -ForegroundColor Green
+        Write-Host "  Scheduled task created" -ForegroundColor Green
         Write-Host "     Task Name: SecureBootWatcher" -ForegroundColor Gray
         Write-Host "     Run As: SYSTEM" -ForegroundColor Gray
         Write-Host "     Schedule: Daily at $TaskTime" -ForegroundColor Gray
         Write-Host "     Executable: $exePath" -ForegroundColor Gray
     }
     catch {
-        Write-Host "  ? Installation/Scheduled task failed: $_" -ForegroundColor Red
+        Write-Host "  Installation/Scheduled task failed: $_" -ForegroundColor Red
         exit 1
     }
     finally {
@@ -293,12 +293,12 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 if ($usePrecompiledPackage) {
-    Write-Host "? Deployment from precompiled package completed!" -ForegroundColor Green
+    Write-Host "Deployment from precompiled package completed!" -ForegroundColor Green
     Write-Host ""
     Write-Host "Source Package:" -ForegroundColor White
     Write-Host "  $PackageZipPath" -ForegroundColor Cyan
 } else {
-    Write-Host "? Client package created successfully!" -ForegroundColor Green
+    Write-Host "Client package created successfully!" -ForegroundColor Green
     Write-Host ""
     Write-Host "Package Location:" -ForegroundColor White
     Write-Host "  $packagePath" -ForegroundColor Cyan
