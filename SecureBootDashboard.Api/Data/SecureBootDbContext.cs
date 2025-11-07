@@ -15,6 +15,8 @@ namespace SecureBootDashboard.Api.Data
 
         public DbSet<SecureBootEventEntity> Events => Set<SecureBootEventEntity>();
 
+        public DbSet<AnomalyEntity> Anomalies => Set<AnomalyEntity>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -63,6 +65,23 @@ namespace SecureBootDashboard.Api.Data
                 entity.HasOne(e => e.Report)
                     .WithMany(r => r.Events)
                     .HasForeignKey(e => e.ReportId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<AnomalyEntity>(entity =>
+            {
+                entity.ToTable("Anomalies");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.AnomalyType).HasMaxLength(64).IsRequired();
+                entity.Property(e => e.Description).HasMaxLength(1024).IsRequired();
+                entity.Property(e => e.Status).HasMaxLength(64).IsRequired();
+                entity.Property(e => e.ResolvedBy).HasMaxLength(256);
+                entity.Property(e => e.Metadata).HasColumnType("nvarchar(max)");
+                entity.HasIndex(e => e.DetectedAtUtc);
+                entity.HasIndex(e => e.Status);
+                entity.HasOne(e => e.Device)
+                    .WithMany()
+                    .HasForeignKey(e => e.DeviceId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
         }
