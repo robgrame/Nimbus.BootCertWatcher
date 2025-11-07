@@ -52,9 +52,9 @@ namespace SecureBootWatcher.LinuxClient.Services
                 _logger.LogError(ex, "Failed to access EFI variables due to insufficient permissions. Try running with sudo.");
                 snapshot.DeploymentState = SecureBootDeploymentState.Unknown;
             }
-            catch (Exception ex)
+            catch (IOException ex)
             {
-                _logger.LogError(ex, "Unexpected error while checking EFI variables.");
+                _logger.LogError(ex, "I/O error while checking EFI variables.");
                 snapshot.DeploymentState = SecureBootDeploymentState.Unknown;
             }
 
