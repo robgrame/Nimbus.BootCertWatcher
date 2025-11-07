@@ -223,14 +223,13 @@ namespace SecureBootWatcher.LinuxClient.Sinks
             var orderedSinks = new List<IReportSink>();
 
             // Add sinks in priority order (only if enabled)
-            foreach (var sinkName in priorityOrder)
+            foreach (var sinkName in priorityOrder
+                .Where(sinkName => sinkMap.TryGetValue(sinkName, out var sinkInfo) && sinkInfo.Enabled && sinkInfo.Sink != null))
             {
-                if (sinkMap.TryGetValue(sinkName, out var sinkInfo) && sinkInfo.Enabled && sinkInfo.Sink != null)
-                {
-                    orderedSinks.Add(sinkInfo.Sink);
-                    _logger.LogDebug("Added sink to execution queue: {SinkName} (priority: {Priority})",
-                        sinkName, orderedSinks.Count);
-                }
+                var sinkInfo = sinkMap[sinkName];
+                orderedSinks.Add(sinkInfo.Sink);
+                _logger.LogDebug("Added sink to execution queue: {SinkName} (priority: {Priority})",
+                    sinkName, orderedSinks.Count);
             }
 
             // Add any enabled sinks not in priority list (fallback)
