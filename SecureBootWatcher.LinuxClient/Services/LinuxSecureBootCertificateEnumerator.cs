@@ -326,7 +326,10 @@ namespace SecureBootWatcher.LinuxClient.Services
                         break;
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (
+                !(ex is OutOfMemoryException) &&
+                !(ex is StackOverflowException) &&
+                !(ex is ThreadAbortException))
             {
                 _logger.LogWarning(ex, "Failed to parse EFI signature list for {Database}", databaseName);
             }
