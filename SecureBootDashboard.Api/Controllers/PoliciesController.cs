@@ -172,7 +172,7 @@ namespace SecureBootDashboard.Api.Controllers
             }
         }
 
-        private static CertificateCompliancePolicy MapToModel(PolicyEntity entity)
+        private CertificateCompliancePolicy MapToModel(PolicyEntity entity)
         {
             var rules = new List<PolicyRule>();
             if (!string.IsNullOrEmpty(entity.RulesJson))
@@ -184,7 +184,8 @@ namespace SecureBootDashboard.Api.Controllers
                 catch (JsonException ex)
                 {
                     // Log deserialization failure but continue with empty rules
-                    System.Diagnostics.Debug.WriteLine($"Failed to deserialize rules for policy '{entity.Name}' (ID: {entity.Id}): {ex.Message}");
+                    _logger.LogWarning(ex, "Failed to deserialize rules for policy '{PolicyName}' (ID: {PolicyId})", 
+                        entity.Name, entity.Id);
                 }
             }
 

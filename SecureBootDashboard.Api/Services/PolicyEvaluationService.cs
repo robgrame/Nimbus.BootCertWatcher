@@ -210,11 +210,10 @@ namespace SecureBootDashboard.Api.Services
                                     $"Certificate subject '{cert.Subject}' does not match required pattern: {rule.Value}");
                             }
                         }
-                        catch (ArgumentException ex)
+                        catch (ArgumentException)
                         {
-                            // Invalid regex pattern - log and skip this rule
-                            // Note: In production, consider logging this with a proper logger
-                            System.Diagnostics.Debug.WriteLine($"Invalid regex pattern '{rule.Value}' in policy '{policy.Name}': {ex.Message}");
+                            // Invalid regex pattern - skip this rule
+                            // Note: Policy validation should catch this at creation time
                         }
                     }
                     break;
