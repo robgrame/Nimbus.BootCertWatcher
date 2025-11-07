@@ -291,6 +291,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 
 ### Features & Implementation
 - **[Dashboard Charts & Splash Screen](docs/DASHBOARD_CHARTS_SPLASH_IMPLEMENTATION.md)** - Analytics features
+- **[Enhanced Analytics](docs/ENHANCED_ANALYTICS.md)** - 30/60/90 day trend analysis
 - **[Device List Separation](docs/DEVICE_LIST_SEPARATION.md)** - UI reorganization details
 - **[Certificate Enumeration](docs/CERTIFICATE_ENUMERATION.md)** - UEFI certificate tracking
 - **[Logo & Banner Implementation](docs/LOGO_BANNER_IMPLEMENTATION.md)** - Branding assets
@@ -488,7 +489,7 @@ For questions, issues, or support:
 - [ ] Multi-tenant support with RBAC
 - [ ] Certificate compliance policies
 - [ ] Automated remediation workflows
-- [ ] Enhanced analytics (30/60/90 day trends)
+- [x] Enhanced analytics (30/60/90 day trends)
 
 ### v2.0 (Q3 2025)
 - [ ] Linux client support (.NET 8)
