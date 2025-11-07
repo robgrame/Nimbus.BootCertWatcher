@@ -104,6 +104,118 @@
             </div>
         </div>
 
+        @* Compliance Status Card *@
+        @if (Model.ComplianceStatus != null)
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Certificate Compliance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                @switch (Model.ComplianceStatus.Status)
+                                {
+                                    case SecureBootWatcher.Shared.Models.ComplianceStatus.Compliant:
+                                        <i class="fas fa-check-circle fa-4x text-success mb-2"></i>
+                                        <h5 class="text-success">Compliant</h5>
+                                        <p class="text-muted">All policies passed</p>
+                                        break;
+                                    case SecureBootWatcher.Shared.Models.ComplianceStatus.Warning:
+                                        <i class="fas fa-exclamation-triangle fa-4x text-warning mb-2"></i>
+                                        <h5 class="text-warning">Warning</h5>
+                                        <p class="text-muted">@Model.ComplianceStatus.Violations.Count warning(s)</p>
+                                        break;
+                                    case SecureBootWatcher.Shared.Models.ComplianceStatus.NonCompliant:
+                                        <i class="fas fa-times-circle fa-4x text-danger mb-2"></i>
+                                        <h5 class="text-danger">Non-Compliant</h5>
+                                        <p class="text-muted">@Model.ComplianceStatus.Violations.Count violation(s)</p>
+                                        break;
+                                    default:
+                                        <i class="fas fa-question-circle fa-4x text-secondary mb-2"></i>
+                                        <h5 class="text-secondary">Unknown</h5>
+                                        <p class="text-muted">Cannot determine status</p>
+                                        break;
+                                }
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            @if (Model.ComplianceStatus.Violations.Any())
+                            {
+                                <h6 class="mb-3">Policy Violations</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Severity</th>
+                                                <th>Policy</th>
+                                                <th>Message</th>
+                                                <th>Certificate</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var violation in Model.ComplianceStatus.Violations)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        @switch (violation.Rule.Severity)
+                                                        {
+                                                            case SecureBootWatcher.Shared.Models.PolicySeverity.Critical:
+                                                                <span class="badge bg-danger">Critical</span>
+                                                                break;
+                                                            case SecureBootWatcher.Shared.Models.PolicySeverity.Warning:
+                                                                <span class="badge bg-warning">Warning</span>
+                                                                break;
+                                                            default:
+                                                                <span class="badge bg-info">Info</span>
+                                                                break;
+                                                        }
+                                                    </td>
+                                                    <td>@violation.PolicyName</td>
+                                                    <td>@violation.Message</td>
+                                                    <td>
+                                                        @if (!string.IsNullOrEmpty(violation.CertificateThumbprint))
+                                                        {
+                                                            <small class="text-muted">
+                                                                <code>@violation.CertificateThumbprint.Substring(0, Math.Min(12, violation.CertificateThumbprint.Length))...</code>
+                                                                @if (!string.IsNullOrEmpty(violation.Database))
+                                                                {
+                                                                    <span class="badge bg-secondary">@violation.Database</span>
+                                                                }
+                                                            </small>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">-</span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-success mb-0">
+                                    <i class="fas fa-check-circle"></i> This device meets all certificate compliance requirements.
+                                </div>
+                            }
+                            <div class="mt-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-clock"></i> Evaluated: @Model.ComplianceStatus.EvaluatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC
+                                </small>
+                                <a asp-page="/Policies/List" class="btn btn-sm btn-outline-primary float-end">
+                                    <i class="fas fa-shield-alt"></i> Manage Policies
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
         <!-- Timeline Card -->
         <div class="card mb-4">
             <div class="card-header">
