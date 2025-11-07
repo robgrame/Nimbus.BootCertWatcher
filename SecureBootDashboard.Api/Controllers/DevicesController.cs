@@ -55,7 +55,8 @@ namespace SecureBootDashboard.Api.Controllers
                     d.LastSeenUtc,
                     d.Reports.Count,
                     latestReport?.DeploymentState,
-                    latestReport?.CreatedAtUtc);
+                    latestReport?.CreatedAtUtc,
+                    d.UEFISecureBootEnabled);
             }).ToArray();
         }
 
@@ -89,7 +90,8 @@ namespace SecureBootDashboard.Api.Controllers
                         d.Model,
                         d.Reports.Count,
                         latestReport?.DeploymentState,
-                        d.LastSeenUtc
+                        d.LastSeenUtc,
+                        d.UEFISecureBootEnabled
                     );
                 }).ToList();
 
@@ -136,7 +138,8 @@ namespace SecureBootDashboard.Api.Controllers
                         d.Model,
                         d.Reports.Count,
                         latestReport?.DeploymentState,
-                        d.LastSeenUtc
+                        d.LastSeenUtc,
+                        d.UEFISecureBootEnabled
                     );
                 }).ToList();
 
@@ -323,7 +326,8 @@ namespace SecureBootDashboard.Api.Controllers
             DateTimeOffset LastSeenUtc,
             int ReportCount,
             string? LatestDeploymentState,
-            DateTimeOffset? LatestReportDate);
+            DateTimeOffset? LatestReportDate,
+            bool? UEFISecureBootEnabled);
 
         public sealed record DeviceDetailResponse(
             Guid Id,

@@ -150,6 +150,7 @@
                                 <th><i class="fas fa-network-wired"></i> Domain</th>
                                 <th><i class="fas fa-layer-group"></i> Fleet</th>
                                 <th><i class="fas fa-industry"></i> Manufacturer / Model</th>
+                                <th><i class="fas fa-shield-alt"></i> Secure Boot</th>
                                 <th><i class="fas fa-file-alt"></i> Reports</th>
                                 <th><i class="fas fa-traffic-light"></i> State</th>
                                 <th><i class="fas fa-clock"></i> Last Seen</th>
@@ -200,6 +201,29 @@
                                         <small class="text-muted">
                                             @(device.Manufacturer ?? "Unknown") / @(device.Model ?? "Unknown")
                                         </small>
+                                    </td>
+                                    <td>
+                                        @if (device.UEFISecureBootEnabled.HasValue)
+                                        {
+                                            if (device.UEFISecureBootEnabled.Value)
+                                            {
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check-circle"></i> Enabled
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger">
+                                                    <i class="fas fa-times-circle"></i> Disabled
+                                                </span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-question-circle"></i> Unknown
+                                            </span>
+                                        }
                                     </td>
                                     <td>
                                         <span class="badge bg-secondary">@device.ReportCount</span>
