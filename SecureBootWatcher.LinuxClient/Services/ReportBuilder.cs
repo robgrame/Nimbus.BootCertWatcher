@@ -45,9 +45,17 @@ namespace SecureBootWatcher.LinuxClient.Services
             {
                 certificates = await _certificateEnumerator.EnumerateAsync(cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (IOException ex)
             {
-                _logger.LogWarning(ex, "Failed to enumerate Secure Boot certificates. Report will continue without certificate details.");
+                _logger.LogWarning(ex, "Failed to enumerate Secure Boot certificates due to an IO error. Report will continue without certificate details.");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Failed to enumerate Secure Boot certificates due to insufficient permissions. Report will continue without certificate details.");
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Failed to enumerate Secure Boot certificates due to an invalid operation. Report will continue without certificate details.");
             }
 
             var report = new SecureBootStatusReport
