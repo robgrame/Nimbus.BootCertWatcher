@@ -51,6 +51,28 @@ try
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
 
+    // Add CORS for SignalR (allow Web frontend to connect)
+    Log.Information("Configuring CORS...");
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("AllowWebApp", policy =>
+        {
+            // Get web app URL from configuration or use default
+            var webAppUrl = builder.Configuration.GetValue<string>("WebAppUrl") ?? "https://localhost:7001";
+            var alternativeUrls = builder.Configuration.GetSection("AlternativeWebUrls").Get<string[]>() ?? Array.Empty<string>();
+            
+            var allowedOrigins = new List<string> { webAppUrl };
+            allowedOrigins.AddRange(alternativeUrls);
+            
+            policy.WithOrigins(allowedOrigins.ToArray())
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials(); // Required for SignalR
+            
+            Log.Information("CORS configured for origins: {Origins}", string.Join(", ", allowedOrigins));
+        });
+    });
+
     // Add SignalR for real-time updates
     Log.Information("Configuring SignalR...");
     builder.Services.AddSignalR(options =>
@@ -154,6 +176,10 @@ try
     }
 
     app.UseHttpsRedirection();
+
+    // Enable CORS before routing
+    app.UseCors("AllowWebApp");
+    Log.Information("CORS middleware enabled");
 
     app.MapControllers();
     app.MapHealthChecks("/health");
