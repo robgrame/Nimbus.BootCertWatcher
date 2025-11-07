@@ -121,6 +121,12 @@ try
     builder.Services.Configure<QueueProcessorOptions>(queueConfig);
     builder.Services.AddHostedService<QueueProcessorService>();
 
+    // Configure Anomaly Detection
+    Log.Information("Configuring Anomaly Detection...");
+    builder.Services.AddScoped<IAnomalyDetectionService, AnomalyDetectionService>();
+    builder.Services.AddHostedService<AnomalyDetectionBackgroundService>();
+    Log.Information("Anomaly Detection enabled");
+
     Log.Information("Building WebApplication...");
     var app = builder.Build();
 

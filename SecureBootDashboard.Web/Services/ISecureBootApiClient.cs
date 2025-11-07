@@ -1,3 +1,4 @@
+using SecureBootWatcher.Shared.Models;
 using SecureBootWatcher.Shared.Storage;
 
 namespace SecureBootDashboard.Web.Services;
@@ -12,6 +13,12 @@ public interface ISecureBootApiClient
     Task<IReadOnlyList<DeviceSummary>> GetDevicesAsync(CancellationToken cancellationToken = default);
     Task<DeviceDetail?> GetDeviceAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ReportHistoryItem>> GetDeviceReportsAsync(Guid deviceId, int limit = 50, CancellationToken cancellationToken = default);
+    
+    // Anomaly detection methods
+    Task<IReadOnlyList<AnomalyDetectionResult>> GetActiveAnomaliesAsync(CancellationToken cancellationToken = default);
+    Task<AnomalyDetectionResult?> GetAnomalyAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AnomalyDetectionResult>> TriggerAnomalyScanAsync(CancellationToken cancellationToken = default);
+    Task ResolveAnomalyAsync(Guid id, string resolvedBy, CancellationToken cancellationToken = default);
 }
 
 // DTOs for device endpoints

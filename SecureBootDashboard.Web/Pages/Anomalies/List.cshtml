@@ -1,0 +1,197 @@
+@page
+@model SecureBootDashboard.Web.Pages.Anomalies.ListModel
+@{
+    ViewData["Title"] = "Anomaly Detection";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">
+            <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+            Anomaly Detection
+        </h1>
+        <div>
+            <button class="btn btn-primary" onclick="triggerScan()">
+                <i class="fas fa-search me-1"></i>
+                Run Scan
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            @Model.ErrorMessage
+        </div>
+    }
+
+    @if (Model.ScanTriggered)
+    {
+        <div class="alert alert-success" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            Anomaly scan completed. Found @Model.Anomalies.Count anomalies.
+        </div>
+    }
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body">
+                    <h5 class="card-title text-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Active Anomalies
+                    </h5>
+                    <h2 class="mb-0">@Model.Anomalies.Count</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-danger">
+                <div class="card-body">
+                    <h5 class="card-title text-danger">
+                        <i class="fas fa-fire me-2"></i>
+                        High Severity
+                    </h5>
+                    <h2 class="mb-0">@Model.HighSeverityCount</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body">
+                    <h5 class="card-title text-warning">
+                        <i class="fas fa-exclamation me-2"></i>
+                        Medium Severity
+                    </h5>
+                    <h2 class="mb-0">@Model.MediumSeverityCount</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body">
+                    <h5 class="card-title text-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Low Severity
+                    </h5>
+                    <h2 class="mb-0">@Model.LowSeverityCount</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anomalies Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-list me-2"></i>
+                Active Anomalies
+            </h5>
+        </div>
+        <div class="card-body">
+            @if (Model.Anomalies.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
+                    <h4>No Active Anomalies</h4>
+                    <p class="text-muted">All systems are operating normally.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Severity</th>
+                                <th>Type</th>
+                                <th>Device</th>
+                                <th>Description</th>
+                                <th>Detected</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var anomaly in Model.Anomalies)
+                            {
+                                <tr>
+                                    <td>
+                                        @if (anomaly.Severity >= 0.7)
+                                        {
+                                            <span class="badge bg-danger">High</span>
+                                        }
+                                        else if (anomaly.Severity >= 0.4)
+                                        {
+                                            <span class="badge bg-warning text-dark">Medium</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-info">Low</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">@anomaly.Type</span>
+                                    </td>
+                                    <td>
+                                        <a asp-page="/Devices/Details" asp-route-id="@anomaly.DeviceId">
+                                            @anomaly.DeviceName
+                                        </a>
+                                    </td>
+                                    <td>@anomaly.Description</td>
+                                    <td>
+                                        <small class="text-muted">
+                                            @anomaly.DetectedAtUtc.ToString("yyyy-MM-dd HH:mm")
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <form method="post" asp-page-handler="Resolve" class="d-inline">
+                                            <input type="hidden" name="anomalyId" value="@anomaly.Id" />
+                                            <button type="submit" class="btn btn-sm btn-success">
+                                                <i class="fas fa-check me-1"></i>
+                                                Resolve
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Information Panel -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-info-circle me-2"></i>
+                About Anomaly Detection
+            </h5>
+        </div>
+        <div class="card-body">
+            <h6>Anomaly Types Detected:</h6>
+            <ul>
+                <li><strong>Device Behavior:</strong> Devices that have stopped reporting or show unusual patterns</li>
+                <li><strong>Reporting Frequency:</strong> Devices reporting too frequently or infrequently compared to the fleet average</li>
+                <li><strong>Deployment State:</strong> Devices stuck in Pending or Error states for multiple reports</li>
+                <li><strong>Certificate Change:</strong> Unexpected changes in certificate configurations</li>
+            </ul>
+            <p class="mb-0 text-muted">
+                <i class="fas fa-robot me-1"></i>
+                Anomalies are detected using statistical analysis with a 2.5 standard deviation threshold. 
+                The background service runs hourly to identify new anomalies automatically.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+    function triggerScan() {
+        if (confirm('This will trigger a manual anomaly detection scan. Continue?')) {
+            window.location.href = '@Url.Page("/Anomalies/List", new { handler = "TriggerScan" })';
+        }
+    }
+</script>
