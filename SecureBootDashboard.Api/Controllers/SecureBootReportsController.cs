@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using SecureBootDashboard.Api.Hubs;
 using SecureBootWatcher.Shared.Models;
 using SecureBootWatcher.Shared.Storage;
 using SecureBootWatcher.Shared.Validation;
@@ -15,11 +17,16 @@ namespace SecureBootDashboard.Api.Controllers
     public sealed class SecureBootReportsController : ControllerBase
     {
         private readonly IReportStore _reportStore;
+        private readonly IHubContext<DashboardHub> _hubContext;
         private readonly ILogger<SecureBootReportsController> _logger;
 
-        public SecureBootReportsController(IReportStore reportStore, ILogger<SecureBootReportsController> logger)
+        public SecureBootReportsController(
+            IReportStore reportStore,
+            IHubContext<DashboardHub> hubContext,
+            ILogger<SecureBootReportsController> logger)
         {
             _reportStore = reportStore;
+            _hubContext = hubContext;
             _logger = logger;
         }
 
@@ -42,6 +49,28 @@ namespace SecureBootDashboard.Api.Controllers
                 
                 _logger.LogInformation("Successfully ingested report {ReportId} for device {MachineName}", 
                     id, report.Device.MachineName);
+                
+                // Broadcast new report notification via SignalR
+                try
+                {
+                    // Generate a consistent device identifier from machine name using MD5 hash
+                    var hashBytes = System.Security.Cryptography.MD5.HashData(
+                        System.Text.Encoding.UTF8.GetBytes(report.Device.MachineName.ToLowerInvariant()));
+                    var deviceIdentifier = new Guid(hashBytes);
+                    
+                    await _hubContext.BroadcastNewReport(
+                        deviceIdentifier,
+                        id,
+                        report.Device.MachineName);
+                    
+                    _logger.LogDebug("Broadcasted new report notification via SignalR for device {MachineName}", 
+                        report.Device.MachineName);
+                }
+                catch (Exception signalREx)
+                {
+                    // Log but don't fail the request if SignalR broadcast fails
+                    _logger.LogWarning(signalREx, "Failed to broadcast SignalR notification for report {ReportId}", id);
+                }
                 
                 // Usa CreatedAtRoute invece di CreatedAtAction per evitare problemi di routing
                 return CreatedAtRoute("GetReport", new { id }, new { id });

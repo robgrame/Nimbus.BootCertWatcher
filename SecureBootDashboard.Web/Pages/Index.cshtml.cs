@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Options;
 using SecureBootDashboard.Web.Services;
 using SecureBootWatcher.Shared.Storage;
 
@@ -11,11 +12,16 @@ public class IndexModel : PageModel
 {
     private readonly ISecureBootApiClient _apiClient;
     private readonly ILogger<IndexModel> _logger;
+    private readonly ApiSettings _apiSettings;
 
-    public IndexModel(ISecureBootApiClient apiClient, ILogger<IndexModel> logger)
+    public IndexModel(
+        ISecureBootApiClient apiClient, 
+        ILogger<IndexModel> logger,
+        IOptions<ApiSettings> apiSettings)
     {
         _apiClient = apiClient;
         _logger = logger;
+        _apiSettings = apiSettings.Value;
     }
 
     public IReadOnlyList<DeviceSummary> Devices { get; private set; } = Array.Empty<DeviceSummary>();
@@ -40,6 +46,9 @@ public class IndexModel : PageModel
 
     public async Task OnGetAsync()
     {
+        // Set API base URL for SignalR connection
+        ViewData["ApiBaseUrl"] = _apiSettings.BaseUrl;
+        
         try
         {
             ApiHealthy = await _apiClient.IsHealthyAsync(HttpContext.RequestAborted);

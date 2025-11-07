@@ -3,10 +3,12 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="api-base-url" content="@(ViewData["ApiBaseUrl"] ?? "https://localhost:5001")" />
     <title>@ViewData["Title"] - Secure Boot Dashboard</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/splash.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/signalr.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/SecureBootDashboard.Web.styles.css" asp-append-version="true" />
     
     @* Font Awesome for icons *@
@@ -52,6 +54,9 @@
         <div class="splash-loader"></div>
         <p class="splash-loading-text">Caricamento in corso...</p>
     </div>
+
+    @* SignalR Connection Status Indicator *@
+    <div id="signalr-status-indicator" class="signalr-status-indicator" title="Real-time updates: Connecting..."></div>
 
     <header>
         <nav class="navbar navbar-expand-sm navbar-dark bg-dark border-bottom box-shadow mb-3">
@@ -123,6 +128,16 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    
+    @* SignalR Client Library *@
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js" 
+            integrity="sha512-LOvIJF8/PwXbBSIFB7oCRMPDr6Xfo3CaBJZGsYR0LyKWU1nJzTLzkDRXy5Rbl8wfLKy8HnvlL0L+pbJ4/V2iZA==" 
+            crossorigin="anonymous" 
+            referrerpolicy="no-referrer"></script>
+    
+    @* SignalR Dashboard Client *@
+    <script src="~/js/dashboard-realtime.js" asp-append-version="true"></script>
+    
     <script src="~/js/splash.js" asp-append-version="true"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
 

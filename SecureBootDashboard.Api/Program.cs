@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SecureBootDashboard.Api.Configuration;
 using SecureBootDashboard.Api.Data;
+using SecureBootDashboard.Api.Hubs;
 using SecureBootDashboard.Api.Services;
 using SecureBootDashboard.Api.Storage;
 using SecureBootWatcher.Shared.Storage;
@@ -49,6 +50,16 @@ try
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
+
+    // Add SignalR for real-time updates
+    Log.Information("Configuring SignalR...");
+    builder.Services.AddSignalR(options =>
+    {
+        options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+        options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+        options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+    });
+    Log.Information("SignalR configured successfully");
 
     // Log connection string (masked)
     var connectionString = builder.Configuration.GetConnectionString("SqlServer");
@@ -101,6 +112,10 @@ try
         }
     });
 
+    // Configure Export Service
+    Log.Information("Configuring Export Service...");
+    builder.Services.AddScoped<IExportService, ExportService>();
+
     // Configure Azure Queue Processor
     Log.Information("Configuring Queue Processor...");
     var queueConfig = builder.Configuration.GetSection("QueueProcessor");
@@ -142,6 +157,10 @@ try
 
     app.MapControllers();
     app.MapHealthChecks("/health");
+    
+    // Map SignalR hub
+    app.MapHub<DashboardHub>("/dashboardHub");
+    Log.Information("SignalR DashboardHub mapped at: /dashboardHub");
 
     Log.Information("========================================");
     Log.Information("SecureBootDashboard.Api started successfully");
