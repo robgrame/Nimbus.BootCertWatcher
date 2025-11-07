@@ -1,0 +1,102 @@
+@page
+@model SecureBootDashboard.Web.Pages.Workflows.ListModel
+@{
+    ViewData["Title"] = "Remediation Workflows";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h2><i class="fas fa-project-diagram me-2"></i>Remediation Workflows</h2>
+            <p class="text-muted">Automate responses to device conditions and alerts</p>
+        </div>
+        <div class="col-auto">
+            <a asp-page="./Create" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Create Workflow
+            </a>
+        </div>
+    </div>
+
+    @if (!Model.Workflows.Any())
+    {
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            No workflows configured yet. Create your first workflow to start automating remediation actions.
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var workflow in Model.Workflows)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@workflow.Name</strong>
+                                    </td>
+                                    <td>@workflow.Description</td>
+                                    <td>
+                                        <span class="badge bg-secondary">@workflow.Priority</span>
+                                    </td>
+                                    <td>
+                                        @if (workflow.IsEnabled)
+                                        {
+                                            <span class="badge bg-success">Enabled</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Disabled</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">@workflow.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm")</small>
+                                    </td>
+                                    <td>
+                                        <a asp-page="./Details" asp-route-id="@workflow.Id" class="btn btn-sm btn-outline-primary" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a asp-page="./Edit" asp-route-id="@workflow.Id" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                onclick="confirmDelete('@workflow.Id', '@workflow.Name')" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<form method="post" asp-page-handler="Delete" id="deleteForm" style="display:none;">
+    <input type="hidden" name="id" id="deleteId" />
+</form>
+
+@section Scripts {
+    <script>
+        function confirmDelete(id, name) {
+            if (confirm(`Are you sure you want to delete workflow "${name}"?`)) {
+                document.getElementById('deleteId').value = id;
+                document.getElementById('deleteForm').submit();
+            }
+        }
+    </script>
+}

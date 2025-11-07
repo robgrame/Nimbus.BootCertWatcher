@@ -68,6 +68,18 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = UGFnZXMvV2VsY29tZS5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
+[/home/runner/work/Nimbus.BootCertWatcher/Nimbus.BootCertWatcher/SecureBootDashboard.Web/Pages/Workflows/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvV29ya2Zsb3dzL0NyZWF0ZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[/home/runner/work/Nimbus.BootCertWatcher/Nimbus.BootCertWatcher/SecureBootDashboard.Web/Pages/Workflows/Details.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvV29ya2Zsb3dzL0RldGFpbHMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[/home/runner/work/Nimbus.BootCertWatcher/Nimbus.BootCertWatcher/SecureBootDashboard.Web/Pages/Workflows/List.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvV29ya2Zsb3dzL0xpc3QuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [/home/runner/work/Nimbus.BootCertWatcher/Nimbus.BootCertWatcher/SecureBootDashboard.Web/Pages/_ViewImports.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXMvX1ZpZXdJbXBvcnRzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
