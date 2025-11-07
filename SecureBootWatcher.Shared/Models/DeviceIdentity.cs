@@ -19,6 +19,7 @@ namespace SecureBootWatcher.Shared.Models
         public string? Model { get; set; }
 
         public string? FirmwareVersion { get; set; }
+        public DateTime? FirmwareReleaseDate { get; set; }
 
         public IDictionary<string, string> Tags { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     }

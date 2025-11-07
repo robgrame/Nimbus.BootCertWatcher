@@ -12,6 +12,8 @@ namespace SecureBootWatcher.Shared.Models
 
         public SecureBootRegistrySnapshot Registry { get; set; } = new SecureBootRegistrySnapshot();
 
+        public SecureBootDeviceAttributesRegistrySnapshot? DeviceAttributes { get; set; } // Added property
+
         public SecureBootCertificateCollection? Certificates { get; set; }
 
         public IList<SecureBootEventRecord> Events { get; set; } = new List<SecureBootEventRecord>();

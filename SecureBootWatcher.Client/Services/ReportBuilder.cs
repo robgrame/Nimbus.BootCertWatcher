@@ -37,8 +37,9 @@ namespace SecureBootWatcher.Client.Services
         public async Task<SecureBootStatusReport> BuildAsync(CancellationToken cancellationToken)
         {
             var registrySnapshot = await _registrySnapshotProvider.CaptureAsync(cancellationToken).ConfigureAwait(false);
+            var deviceAttributesSnapshot = await _registrySnapshotProvider.CaptureDeviceAttributesAsync(cancellationToken).ConfigureAwait(false);
             var recentEvents = await _eventLogReader.ReadRecentEventsAsync(cancellationToken).ConfigureAwait(false);
- 
+
             // Enumerate certificates
             SecureBootCertificateCollection? certificates = null;
             try
@@ -54,6 +55,7 @@ namespace SecureBootWatcher.Client.Services
             {
                 Device = BuildDeviceIdentity(),
                 Registry = registrySnapshot,
+                DeviceAttributes = deviceAttributesSnapshot, // Include device attributes snapshot
                 Certificates = certificates,
                 Events = recentEvents.ToList(),
                 CreatedAtUtc = DateTimeOffset.UtcNow,
@@ -123,6 +125,7 @@ namespace SecureBootWatcher.Client.Services
                 foreach (var bios in biosSearcher.Get())
                 {
                     identity.FirmwareVersion = bios["SMBIOSBIOSVersion"]?.ToString();
+                    identity.FirmwareReleaseDate = ManagementDateTimeConverter.ToDateTime(bios["ReleaseDate"]?.ToString() ?? string.Empty);
                     break;
                 }
             }
@@ -136,12 +139,12 @@ namespace SecureBootWatcher.Client.Services
         {
             var alerts = new List<string>();
 
-            if (report.Registry.DeploymentState == SecureBootDeploymentState.Error)
+            if (report.Registry.UefiCa2023Status == SecureBootDeploymentState.Error)
             {
-                alerts.Add($"Secure Boot update reported error code {report.Registry.UefiCa2023ErrorCode ?? 0}.");
+                alerts.Add("Secure Boot update reported an error."); // Adjusted message
             }
 
-            if (report.Registry.DeploymentState == SecureBootDeploymentState.NotStarted)
+            if (report.Registry.UefiCa2023Status == SecureBootDeploymentState.NotStarted)
             {
                 alerts.Add("Secure Boot certificate update has not started on this device.");
             }
@@ -156,7 +159,7 @@ namespace SecureBootWatcher.Client.Services
                 alerts.Add("Device is opted in to Microsoft managed deployment (CFR).");
             }
 
-            if (report.Events.Count == 0 && report.Registry.DeploymentState != SecureBootDeploymentState.Updated)
+            if (report.Events.Count == 0 && report.Registry.UefiCa2023Status != SecureBootDeploymentState.Updated)
             {
                 alerts.Add("No Secure Boot events detected within the lookback window.");
             }

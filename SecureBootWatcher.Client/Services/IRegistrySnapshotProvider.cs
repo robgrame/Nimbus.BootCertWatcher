@@ -7,5 +7,7 @@ namespace SecureBootWatcher.Client.Services
     internal interface IRegistrySnapshotProvider
     {
         Task<SecureBootRegistrySnapshot> CaptureAsync(CancellationToken cancellationToken);
+
+        Task<SecureBootDeviceAttributesRegistrySnapshot> CaptureDeviceAttributesAsync(CancellationToken cancellationToken); // Added method
     }
 }

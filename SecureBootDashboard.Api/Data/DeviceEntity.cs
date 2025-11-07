@@ -17,11 +17,13 @@ namespace SecureBootDashboard.Api.Data
 
         public string? Model { get; set; }
 
-    public string? FirmwareVersion { get; set; }
+        public string? FirmwareVersion { get; set; }
 
-    public string? FleetId { get; set; }
+        public DateTime? FirmwareReleaseDate { get; set; } // Added property
 
-    public string? TagsJson { get; set; }
+        public string? FleetId { get; set; }
+
+        public string? TagsJson { get; set; }
 
         public DateTimeOffset CreatedAtUtc { get; set; }
 

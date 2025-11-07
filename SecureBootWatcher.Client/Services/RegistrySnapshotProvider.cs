@@ -27,7 +27,7 @@ namespace SecureBootWatcher.Client.Services
 
             try
             {
-                using var baseKey = Registry.LocalMachine.OpenSubKey("SYSTEM\\CurrentControlSet\\Control\\SecureBoot\\Servicing", false);
+                using var baseKey = Registry.LocalMachine.OpenSubKey(SecureBootRegistrySnapshot.RegistryRootPath, false);
                 if (baseKey == null)
                 {
                     _logger.LogWarning("Secure Boot servicing registry path was not found. Returning empty snapshot.");
@@ -35,11 +35,24 @@ namespace SecureBootWatcher.Client.Services
                 }
 
                 snapshot.AvailableUpdates = ReadUInt(baseKey, "AvailableUpdates");
-                snapshot.UefiCa2023StatusRaw = ReadString(baseKey, "UEFICA2023Status");
-                snapshot.UefiCa2023ErrorCode = ReadUInt(baseKey, "UEFICA2023Error");
                 snapshot.HighConfidenceOptOut = ReadBool(baseKey, "HighConfidenceOptOut");
                 snapshot.MicrosoftUpdateManagedOptIn = ReadBool(baseKey, "MicrosoftUpdateManagedOptIn");
-                snapshot.DeploymentState = DeriveDeploymentState(snapshot.UefiCa2023StatusRaw, snapshot.UefiCa2023ErrorCode);
+
+                using var servicingKey = baseKey.OpenSubKey("Servicing", false);
+                if (servicingKey != null)
+                {
+                    snapshot.UefiCa2023Status = (SecureBootDeploymentState?)ReadUInt(servicingKey, "UEFICA2023Status") ?? SecureBootDeploymentState.Unknown;
+                    snapshot.UefiCa2023Error = ReadUInt(servicingKey, "UefiCa2023Error");
+                    snapshot.WindowsUEFICA2023CapableCode = ReadUInt(servicingKey, "WindowsUEFICA2023CapableCode");
+                }
+
+                using var stateKey = baseKey.OpenSubKey("State", false);
+                if (stateKey != null)
+                {
+                    snapshot.PolicyPublisher = ReadString(stateKey, "PolicyPublisher");
+                    snapshot.PolicyVersion = ReadUInt(stateKey, "PolicyVersion");
+                    snapshot.UEFISecureBootEnabled = ReadUInt(stateKey, "UEFISecureBootEnabled");
+                }
             }
             catch (SecurityException ex)
             {
@@ -48,6 +61,50 @@ namespace SecureBootWatcher.Client.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while reading Secure Boot registry keys.");
+            }
+
+            return Task.FromResult(snapshot);
+        }
+
+        public Task<SecureBootDeviceAttributesRegistrySnapshot> CaptureDeviceAttributesAsync(CancellationToken cancellationToken)
+        {
+            var snapshot = new SecureBootDeviceAttributesRegistrySnapshot
+            {
+                CollectedAtUtc = DateTimeOffset.UtcNow
+            };
+
+            try
+            {
+                using var baseKey = Registry.LocalMachine.OpenSubKey(SecureBootDeviceAttributesRegistrySnapshot.RegistryRootPath, false);
+                if (baseKey == null)
+                {
+                    _logger.LogWarning("Secure Boot Device Attributes registry path was not found. Returning empty snapshot.");
+                    return Task.FromResult(snapshot);
+                }
+
+                snapshot.CanAttemptUpdateAfter = ReadDateTimeOffset(baseKey, "CanAttemptUpdateAfter");
+                snapshot.OEMManufacturerName = ReadString(baseKey, "OEMManufacturerName");
+                snapshot.OEMModelSystemVersion = ReadString(baseKey, "OEMModelSystemVersion");
+                snapshot.BaseBoardManufacturer = ReadString(baseKey, "BaseBoardManufacturer");
+                snapshot.FirmwareManufacturer = ReadString(baseKey, "FirmwareManufacturer");
+                snapshot.OEMModelBaseBoard = ReadString(baseKey, "OEMModelBaseBoard");
+                snapshot.FirmwareVersion = ReadString(baseKey, "FirmwareVersion");
+                snapshot.OEMModelNumber = ReadString(baseKey, "OEMModelNumber");
+                snapshot.OEMModelSystemFamily = ReadString(baseKey, "OEMModelSystemFamily");
+                snapshot.OEMName = ReadString(baseKey, "OEMName");
+                snapshot.OSArchitecture = ReadString(baseKey, "OSArchitecture");
+                snapshot.OEMModelSKU = ReadString(baseKey, "OEMModelSKU");
+                snapshot.FirmwareReleaseDate = ReadDateTime(baseKey, "FirmwareReleaseDate");
+                snapshot.OEMModelBaseBoardVersion = ReadString(baseKey, "OEMModelBaseBoardVersion");
+                snapshot.StateAttributes = ReadString(baseKey, "StateAttributes");
+            }
+            catch (SecurityException ex)
+            {
+                _logger.LogError(ex, "Failed to read Secure Boot Device Attributes registry keys due to insufficient permissions.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while reading Secure Boot Device Attributes registry keys.");
             }
 
             return Task.FromResult(snapshot);
@@ -95,20 +152,41 @@ namespace SecureBootWatcher.Client.Services
             }
         }
 
-        private static SecureBootDeploymentState DeriveDeploymentState(string? status, uint? errorCode)
+        private static DateTimeOffset? ReadDateTimeOffset(RegistryKey key, string valueName)
         {
-            if (errorCode.HasValue && errorCode.Value != 0)
+            var value = key.GetValue(valueName) as byte[];
+            if (value == null || value.Length != 8)
             {
-                return SecureBootDeploymentState.Error;
+                return null;
             }
 
-            return status?.Trim() switch
+            try
             {
-                "NotStarted" => SecureBootDeploymentState.NotStarted,
-                "InProgress" => SecureBootDeploymentState.InProgress,
-                "Updated" => SecureBootDeploymentState.Updated,
-                _ => SecureBootDeploymentState.Unknown
-            };
+                var fileTime = BitConverter.ToInt64(value, 0);
+                return DateTimeOffset.FromFileTime(fileTime);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        private static DateTime? ReadDateTime(RegistryKey key, string valueName)
+        {
+            var value = key.GetValue(valueName) as string;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            try
+            {
+                return DateTime.Parse(value, CultureInfo.InvariantCulture);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
     }
 }
