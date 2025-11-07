@@ -151,7 +151,7 @@ namespace SecureBootWatcher.LinuxClient.Services
             {
                 _logger.LogWarning(ex, "journalctl command not found. Install systemd or run with appropriate permissions.");
             }
-            catch (Exception ex)
+            catch (Exception ex) when (!(ex is SystemException))
             {
                 _logger.LogError(ex, "Failed to query journalctl");
             }
