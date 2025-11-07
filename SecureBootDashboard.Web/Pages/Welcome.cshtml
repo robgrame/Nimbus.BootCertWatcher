@@ -1,0 +1,198 @@
+@page
+@model WelcomeModel
+@{
+    ViewData["Title"] = "Benvenuto";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Secure Boot Dashboard</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" 
+          integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" 
+          crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="icon" type="image/png" href="~/lock.png">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .welcome-container {
+            text-align: center;
+            color: white;
+            max-width: 800px;
+            padding: 2rem;
+        }
+
+        .welcome-logo {
+            max-width: 200px;
+            margin-bottom: 2rem;
+            animation: fadeInDown 1s ease-in-out;
+        }
+
+        .welcome-title {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            animation: fadeInUp 1s ease-in-out 0.2s backwards;
+        }
+
+        .welcome-subtitle {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            opacity: 0.95;
+            animation: fadeInUp 1s ease-in-out 0.4s backwards;
+        }
+
+        .welcome-description {
+            font-size: 1.1rem;
+            margin-bottom: 3rem;
+            opacity: 0.9;
+            line-height: 1.6;
+            animation: fadeInUp 1s ease-in-out 0.6s backwards;
+        }
+
+        .login-button {
+            font-size: 1.25rem;
+            padding: 1rem 3rem;
+            border-radius: 50px;
+            background: white;
+            color: #667eea;
+            border: none;
+            font-weight: 600;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            animation: fadeInUp 1s ease-in-out 0.8s backwards;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .login-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            color: #667eea;
+        }
+
+        .features {
+            margin-top: 4rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            animation: fadeInUp 1s ease-in-out 1s backwards;
+        }
+
+        .feature {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .feature i {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature p {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            margin: 0;
+        }
+
+        @@keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@media (max-width: 768px) {
+            .welcome-title {
+                font-size: 2rem;
+            }
+
+            .welcome-subtitle {
+                font-size: 1.2rem;
+            }
+
+            .welcome-description {
+                font-size: 1rem;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="welcome-container">
+        <img src="~/images/logo.webp" alt="Secure Boot Dashboard" class="welcome-logo">
+        
+        <h1 class="welcome-title">Secure Boot Dashboard</h1>
+        <p class="welcome-subtitle">Monitoraggio Certificati Secure Boot</p>
+        <p class="welcome-description">
+            Sistema completo per il monitoraggio e la gestione dei certificati Secure Boot 
+            sui dispositivi Windows della tua infrastruttura aziendale.
+        </p>
+
+        <a href="/Account/Login" class="login-button">
+            <i class="fas fa-sign-in-alt me-2"></i>
+            Accedi al Portale
+        </a>
+
+        <div class="features">
+            <div class="feature">
+                <i class="fas fa-chart-line"></i>
+                <h3>Dashboard Analitica</h3>
+                <p>Visualizzazione in tempo reale dello stato di compliance</p>
+            </div>
+            <div class="feature">
+                <i class="fas fa-laptop"></i>
+                <h3>Gestione Dispositivi</h3>
+                <p>Monitoraggio completo di tutti i dispositivi registrati</p>
+            </div>
+            <div class="feature">
+                <i class="fas fa-certificate"></i>
+                <h3>Tracking Certificati</h3>
+                <p>Tracciamento dettagliato dei certificati UEFI</p>
+            </div>
+            <div class="feature">
+                <i class="fas fa-shield-alt"></i>
+                <h3>Sicurezza Enterprise</h3>
+                <p>Autenticazione aziendale sicura e protetta</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

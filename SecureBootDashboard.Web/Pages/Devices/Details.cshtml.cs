@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SecureBootDashboard.Web.Services;
 
 namespace SecureBootDashboard.Web.Pages.Devices;
 
+[Authorize]
 public class DetailsModel : PageModel
 {
     private readonly ISecureBootApiClient _apiClient;

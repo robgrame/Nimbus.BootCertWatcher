@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using SecureBootDashboard.Web.Services;
 using SecureBootWatcher.Shared.Storage;
 
 namespace SecureBootDashboard.Web.Pages.Devices;
 
+[Authorize]
 public class ListModel : PageModel
 {
     private readonly ISecureBootApiClient _apiClient;
