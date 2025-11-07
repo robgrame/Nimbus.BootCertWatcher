@@ -75,6 +75,9 @@ try
 
     builder.Services.AddHealthChecks();
 
+    Log.Information("Configuring Workflow Engine...");
+    builder.Services.AddScoped<WorkflowEngine>();
+
     Log.Information("Configuring Storage services...");
     builder.Services.Configure<FileReportStoreOptions>(builder.Configuration.GetSection("Storage:File"));
     builder.Services.AddScoped<EfCoreReportStore>();

@@ -1,0 +1,155 @@
+@page
+@model SecureBootDashboard.Web.Pages.Workflows.CreateModel
+@{
+    ViewData["Title"] = "Create Workflow";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h2><i class="fas fa-plus-circle me-2"></i>Create Remediation Workflow</h2>
+            <p class="text-muted">Define automated actions based on device conditions</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post">
+                        <div class="mb-3">
+                            <label asp-for="Name" class="form-label">Workflow Name</label>
+                            <input asp-for="Name" class="form-control" required />
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label">Description</label>
+                            <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Priority" class="form-label">Priority</label>
+                                <input asp-for="Priority" class="form-control" type="number" min="1" max="999" />
+                                <small class="form-text text-muted">Lower numbers execute first</small>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check mt-4">
+                                    <input asp-for="IsEnabled" class="form-check-input" type="checkbox" />
+                                    <label asp-for="IsEnabled" class="form-check-label">
+                                        Enable workflow immediately
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        <h5 class="mb-3"><i class="fas fa-filter me-2"></i>Trigger Conditions</h5>
+                        <p class="text-muted small">All specified conditions must be met for the workflow to execute</p>
+
+                        <div class="mb-3">
+                            <label asp-for="DeploymentState" class="form-label">Deployment State</label>
+                            <select asp-for="DeploymentState" class="form-select">
+                                <option value="">Any</option>
+                                <option value="NotStarted">Not Started</option>
+                                <option value="InProgress">In Progress</option>
+                                <option value="Updated">Updated</option>
+                                <option value="Error">Error</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="FleetIdMatches" class="form-label">Fleet ID (comma-separated for multiple)</label>
+                            <input asp-for="FleetIdMatches" class="form-control" placeholder="e.g., fleet-01, fleet-02" />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="ManufacturerMatches" class="form-label">Manufacturer</label>
+                                <input asp-for="ManufacturerMatches" class="form-control" placeholder="e.g., Dell, HP, Lenovo" />
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="NoReportForDays" class="form-label">No Report For Days</label>
+                                <input asp-for="NoReportForDays" class="form-control" type="number" min="1" placeholder="e.g., 7" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="AlertContains" class="form-label">Alert Contains (comma-separated)</label>
+                            <input asp-for="AlertContains" class="form-control" placeholder="e.g., expired, expiring" />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check">
+                                    <input asp-for="HasExpiredCertificates" class="form-check-input" type="checkbox" />
+                                    <label asp-for="HasExpiredCertificates" class="form-check-label">
+                                        Has expired certificates
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="CertificateExpiringWithinDays" class="form-label">Certificates expiring within days</label>
+                                <input asp-for="CertificateExpiringWithinDays" class="form-control" type="number" min="1" placeholder="e.g., 90" />
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        <h5 class="mb-3"><i class="fas fa-cog me-2"></i>Actions</h5>
+                        <p class="text-muted small">Actions will be executed in the order specified</p>
+
+                        <div class="mb-3">
+                            <label class="form-label">Action Type</label>
+                            <select asp-for="ActionType" class="form-select">
+                                <option value="LogEntry">Log Entry</option>
+                                <option value="EmailNotification">Email Notification (coming soon)</option>
+                                <option value="Webhook">Webhook (coming soon)</option>
+                                <option value="UpdateDeviceTags">Update Device Tags</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="ActionConfiguration" class="form-label">Action Configuration (JSON)</label>
+                            <textarea asp-for="ActionConfiguration" class="form-control font-monospace" rows="4" placeholder='{"message": "Workflow triggered for device"}'></textarea>
+                            <small class="form-text text-muted">Example for Log Entry: {"message": "Your log message"}</small>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a asp-page="./List" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Create Workflow
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-info-circle me-2"></i>Tips</h5>
+                    <ul class="small">
+                        <li>Workflows with lower priority numbers execute first</li>
+                        <li>Leave trigger fields empty to match any value</li>
+                        <li>Multiple triggers act as AND conditions</li>
+                        <li>Test workflows with disabled state first</li>
+                        <li>Actions are executed sequentially</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

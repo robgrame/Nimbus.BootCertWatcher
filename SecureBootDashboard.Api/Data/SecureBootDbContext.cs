@@ -15,6 +15,10 @@ namespace SecureBootDashboard.Api.Data
 
         public DbSet<SecureBootEventEntity> Events => Set<SecureBootEventEntity>();
 
+        public DbSet<RemediationWorkflowEntity> RemediationWorkflows => Set<RemediationWorkflowEntity>();
+
+        public DbSet<WorkflowExecutionEntity> WorkflowExecutions => Set<WorkflowExecutionEntity>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -64,6 +68,42 @@ namespace SecureBootDashboard.Api.Data
                     .WithMany(r => r.Events)
                     .HasForeignKey(e => e.ReportId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<RemediationWorkflowEntity>(entity =>
+            {
+                entity.ToTable("RemediationWorkflows");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).HasMaxLength(256).IsRequired();
+                entity.Property(e => e.Description).HasMaxLength(1024);
+                entity.Property(e => e.TriggerJson).HasColumnType("nvarchar(max)").IsRequired();
+                entity.Property(e => e.ActionsJson).HasColumnType("nvarchar(max)").IsRequired();
+                entity.Property(e => e.CreatedBy).HasMaxLength(256);
+                entity.Property(e => e.UpdatedBy).HasMaxLength(256);
+                entity.HasIndex(e => e.IsEnabled);
+                entity.HasIndex(e => e.Priority);
+            });
+
+            modelBuilder.Entity<WorkflowExecutionEntity>(entity =>
+            {
+                entity.ToTable("WorkflowExecutions");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ResultMessage).HasMaxLength(2048);
+                entity.Property(e => e.ActionsResultJson).HasColumnType("nvarchar(max)");
+                entity.HasIndex(e => e.StartedAtUtc);
+                entity.HasIndex(e => e.DeviceId);
+                entity.HasOne(e => e.Workflow)
+                    .WithMany(w => w.Executions)
+                    .HasForeignKey(e => e.WorkflowId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Device)
+                    .WithMany()
+                    .HasForeignKey(e => e.DeviceId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Report)
+                    .WithMany()
+                    .HasForeignKey(e => e.ReportId)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
         }
     }
