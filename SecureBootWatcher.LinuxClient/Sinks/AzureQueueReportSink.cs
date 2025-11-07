@@ -101,7 +101,7 @@ namespace SecureBootWatcher.LinuxClient.Sinks
   var queueUri = new Uri(options.QueueServiceUri, options.QueueName);
       TokenCredential credential;
 
-       // Metodo 2: App Registration con Client Secret (raccomandato per service-to-service)
+       // Method 2: App Registration with Client Secret (recommended for service-to-service)
   if (options.AuthenticationMethod.Equals("AppRegistration", StringComparison.OrdinalIgnoreCase))
            {
       if (string.IsNullOrWhiteSpace(options.TenantId) ||
