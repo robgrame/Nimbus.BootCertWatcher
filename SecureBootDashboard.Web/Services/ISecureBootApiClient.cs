@@ -12,6 +12,9 @@ public interface ISecureBootApiClient
     Task<IReadOnlyList<DeviceSummary>> GetDevicesAsync(CancellationToken cancellationToken = default);
     Task<DeviceDetail?> GetDeviceAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ReportHistoryItem>> GetDeviceReportsAsync(Guid deviceId, int limit = 50, CancellationToken cancellationToken = default);
+    
+    // Analytics methods
+    Task<ComplianceTrendResponse?> GetComplianceTrendAsync(int days, CancellationToken cancellationToken = default);
 }
 
 // DTOs for device endpoints
@@ -47,3 +50,17 @@ public sealed record ReportHistoryItem(
     DateTimeOffset CreatedAtUtc,
     string? DeploymentState,
     string? ClientVersion);
+
+// Analytics DTOs
+public sealed record ComplianceTrendResponse(
+    int Days,
+    IReadOnlyCollection<DailySnapshot> Snapshots);
+
+public sealed record DailySnapshot(
+    DateTimeOffset Date,
+    int TotalDevices,
+    int DeployedDevices,
+    int PendingDevices,
+    int ErrorDevices,
+    int UnknownDevices,
+    double CompliancePercentage);

@@ -184,15 +184,29 @@
             <div class="col-lg-4 col-md-12 mb-4">
                 <a asp-page="/Devices/List" class="card-link">
                     <div class="card h-100 shadow-sm chart-card">
-                        <div class="card-header bg-success text-white">
+                        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">
-                                <i class="fas fa-chart-line"></i> Compliance Trend (7 giorni)
+                                <i class="fas fa-chart-line"></i> Compliance Trend
                             </h5>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a asp-page="/Index" asp-route-trendDays="7" 
+                                   class="btn btn-sm @(Model.TrendDays == 7 ? "btn-light" : "btn-outline-light")" 
+                                   onclick="event.stopPropagation()">7d</a>
+                                <a asp-page="/Index" asp-route-trendDays="30" 
+                                   class="btn btn-sm @(Model.TrendDays == 30 ? "btn-light" : "btn-outline-light")" 
+                                   onclick="event.stopPropagation()">30d</a>
+                                <a asp-page="/Index" asp-route-trendDays="60" 
+                                   class="btn btn-sm @(Model.TrendDays == 60 ? "btn-light" : "btn-outline-light")" 
+                                   onclick="event.stopPropagation()">60d</a>
+                                <a asp-page="/Index" asp-route-trendDays="90" 
+                                   class="btn btn-sm @(Model.TrendDays == 90 ? "btn-light" : "btn-outline-light")" 
+                                   onclick="event.stopPropagation()">90d</a>
+                            </div>
                         </div>
                         <div class="card-body">
                             <canvas id="complianceTrendChart"></canvas>
                             <div class="text-center mt-3">
-                                <p class="text-muted mb-0">Crescita Dispositivi Compliant</p>
+                                <p class="text-muted mb-0">Crescita Dispositivi Compliant (@Model.TrendDays giorni)</p>
                             </div>
                         </div>
                         <div class="card-footer bg-light text-center">
@@ -459,12 +473,26 @@
         // 3. Compliance Trend Line Chart
         const complianceTrendCtx = document.getElementById('complianceTrendChart');
         if (complianceTrendCtx) {
-            const trendData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ComplianceTrendData));
-            const labels = Object.keys(trendData).map(date => {
-                const d = new Date(date);
-                return d.toLocaleDateString('it-IT', { month: 'short', day: 'numeric' });
-            });
-            const data = Object.values(trendData);
+            @if (Model.ComplianceTrend != null && Model.ComplianceTrend.Snapshots.Count > 0)
+            {
+                <text>
+                const snapshots = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ComplianceTrend.Snapshots));
+                const labels = snapshots.map(s => {
+                    const d = new Date(s.date);
+                    return d.toLocaleDateString('it-IT', { month: 'short', day: 'numeric' });
+                });
+                const complianceData = snapshots.map(s => s.deployedDevices);
+                const compliancePercentages = snapshots.map(s => s.compliancePercentage);
+                </text>
+            }
+            else
+            {
+                <text>
+                const labels = ['No data'];
+                const complianceData = [0];
+                const compliancePercentages = [0];
+                </text>
+            }
 
             new Chart(complianceTrendCtx, {
                 type: 'line',
@@ -472,7 +500,7 @@
                     labels: labels,
                     datasets: [{
                         label: 'Dispositivi Compliant',
-                        data: data,
+                        data: complianceData,
                         borderColor: chartColors.trend,
                         backgroundColor: 'rgba(23, 162, 184, 0.1)',
                         borderWidth: 3,
@@ -496,14 +524,33 @@
                             mode: 'index',
                             intersect: false,
                             callbacks: {
+                                label: function(context) {
+                                    const idx = context.dataIndex;
+                                    const devices = complianceData[idx];
+                                    const percentage = compliancePercentages[idx].toFixed(1);
+                                    return `Compliant: ${devices} (${percentage}%)`;
+                                },
                                 title: function(context) {
-                                    const date = Object.keys(trendData)[context[0].dataIndex];
-                                    return new Date(date).toLocaleDateString('it-IT', { 
-                                        weekday: 'short', 
-                                        year: 'numeric', 
-                                        month: 'short', 
-                                        day: 'numeric' 
-                                    });
+                                    @if (Model.ComplianceTrend != null && Model.ComplianceTrend.Snapshots.Count > 0)
+                                    {
+                                        <text>
+                                        const idx = context[0].dataIndex;
+                                        const snapshot = snapshots[idx];
+                                        const date = new Date(snapshot.date);
+                                        return date.toLocaleDateString('it-IT', { 
+                                            weekday: 'short', 
+                                            year: 'numeric', 
+                                            month: 'short', 
+                                            day: 'numeric' 
+                                        });
+                                        </text>
+                                    }
+                                    else
+                                    {
+                                        <text>
+                                        return context[0].label;
+                                        </text>
+                                    }
                                 }
                             }
                         }

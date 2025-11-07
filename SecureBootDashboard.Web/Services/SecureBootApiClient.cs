@@ -156,4 +156,27 @@ public sealed class SecureBootApiClient : ISecureBootApiClient
             return false;
         }
     }
+
+    public async Task<ComplianceTrendResponse?> GetComplianceTrendAsync(int days, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching compliance trend for {Days} days", days);
+            
+            var response = await _httpClient.GetAsync($"/api/Analytics/compliance-trend?days={days}", cancellationToken);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to fetch compliance trend: {StatusCode}", response.StatusCode);
+                return null;
+            }
+
+            return await response.Content.ReadFromJsonAsync<ComplianceTrendResponse>(cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to fetch compliance trend for {Days} days", days);
+            return null;
+        }
+    }
 }
