@@ -97,7 +97,7 @@ namespace SecureBootDashboard.Api.Controllers
                 _dbContext.Policies.Add(entity);
                 await _dbContext.SaveChangesAsync();
 
-                _logger.LogInformation("Created policy {PolicyId}: {PolicyName}", policy.Id, policy.Name);
+                _logger.LogInformation("Created policy {PolicyId}", policy.Id);
                 return CreatedAtAction(nameof(GetPolicy), new { id = policy.Id }, policy);
             }
             catch (Exception ex)
@@ -135,7 +135,7 @@ namespace SecureBootDashboard.Api.Controllers
                 _dbContext.Entry(entity).CurrentValues.SetValues(updatedEntity);
                 await _dbContext.SaveChangesAsync();
 
-                _logger.LogInformation("Updated policy {PolicyId}: {PolicyName}", policy.Id, policy.Name);
+                _logger.LogInformation("Updated policy {PolicyId}", policy.Id);
                 return Ok(policy);
             }
             catch (Exception ex)
