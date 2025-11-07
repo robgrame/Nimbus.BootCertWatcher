@@ -53,6 +53,13 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
 - **Dual Storage**: EF Core with SQL Server or file-based JSON storage
 - **Queue Processing**: Background service for Azure Queue consumption
 
+### 🤖 Machine Learning Anomaly Detection
+- **Automatic Detection**: Background service runs hourly to identify unusual patterns
+- **Statistical Analysis**: Uses 2.5σ thresholds to detect anomalies in device behavior
+- **Multiple Detection Types**: Reporting frequency, deployment state, and inactivity anomalies
+- **Interactive Dashboard**: View, investigate, and resolve detected anomalies
+- **Severity Scoring**: Prioritized alerts (High/Medium/Low) for efficient triage
+
 ### 🔒 Enterprise Security
 - **Managed Identity**: Azure AD authentication for database and storage access
 - **Certificate-based Auth**: Client certificate authentication for Azure Queue
@@ -294,6 +301,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 - **[Device List Separation](docs/DEVICE_LIST_SEPARATION.md)** - UI reorganization details
 - **[Certificate Enumeration](docs/CERTIFICATE_ENUMERATION.md)** - UEFI certificate tracking
 - **[Logo & Banner Implementation](docs/LOGO_BANNER_IMPLEMENTATION.md)** - Branding assets
+- **[Anomaly Detection](docs/ANOMALY_DETECTION.md)** - ML-powered anomaly detection system
 
 ### Operations & Troubleshooting
 - **[Logging Guide](docs/LOGGING_GUIDE.md)** - Serilog configuration and best practices
@@ -493,7 +501,7 @@ For questions, issues, or support:
 ### v2.0 (Q3 2025)
 - [ ] Linux client support (.NET 8)
 - [ ] API v2 with GraphQL
-- [ ] Machine learning anomaly detection
+- [x] **Machine learning anomaly detection** ✨ *Completed in Nov 2025*
 - [ ] Integration with ServiceNow/Jira
 
 See [GitHub Projects](https://github.com/robgrame/Nimbus.BootCertWatcher/projects) for detailed roadmap.
