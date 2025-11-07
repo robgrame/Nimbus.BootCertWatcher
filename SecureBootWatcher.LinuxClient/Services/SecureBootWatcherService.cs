@@ -53,6 +53,8 @@ namespace SecureBootWatcher.LinuxClient.Services
                 }
                 catch (Exception ex)
                 {
+                    if (ex is OutOfMemoryException || ex is StackOverflowException || ex is ThreadAbortException)
+                        throw;
                     _logger.LogError(ex, "Unexpected error while executing Secure Boot watcher cycle.");
                 }
 
