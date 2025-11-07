@@ -50,6 +50,7 @@ namespace SecureBootDashboard.Api.Controllers
             // Get all devices to calculate total device count per day
             var allDevices = await _dbContext.Devices
                 .AsNoTracking()
+                .Where(d => d.CreatedAtUtc <= DateTimeOffset.UtcNow.Date)
                 .Select(d => new { d.Id, d.CreatedAtUtc })
                 .ToListAsync(cancellationToken);
 
