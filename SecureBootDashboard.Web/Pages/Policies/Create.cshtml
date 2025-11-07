@@ -1,0 +1,252 @@
+@page
+@model SecureBootDashboard.Web.Pages.Policies.CreateModel
+@{
+    ViewData["Title"] = "Create Policy";
+}
+
+<div class="row mb-3">
+    <div class="col">
+        <h2><i class="fas fa-shield-alt"></i> Create Compliance Policy</h2>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-page="./List">Policies</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Create</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle"></i> @Model.ErrorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<form method="post">
+    <div class="card mb-3">
+        <div class="card-header">
+            <h5 class="mb-0">Policy Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label asp-for="Name" class="form-label">Policy Name <span class="text-danger">*</span></label>
+                    <input asp-for="Name" class="form-control" required />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label asp-for="Priority" class="form-label">Priority <span class="text-danger">*</span></label>
+                    <input asp-for="Priority" class="form-control" type="number" min="0" value="100" required />
+                    <small class="form-text text-muted">Lower values = higher priority</small>
+                    <span asp-validation-for="Priority" class="text-danger"></span>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label">Description</label>
+                <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="FleetId" class="form-label">Fleet ID (Optional)</label>
+                    <input asp-for="FleetId" class="form-control" placeholder="Leave empty for all fleets" />
+                    <small class="form-text text-muted">Policy will apply only to this fleet if specified</small>
+                    <span asp-validation-for="FleetId" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="form-check mt-4">
+                        <input asp-for="IsEnabled" class="form-check-input" type="checkbox" checked />
+                        <label asp-for="IsEnabled" class="form-check-label">
+                            Policy Enabled
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Policy Rules</h5>
+            <button type="button" class="btn btn-sm btn-primary" onclick="addRule()">
+                <i class="fas fa-plus"></i> Add Rule
+            </button>
+        </div>
+        <div class="card-body">
+            <div id="rulesContainer">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> No rules added yet. Click "Add Rule" to define compliance requirements.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <input type="hidden" asp-for="RulesJson" id="rulesJsonInput" />
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Create Policy
+        </button>
+        <a asp-page="./List" class="btn btn-secondary">
+            <i class="fas fa-times"></i> Cancel
+        </a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        let rules = [];
+        
+        const ruleTypes = {
+            '1': 'Minimum Key Size',
+            '2': 'Allowed Signature Algorithms',
+            '3': 'Disallowed Signature Algorithms',
+            '4': 'Maximum Certificate Age',
+            '5': 'Minimum Days Until Expiration',
+            '6': 'Require Microsoft Certificate',
+            '7': 'Disallow Expired Certificates',
+            '8': 'Require Subject Pattern'
+        };
+        
+        const severities = {
+            '1': 'Info',
+            '2': 'Warning',
+            '3': 'Critical'
+        };
+        
+        function addRule() {
+            const ruleId = Date.now();
+            rules.push({ id: ruleId, RuleType: 1, Severity: 2, Value: '', DatabaseFilter: '' });
+            renderRules();
+        }
+        
+        function removeRule(ruleId) {
+            rules = rules.filter(r => r.id !== ruleId);
+            renderRules();
+        }
+        
+        function updateRule(ruleId, field, value) {
+            const rule = rules.find(r => r.id === ruleId);
+            if (rule) {
+                rule[field] = value;
+            }
+        }
+        
+        function renderRules() {
+            const container = document.getElementById('rulesContainer');
+            
+            if (rules.length === 0) {
+                container.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle"></i> No rules added yet. Click "Add Rule" to define compliance requirements.</div>';
+                return;
+            }
+            
+            let html = '<div class="row g-3">';
+            
+            rules.forEach((rule, index) => {
+                html += `
+                    <div class="col-12 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">Rule ${index + 1}</h6>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRule(${rule.id})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label">Rule Type</label>
+                                        <select class="form-select" onchange="updateRule(${rule.id}, 'RuleType', parseInt(this.value))">
+                                            ${Object.entries(ruleTypes).map(([k, v]) => 
+                                                `<option value="${k}" ${rule.RuleType == k ? 'selected' : ''}>${v}</option>`
+                                            ).join('')}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3 mb-2">
+                                        <label class="form-label">Severity</label>
+                                        <select class="form-select" onchange="updateRule(${rule.id}, 'Severity', parseInt(this.value))">
+                                            ${Object.entries(severities).map(([k, v]) => 
+                                                `<option value="${k}" ${rule.Severity == k ? 'selected' : ''}>${v}</option>`
+                                            ).join('')}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3 mb-2">
+                                        <label class="form-label">Value</label>
+                                        <input type="text" class="form-control" value="${rule.Value || ''}" 
+                                               onchange="updateRule(${rule.id}, 'Value', this.value)"
+                                               placeholder="${getValuePlaceholder(rule.RuleType)}" />
+                                    </div>
+                                    <div class="col-md-2 mb-2">
+                                        <label class="form-label">Database</label>
+                                        <select class="form-select" onchange="updateRule(${rule.id}, 'DatabaseFilter', this.value)">
+                                            <option value="" ${!rule.DatabaseFilter ? 'selected' : ''}>All</option>
+                                            <option value="db" ${rule.DatabaseFilter === 'db' ? 'selected' : ''}>db</option>
+                                            <option value="dbx" ${rule.DatabaseFilter === 'dbx' ? 'selected' : ''}>dbx</option>
+                                            <option value="KEK" ${rule.DatabaseFilter === 'KEK' ? 'selected' : ''}>KEK</option>
+                                            <option value="PK" ${rule.DatabaseFilter === 'PK' ? 'selected' : ''}>PK</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+        
+        function getValuePlaceholder(ruleType) {
+            switch (parseInt(ruleType)) {
+                case 1: return '2048';
+                case 2: return 'SHA256,SHA384,SHA512';
+                case 3: return 'MD5,SHA1';
+                case 4: return '3650';
+                case 5: return '90';
+                case 6: return 'true';
+                case 7: return 'true';
+                case 8: return 'CN=.*Microsoft.*';
+                default: return '';
+            }
+        }
+        
+        // Update hidden field before form submission
+        document.querySelector('form').addEventListener('submit', function(e) {
+            // Validate that at least one rule exists
+            if (rules.length === 0) {
+                alert('Please add at least one rule to the policy.');
+                e.preventDefault();
+                return false;
+            }
+            
+            // Validate each rule has required values
+            const invalidRules = rules.filter(r => {
+                const needsValue = [1, 2, 3, 4, 5, 8].includes(parseInt(r.RuleType));
+                return needsValue && (!r.Value || r.Value.trim() === '');
+            });
+            
+            if (invalidRules.length > 0) {
+                alert('All rules must have a value specified. Please complete all rule configurations.');
+                e.preventDefault();
+                return false;
+            }
+            
+            const rulesData = rules.map(r => ({
+                RuleType: parseInt(r.RuleType),
+                Severity: parseInt(r.Severity),
+                Value: r.Value,
+                DatabaseFilter: r.DatabaseFilter || null
+            }));
+            document.getElementById('rulesJsonInput').value = JSON.stringify(rulesData);
+        });
+        
+        // Initialize
+        renderRules();
+    </script>
+}

@@ -293,6 +293,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 - **[Dashboard Charts & Splash Screen](docs/DASHBOARD_CHARTS_SPLASH_IMPLEMENTATION.md)** - Analytics features
 - **[Device List Separation](docs/DEVICE_LIST_SEPARATION.md)** - UI reorganization details
 - **[Certificate Enumeration](docs/CERTIFICATE_ENUMERATION.md)** - UEFI certificate tracking
+- **[Certificate Compliance Policies](docs/CERTIFICATE_COMPLIANCE_POLICIES.md)** - Policy enforcement and compliance
 - **[Logo & Banner Implementation](docs/LOGO_BANNER_IMPLEMENTATION.md)** - Branding assets
 
 ### Operations & Troubleshooting
@@ -486,7 +487,7 @@ For questions, issues, or support:
 
 ### v1.2 (Q2 2025)
 - [ ] Multi-tenant support with RBAC
-- [ ] Certificate compliance policies
+- [x] Certificate compliance policies
 - [ ] Automated remediation workflows
 - [ ] Enhanced analytics (30/60/90 day trends)
 
