@@ -205,7 +205,7 @@ options.CertificateThumbprint, storeLocation, storeName);
   return new QueueClient(queueUri, credential);
       }
 
-      // Metodo 4: Managed Identity (raccomandato per Azure VMs, App Services, ecc.)
+      // Method 4: Managed Identity (recommended for Azure VMs, App Services, etc.)
    if (options.AuthenticationMethod.Equals("ManagedIdentity", StringComparison.OrdinalIgnoreCase))
         {
               if (!string.IsNullOrWhiteSpace(options.ClientId))
