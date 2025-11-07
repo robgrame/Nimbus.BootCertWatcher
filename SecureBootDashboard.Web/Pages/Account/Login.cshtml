@@ -1,0 +1,79 @@
+@page
+@model LoginModel
+@{
+    ViewData["Title"] = "Login";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white text-center">
+                    <h3><i class="fas fa-sign-in-alt"></i> Accedi al Portale</h3>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <img src="~/images/logo.webp" alt="Secure Boot Dashboard" style="max-width: 150px;">
+                        <p class="text-muted mt-3">Secure Boot Dashboard</p>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <i class="fas fa-exclamation-triangle"></i> @Model.ErrorMessage
+                        </div>
+                    }
+
+                    <form method="post">
+                        <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
+                        
+                        <div class="d-grid gap-3">
+                            @if (Model.IsEntraIdEnabled)
+                            {
+                                <button type="submit" asp-page-handler="EntraId" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-microsoft"></i> Accedi con Microsoft Entra ID
+                                </button>
+                            }
+
+                            @if (Model.IsWindowsAuthEnabled)
+                            {
+                                <button type="submit" asp-page-handler="Windows" class="btn btn-dark btn-lg">
+                                    <i class="fab fa-windows"></i> Accedi con Windows Domain
+                                </button>
+                            }
+                        </div>
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <a href="/Welcome" class="text-muted">
+                            <i class="fas fa-arrow-left"></i> Torna alla home
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-info-circle"></i> Informazioni</h5>
+                    <ul class="list-unstyled mb-0">
+                        <li><i class="fas fa-check text-success"></i> Autenticazione sicura enterprise</li>
+                        <li><i class="fas fa-check text-success"></i> Gestione centralizzata degli accessi</li>
+                        <li><i class="fas fa-check text-success"></i> Integrazione con Active Directory o Entra ID</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Auto-submit if only one authentication method is available
+        document.addEventListener('DOMContentLoaded', function() {
+            var buttons = document.querySelectorAll('button[type="submit"]');
+            if (buttons.length === 1) {
+                console.log('Only one authentication method available');
+            }
+        });
+    </script>
+}
