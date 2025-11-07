@@ -222,9 +222,13 @@ namespace SecureBootWatcher.LinuxClient.Services
                     {
                         _logger.LogWarning(ex, "Access denied reading {File}. Try running with sudo.", varFile);
                     }
-                    catch (Exception ex)
+                    catch (IOException ex)
                     {
-                        _logger.LogDebug(ex, "Failed to read {File}", varFile);
+                        _logger.LogDebug(ex, "I/O error reading {File}", varFile);
+                    }
+                    catch (FileNotFoundException ex)
+                    {
+                        _logger.LogDebug(ex, "File not found: {File}", varFile);
                     }
                 }
             }
