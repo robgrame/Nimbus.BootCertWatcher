@@ -86,7 +86,15 @@ public class IndexModel : PageModel
 
     private void CalculateComplianceTrendFallback()
     {
-        // Fallback: Generate simulated trend data
+        // Fallback: Generate simulated trend data when API is unavailable
+        // Check if devices are available
+        if (Devices.Count == 0)
+        {
+            // No devices, return empty trend
+            ComplianceTrend = new ComplianceTrendResponse(TrendDays, new List<DailySnapshot>());
+            return;
+        }
+        
         var snapshots = new List<DailySnapshot>();
         var today = DateTimeOffset.UtcNow.Date;
         
@@ -94,15 +102,17 @@ public class IndexModel : PageModel
         {
             var date = today.AddDays(-i);
             var daysAgo = i;
+            // Simulate gradual improvement in compliance over time
             var historicalCompliance = Math.Max(0, CompliantDevices - (daysAgo * 2));
             
+            // For fallback, use simple simulation without historical pending/error counts
             snapshots.Add(new DailySnapshot(
                 date,
                 TotalDevices,
                 historicalCompliance,
-                PendingDevices,
-                ErrorDevices,
-                TotalDevices - historicalCompliance - PendingDevices - ErrorDevices,
+                0, // Pending - set to 0 for fallback
+                0, // Error - set to 0 for fallback
+                TotalDevices - historicalCompliance,
                 TotalDevices > 0 ? (double)historicalCompliance / TotalDevices * 100 : 0));
         }
 

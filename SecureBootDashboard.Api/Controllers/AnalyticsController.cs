@@ -54,6 +54,14 @@ namespace SecureBootDashboard.Api.Controllers
                 .Select(d => new { d.Id, d.CreatedAtUtc })
                 .ToListAsync(cancellationToken);
 
+            // Pre-group reports by device and sort by date descending for efficiency
+            var reportsByDevice = reports
+                .GroupBy(r => r.DeviceId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(r => r.CreatedAtUtc).ToList()
+                );
+
             // Calculate daily snapshots
             var dailySnapshots = new Dictionary<string, DailySnapshot>();
             
@@ -70,12 +78,17 @@ namespace SecureBootDashboard.Api.Controllers
                 
                 foreach (var deviceId in devicesOnDate)
                 {
-                    var latestReport = reports
-                        .Where(r => r.DeviceId == deviceId && r.CreatedAtUtc.Date <= date)
-                        .OrderByDescending(r => r.CreatedAtUtc)
-                        .FirstOrDefault();
-                    
-                    deviceStates[deviceId] = latestReport?.DeploymentState;
+                    // Use pre-grouped reports for efficiency
+                    if (reportsByDevice.TryGetValue(deviceId, out var deviceReports))
+                    {
+                        var latestReport = deviceReports
+                            .FirstOrDefault(r => r.CreatedAtUtc.Date <= date);
+                        deviceStates[deviceId] = latestReport?.DeploymentState;
+                    }
+                    else
+                    {
+                        deviceStates[deviceId] = null;
+                    }
                 }
                 
                 var totalDevices = devicesOnDate.Count;

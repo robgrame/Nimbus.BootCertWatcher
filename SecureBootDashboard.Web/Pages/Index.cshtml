@@ -188,18 +188,26 @@
                             <h5 class="mb-0">
                                 <i class="fas fa-chart-line"></i> Compliance Trend
                             </h5>
-                            <div class="btn-group btn-group-sm" role="group">
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Selettore periodo trend">
                                 <a asp-page="/Index" asp-route-trendDays="7" 
                                    class="btn btn-sm @(Model.TrendDays == 7 ? "btn-light" : "btn-outline-light")" 
+                                   aria-label="Mostra trend a 7 giorni"
+                                   aria-current="@(Model.TrendDays == 7 ? "true" : "false")"
                                    onclick="event.stopPropagation()">7d</a>
                                 <a asp-page="/Index" asp-route-trendDays="30" 
                                    class="btn btn-sm @(Model.TrendDays == 30 ? "btn-light" : "btn-outline-light")" 
+                                   aria-label="Mostra trend a 30 giorni"
+                                   aria-current="@(Model.TrendDays == 30 ? "true" : "false")"
                                    onclick="event.stopPropagation()">30d</a>
                                 <a asp-page="/Index" asp-route-trendDays="60" 
                                    class="btn btn-sm @(Model.TrendDays == 60 ? "btn-light" : "btn-outline-light")" 
+                                   aria-label="Mostra trend a 60 giorni"
+                                   aria-current="@(Model.TrendDays == 60 ? "true" : "false")"
                                    onclick="event.stopPropagation()">60d</a>
                                 <a asp-page="/Index" asp-route-trendDays="90" 
                                    class="btn btn-sm @(Model.TrendDays == 90 ? "btn-light" : "btn-outline-light")" 
+                                   aria-label="Mostra trend a 90 giorni"
+                                   aria-current="@(Model.TrendDays == 90 ? "true" : "false")"
                                    onclick="event.stopPropagation()">90d</a>
                             </div>
                         </div>

@@ -173,7 +173,7 @@ public sealed class SecureBootApiClient : ISecureBootApiClient
 
             return await response.Content.ReadFromJsonAsync<ComplianceTrendResponse>(cancellationToken);
         }
-        catch (HttpRequestException ex)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
         {
             _logger.LogError(ex, "Failed to fetch compliance trend for {Days} days", days);
             return null;

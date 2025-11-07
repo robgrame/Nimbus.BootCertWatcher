@@ -10,6 +10,7 @@ public class AnalyticsControllerTests : IDisposable
 {
     private readonly SecureBootDbContext _dbContext;
     private readonly AnalyticsController _controller;
+    private readonly ILoggerFactory _loggerFactory;
 
     public AnalyticsControllerTests()
     {
@@ -18,7 +19,8 @@ public class AnalyticsControllerTests : IDisposable
             .Options;
 
         _dbContext = new SecureBootDbContext(options);
-        var logger = new LoggerFactory().CreateLogger<AnalyticsController>();
+        _loggerFactory = new LoggerFactory();
+        var logger = _loggerFactory.CreateLogger<AnalyticsController>();
         _controller = new AnalyticsController(_dbContext, logger);
     }
 
@@ -204,5 +206,6 @@ public class AnalyticsControllerTests : IDisposable
     public void Dispose()
     {
         _dbContext?.Dispose();
+        _loggerFactory?.Dispose();
     }
 }

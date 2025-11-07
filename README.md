@@ -489,7 +489,7 @@ For questions, issues, or support:
 - [ ] Multi-tenant support with RBAC
 - [ ] Certificate compliance policies
 - [ ] Automated remediation workflows
-- [x] Enhanced analytics (30/60/90 day trends)
+- [x] Enhanced analytics (30/60/90 day trends) - [docs](docs/ENHANCED_ANALYTICS.md)
 
 ### v2.0 (Q3 2025)
 - [ ] Linux client support (.NET 8)
