@@ -127,7 +127,7 @@ public class AnalyticsControllerTests : IDisposable
         // Assert
         Assert.NotNull(result.Value);
         Assert.Equal(days, result.Value.Days);
-        Assert.Equal(days + 1, result.Value.Snapshots.Count); // days + 1 because we include today
+        Assert.Equal(days, result.Value.Snapshots.Count);
     }
 
     [Fact]

@@ -56,7 +56,7 @@ namespace SecureBootDashboard.Api.Controllers
             // Calculate daily snapshots
             var dailySnapshots = new Dictionary<string, DailySnapshot>();
             
-            for (int i = 0; i <= days; i++)
+            for (int i = 0; i < days; i++)
             {
                 var date = DateTimeOffset.UtcNow.Date.AddDays(-i);
                 var dateKey = date.ToString("yyyy-MM-dd");
@@ -126,7 +126,7 @@ namespace SecureBootDashboard.Api.Controllers
             // Group by date and count
             var dailyEnrollments = new Dictionary<string, int>();
             
-            for (int i = 0; i <= days; i++)
+            for (int i = 0; i < days; i++)
             {
                 var date = DateTimeOffset.UtcNow.Date.AddDays(-i);
                 var dateKey = date.ToString("yyyy-MM-dd");
