@@ -51,7 +51,7 @@ namespace SecureBootWatcher.Client.Services
                 {
                     snapshot.PolicyPublisher = ReadString(stateKey, "PolicyPublisher");
                     snapshot.PolicyVersion = ReadUInt(stateKey, "PolicyVersion");
-                    snapshot.UEFISecureBootEnabled = ReadUInt(stateKey, "UEFISecureBootEnabled");
+                    snapshot.UEFISecureBootEnabled = ReadBool(stateKey, "UEFISecureBootEnabled");
                 }
             }
             catch (SecurityException ex)

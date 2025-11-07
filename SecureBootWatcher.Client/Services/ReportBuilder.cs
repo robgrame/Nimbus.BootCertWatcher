@@ -141,7 +141,7 @@ namespace SecureBootWatcher.Client.Services
 
             if (report.Registry.UefiCa2023Status == SecureBootDeploymentState.Error)
             {
-                alerts.Add("Secure Boot update reported an error."); // Adjusted message
+                alerts.Add($"Secure Boot update reported error code {report.Registry.UefiCa2023Error ?? 0}.");
             }
 
             if (report.Registry.UefiCa2023Status == SecureBootDeploymentState.NotStarted)
@@ -162,6 +162,22 @@ namespace SecureBootWatcher.Client.Services
             if (report.Events.Count == 0 && report.Registry.UefiCa2023Status != SecureBootDeploymentState.Updated)
             {
                 alerts.Add("No Secure Boot events detected within the lookback window.");
+            }
+
+            // Add AvailableUpdates progression information
+            if (report.Registry.AvailableUpdates.HasValue)
+            {
+                var progressionState = SecureBootUpdateFlagsExtensions.GetProgressionState(report.Registry.AvailableUpdates);
+                var completionPercentage = SecureBootUpdateFlagsExtensions.GetCompletionPercentage(report.Registry.AvailableUpdates);
+                
+                alerts.Add($"Deployment Progress: {progressionState} ({completionPercentage}% complete)");
+
+                // Add pending updates information
+                var pendingFlags = SecureBootUpdateFlagsExtensions.GetActiveFlags(report.Registry.AvailableUpdates);
+                if (pendingFlags.Count > 0)
+                {
+                    alerts.Add($"Pending updates: {string.Join(", ", pendingFlags)}");
+                }
             }
 
             // Add certificate-related alerts
