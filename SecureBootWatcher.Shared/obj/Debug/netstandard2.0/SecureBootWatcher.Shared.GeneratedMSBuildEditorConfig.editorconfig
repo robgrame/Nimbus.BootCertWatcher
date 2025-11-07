@@ -1,6 +1,6 @@
 is_global = true
 build_property.RootNamespace = SecureBootWatcher.Shared
-build_property.ProjectDir = C:\Users\nefario\source\repos\robgrame\Nimbus.BootCertWatcher\SecureBootWatcher.Shared\
+build_property.ProjectDir = /home/runner/work/Nimbus.BootCertWatcher/Nimbus.BootCertWatcher/SecureBootWatcher.Shared/
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.CsWinRTUseWindowsUIXamlProjections = false
