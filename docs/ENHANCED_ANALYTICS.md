@@ -10,7 +10,7 @@ This document describes the enhanced analytics feature that provides 30/60/90 da
 The dashboard now supports viewing compliance trends over multiple time periods:
 - **7 days** - Short-term compliance tracking
 - **30 days** - Monthly compliance analysis  
-- **60 days** - Quarterly compliance trends
+- **60 days** - Bi-monthly compliance trends
 - **90 days** - Long-term compliance patterns
 
 ### 2. Period Selection
