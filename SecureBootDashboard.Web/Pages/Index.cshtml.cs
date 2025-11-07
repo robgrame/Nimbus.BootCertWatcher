@@ -22,6 +22,10 @@ public class IndexModel : PageModel
     public bool ApiHealthy { get; private set; }
     public string? ErrorMessage { get; private set; }
 
+    // Query parameters
+    [BindProperty(SupportsGet = true)]
+    public int TrendDays { get; set; } = 7;
+
     // Statistics
     public int TotalDevices => Devices.Count;
     public int ActiveDevices => Devices.Count(d => d.LastSeenUtc > DateTimeOffset.UtcNow.AddHours(-24));
@@ -35,13 +39,17 @@ public class IndexModel : PageModel
     public int NonCompliantDevices => TotalDevices - DeployedDevices;
     public double CompliancePercentage => TotalDevices > 0 ? (double)CompliantDevices / TotalDevices * 100 : 0;
 
-    // Trend data (last 7 days)
-    public Dictionary<string, int> ComplianceTrendData { get; private set; } = new();
+    // Trend data from API
+    public ComplianceTrendResponse? ComplianceTrend { get; private set; }
 
     public async Task OnGetAsync()
     {
         try
         {
+            // Validate TrendDays
+            if (TrendDays < 7) TrendDays = 7;
+            if (TrendDays > 90) TrendDays = 90;
+            
             ApiHealthy = await _apiClient.IsHealthyAsync(HttpContext.RequestAborted);
             
             if (!ApiHealthy)
@@ -54,8 +62,15 @@ public class IndexModel : PageModel
             
             _logger.LogInformation("Loaded {Count} devices for dashboard", Devices.Count);
 
-            // Calculate trend data (last 7 days)
-            CalculateComplianceTrend();
+            // Get trend data from API
+            ComplianceTrend = await _apiClient.GetComplianceTrendAsync(TrendDays, HttpContext.RequestAborted);
+            
+            if (ComplianceTrend == null)
+            {
+                _logger.LogWarning("Failed to load compliance trend data, using fallback");
+                // Fallback to simulated data if API call fails
+                CalculateComplianceTrendFallback();
+            }
         }
         catch (Exception ex)
         {
@@ -64,25 +79,28 @@ public class IndexModel : PageModel
         }
     }
 
-    private void CalculateComplianceTrend()
+    private void CalculateComplianceTrendFallback()
     {
-        // Generate trend data for the last 7 days
-        // In a real implementation, this would query historical data from the database
-        // For now, we'll simulate trend data based on current state
-        
+        // Fallback: Generate simulated trend data
+        var snapshots = new List<DailySnapshot>();
         var today = DateTimeOffset.UtcNow.Date;
         
-        for (int i = 6; i >= 0; i--)
+        for (int i = TrendDays - 1; i >= 0; i--)
         {
             var date = today.AddDays(-i);
-            var dateKey = date.ToString("yyyy-MM-dd");
-            
-            // Simulate historical compliance growth
-            // In production, this should query actual historical data
             var daysAgo = i;
             var historicalCompliance = Math.Max(0, CompliantDevices - (daysAgo * 2));
             
-            ComplianceTrendData[dateKey] = historicalCompliance;
+            snapshots.Add(new DailySnapshot(
+                date,
+                TotalDevices,
+                historicalCompliance,
+                PendingDevices,
+                ErrorDevices,
+                TotalDevices - historicalCompliance - PendingDevices - ErrorDevices,
+                TotalDevices > 0 ? (double)historicalCompliance / TotalDevices * 100 : 0));
         }
+
+        ComplianceTrend = new ComplianceTrendResponse(TrendDays, snapshots);
     }
 }
