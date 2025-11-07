@@ -253,28 +253,35 @@ if ($CreateScheduledTask) {
         # Create action
         $action = New-ScheduledTaskAction -Execute $exePath -WorkingDirectory $InstallPath
         
+        # Add random delay (0-60 minutes) to prevent flooding
+        # This distributes the load when many clients start at the same time
+        $randomDelay = Get-Random -Minimum 0 -Maximum 60
+        $randomDelayTimeSpan = New-TimeSpan -Minutes $randomDelay
+        
+        Write-Host "  Random delay: $randomDelay minutes (to prevent API flooding)" -ForegroundColor Gray
+        
         # Create trigger based on schedule type
         $trigger = $null
         $scheduleDescription = ""
         
         switch ($ScheduleType) {
             "Once" {
-                $trigger = New-ScheduledTaskTrigger -Once -At $TaskTime
-                $scheduleDescription = "Once at $TaskTime"
+                $trigger = New-ScheduledTaskTrigger -Once -At $TaskTime -RandomDelay $randomDelayTimeSpan
+                $scheduleDescription = "Once at $TaskTime (±$randomDelay min)"
             }
             "Daily" {
-                $trigger = New-ScheduledTaskTrigger -Daily -At $TaskTime
-                $scheduleDescription = "Daily at $TaskTime"
+                $trigger = New-ScheduledTaskTrigger -Daily -At $TaskTime -RandomDelay $randomDelayTimeSpan
+                $scheduleDescription = "Daily at $TaskTime (±$randomDelay min)"
             }
             "Hourly" {
                 # Create a trigger that repeats every hour
-                $trigger = New-ScheduledTaskTrigger -Once -At $TaskTime -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration ([TimeSpan]::MaxValue)
-                $scheduleDescription = "Every hour starting at $TaskTime"
+                $trigger = New-ScheduledTaskTrigger -Once -At $TaskTime -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration ([TimeSpan]::MaxValue) -RandomDelay $randomDelayTimeSpan
+                $scheduleDescription = "Every hour starting at $TaskTime (±$randomDelay min)"
             }
             "Custom" {
                 # Create a trigger that repeats every N hours
-                $trigger = New-ScheduledTaskTrigger -Once -At $TaskTime -RepetitionInterval (New-TimeSpan -Hours $RepeatEveryHours) -RepetitionDuration ([TimeSpan]::MaxValue)
-                $scheduleDescription = "Every $RepeatEveryHours hours starting at $TaskTime"
+                $trigger = New-ScheduledTaskTrigger -Once -At $TaskTime -RepetitionInterval (New-TimeSpan -Hours $RepeatEveryHours) -RepetitionDuration ([TimeSpan]::MaxValue) -RandomDelay $randomDelayTimeSpan
+                $scheduleDescription = "Every $RepeatEveryHours hours starting at $TaskTime (±$randomDelay min)"
             }
         }
         
@@ -467,4 +474,3 @@ Write-Host "Documentation:" -ForegroundColor White
 Write-Host "  - Deployment Guide: docs\DEPLOYMENT_GUIDE.md" -ForegroundColor Gray
 Write-Host "  - Client Deployment Scripts: docs\CLIENT_DEPLOYMENT_SCRIPTS.md" -ForegroundColor Gray
 Write-Host "  - README: README.md" -ForegroundColor Gray
-Write-Host ""
