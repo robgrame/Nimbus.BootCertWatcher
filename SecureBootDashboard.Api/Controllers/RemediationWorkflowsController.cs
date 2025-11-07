@@ -111,7 +111,8 @@ namespace SecureBootDashboard.Api.Controllers
             _dbContext.RemediationWorkflows.Add(workflow);
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Created workflow {WorkflowId} ({WorkflowName})", workflow.Id, workflow.Name);
+            _logger.LogInformation("Created workflow {WorkflowId} with name length {NameLength}", 
+                workflow.Id, workflow.Name.Length);
 
             return CreatedAtAction(
                 nameof(GetWorkflowAsync),
@@ -158,7 +159,8 @@ namespace SecureBootDashboard.Api.Controllers
 
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Updated workflow {WorkflowId} ({WorkflowName})", workflow.Id, workflow.Name);
+            _logger.LogInformation("Updated workflow {WorkflowId} with name length {NameLength}", 
+                workflow.Id, workflow.Name.Length);
 
             var trigger = JsonSerializer.Deserialize<WorkflowTrigger>(workflow.TriggerJson);
             var actions = JsonSerializer.Deserialize<List<WorkflowAction>>(workflow.ActionsJson);
@@ -194,7 +196,7 @@ namespace SecureBootDashboard.Api.Controllers
             _dbContext.RemediationWorkflows.Remove(workflow);
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Deleted workflow {WorkflowId} ({WorkflowName})", workflow.Id, workflow.Name);
+            _logger.LogInformation("Deleted workflow {WorkflowId}", workflow.Id);
 
             return NoContent();
         }
