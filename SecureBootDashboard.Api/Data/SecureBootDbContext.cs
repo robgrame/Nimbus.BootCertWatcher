@@ -15,6 +15,8 @@ namespace SecureBootDashboard.Api.Data
 
         public DbSet<SecureBootEventEntity> Events => Set<SecureBootEventEntity>();
 
+        public DbSet<PolicyEntity> Policies => Set<PolicyEntity>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -64,6 +66,18 @@ namespace SecureBootDashboard.Api.Data
                     .WithMany(r => r.Events)
                     .HasForeignKey(e => e.ReportId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<PolicyEntity>(entity =>
+            {
+                entity.ToTable("Policies");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).HasMaxLength(256).IsRequired();
+                entity.Property(e => e.Description).HasMaxLength(2000);
+                entity.Property(e => e.FleetId).HasMaxLength(128);
+                entity.Property(e => e.RulesJson).HasColumnType("nvarchar(max)").IsRequired();
+                entity.HasIndex(e => e.IsEnabled);
+                entity.HasIndex(e => e.FleetId);
             });
         }
     }
