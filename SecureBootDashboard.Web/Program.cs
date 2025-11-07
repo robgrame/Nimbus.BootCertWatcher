@@ -51,11 +51,24 @@ try
 
     if (string.Equals(authProvider, "EntraId", StringComparison.OrdinalIgnoreCase))
     {
-        // Configure Entra ID (Azure AD) authentication
-        builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectDefaults.AuthenticationScheme)
-            .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("Authentication:EntraId"));
+        var clientId = builder.Configuration["Authentication:EntraId:ClientId"];
+        var tenantId = builder.Configuration["Authentication:EntraId:TenantId"];
         
-        Log.Information("Entra ID authentication configured");
+        if (!string.IsNullOrEmpty(clientId) && !string.IsNullOrEmpty(tenantId))
+        {
+            // Configure Entra ID (Azure AD) authentication
+            builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectDefaults.AuthenticationScheme)
+                .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("Authentication:EntraId"));
+            
+            Log.Information("Entra ID authentication configured with ClientId: {ClientId}", clientId);
+        }
+        else
+        {
+            Log.Warning("Entra ID authentication selected but ClientId or TenantId not configured. Authentication disabled.");
+            // Add cookie authentication as fallback
+            builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie();
+        }
     }
     else if (string.Equals(authProvider, "Windows", StringComparison.OrdinalIgnoreCase))
     {
@@ -67,14 +80,24 @@ try
     }
     else
     {
-        // Default: Add cookie authentication for fallback
+        // No authentication configured - add cookie authentication for session management
         builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme)
             .AddCookie();
         
-        Log.Information("Cookie authentication configured (fallback)");
+        Log.Information("No authentication provider configured - using cookie authentication only");
     }
 
-    builder.Services.AddAuthorization();
+    builder.Services.AddAuthorization(options =>
+    {
+        // Configure default authorization policy based on authentication provider
+        if (string.IsNullOrEmpty(authProvider) || string.Equals(authProvider, "None", StringComparison.OrdinalIgnoreCase))
+        {
+            // When authentication is disabled, allow anonymous access
+            options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+                .RequireAssertion(_ => true)
+                .Build();
+        }
+    });
 
     // Configure API settings
     builder.Services.Configure<ApiSettings>(builder.Configuration.GetSection("ApiSettings"));
@@ -125,8 +148,26 @@ try
 
     app.MapRazorPages();
     
-    // Redirect root to Welcome page
-    app.MapGet("/", () => Results.Redirect("/Welcome"));
+    // Redirect root to appropriate page based on authentication configuration
+    app.MapGet("/", (Microsoft.AspNetCore.Http.HttpContext context) =>
+    {
+        var authProvider = app.Configuration["Authentication:Provider"];
+        if (string.IsNullOrEmpty(authProvider) || string.Equals(authProvider, "None", StringComparison.OrdinalIgnoreCase))
+        {
+            // No authentication - go directly to Index
+            return Results.Redirect("/Index");
+        }
+        else if (context.User.Identity?.IsAuthenticated == true)
+        {
+            // Already authenticated - go to Index
+            return Results.Redirect("/Index");
+        }
+        else
+        {
+            // Need authentication - go to Welcome
+            return Results.Redirect("/Welcome");
+        }
+    });
 
     Log.Information("========================================");
     Log.Information("SecureBootDashboard.Web started successfully");
