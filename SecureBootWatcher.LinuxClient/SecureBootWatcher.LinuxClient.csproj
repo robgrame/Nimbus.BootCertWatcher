@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="SecureBootWatcher.LinuxClient.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\SecureBootWatcher.Shared\SecureBootWatcher.Shared.csproj" />
   </ItemGroup>
 
