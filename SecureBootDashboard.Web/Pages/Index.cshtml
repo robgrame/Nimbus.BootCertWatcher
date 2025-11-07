@@ -527,5 +527,104 @@
                 }
             });
         }
+
+        // === SignalR Real-time Updates ===
+        if (window.dashboardClient) {
+            // Subscribe to dashboard updates
+            window.dashboardClient.subscribeToDashboard();
+
+            // Handle new report received
+            window.dashboardClient.onNewReportReceived = function(data) {
+                console.log('[Dashboard] New report received from:', data.machineName);
+                
+                // Show toast notification (already handled by dashboard-realtime.js)
+                // Optionally reload page to show updated statistics
+                // Uncomment the following line if you want automatic page reload:
+                // setTimeout(() => location.reload(), 2000);
+            };
+
+            // Handle compliance updates
+            window.dashboardClient.onComplianceUpdated = function(data) {
+                console.log('[Dashboard] Compliance updated:', data);
+                
+                // Update statistics cards with animation
+                updateStatCards(data);
+                
+                // Update charts
+                updateCharts(data);
+            };
+
+            // Handle device count updates
+            window.dashboardClient.onDeviceCountUpdated = function(data) {
+                console.log('[Dashboard] Device count updated:', data.totalDevices);
+                
+                // Update total devices card
+                const totalDevicesCard = document.querySelector('.bg-primary .display-4');
+                if (totalDevicesCard) {
+                    animateValue(totalDevicesCard, parseInt(totalDevicesCard.textContent), data.totalDevices, 500);
+                }
+            };
+
+            // Function to update stat cards with animation
+            function updateStatCards(data) {
+                const cards = {
+                    total: document.querySelector('.bg-primary .display-4'),
+                    active: document.querySelector('.bg-info .display-4'),
+                    deployed: document.querySelector('.bg-success .display-4'),
+                    pending: document.querySelector('.bg-warning .display-4'),
+                    error: document.querySelector('.bg-danger .display-4')
+                };
+
+                if (cards.total) animateValue(cards.total, parseInt(cards.total.textContent), data.totalDevices, 500);
+                if (cards.active) animateValue(cards.active, parseInt(cards.active.textContent), data.activeDevices, 500);
+                if (cards.deployed) animateValue(cards.deployed, parseInt(cards.deployed.textContent), data.compliantDevices, 500);
+                if (cards.pending) animateValue(cards.pending, parseInt(cards.pending.textContent), data.pendingDevices, 500);
+                if (cards.error) animateValue(cards.error, parseInt(cards.error.textContent), data.errorDevices, 500);
+                
+                // Update compliance percentage
+                const compliancePercentage = document.querySelector('.text-primary h4');
+                if (compliancePercentage) {
+                    compliancePercentage.textContent = data.compliancePercentage.toFixed(1) + '%';
+                    compliancePercentage.classList.add('realtime-updated');
+                    setTimeout(() => compliancePercentage.classList.remove('realtime-updated'), 800);
+                }
+            }
+
+            // Function to animate number changes
+            function animateValue(element, start, end, duration) {
+                const range = end - start;
+                const increment = range / (duration / 16); // 60fps
+                let current = start;
+
+                element.classList.add('realtime-updated');
+                
+                const timer = setInterval(() => {
+                    current += increment;
+                    if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+                        element.textContent = Math.round(end);
+                        clearInterval(timer);
+                        setTimeout(() => element.classList.remove('realtime-updated'), 800);
+                    } else {
+                        element.textContent = Math.round(current);
+                    }
+                }, 16);
+            }
+
+            // Function to update charts (simplified - full update would require Chart.js update methods)
+            function updateCharts(data) {
+                // For now, just add a visual indicator that charts need refresh
+                const chartCards = document.querySelectorAll('.chart-card');
+                chartCards.forEach(card => {
+                    card.classList.add('realtime-updated');
+                    setTimeout(() => card.classList.remove('realtime-updated'), 800);
+                });
+                
+                // In a full implementation, you would update Chart.js data:
+                // complianceChart.data.datasets[0].data = [data.compliantDevices, data.totalDevices - data.compliantDevices];
+                // complianceChart.update();
+            }
+        } else {
+            console.warn('[Dashboard] SignalR client not available');
+        }
     </script>
 }
