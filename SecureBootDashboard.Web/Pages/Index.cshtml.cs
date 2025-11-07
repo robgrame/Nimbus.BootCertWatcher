@@ -21,6 +21,7 @@ public class IndexModel : PageModel
     public IReadOnlyList<DeviceSummary> Devices { get; private set; } = Array.Empty<DeviceSummary>();
     public bool ApiHealthy { get; private set; }
     public string? ErrorMessage { get; private set; }
+    public int ActiveAnomaliesCount { get; private set; }
 
     // Statistics
     public int TotalDevices => Devices.Count;
@@ -56,6 +57,18 @@ public class IndexModel : PageModel
 
             // Calculate trend data (last 7 days)
             CalculateComplianceTrend();
+
+            // Get anomaly count
+            try
+            {
+                var anomalies = await _apiClient.GetActiveAnomaliesAsync(HttpContext.RequestAborted);
+                ActiveAnomaliesCount = anomalies.Count;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load anomaly count");
+                ActiveAnomaliesCount = 0;
+            }
         }
         catch (Exception ex)
         {

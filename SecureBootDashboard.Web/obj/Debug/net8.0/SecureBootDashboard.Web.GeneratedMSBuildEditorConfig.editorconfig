@@ -32,6 +32,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQWNjb3VudC9Mb2dvdXQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
+[/home/runner/work/Nimbus.BootCertWatcher/Nimbus.BootCertWatcher/SecureBootDashboard.Web/Pages/Anomalies/List.cshtml]
+build_metadata.AdditionalFiles.TargetPath = UGFnZXMvQW5vbWFsaWVzL0xpc3QuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
 [/home/runner/work/Nimbus.BootCertWatcher/Nimbus.BootCertWatcher/SecureBootDashboard.Web/Pages/Devices/Details.cshtml]
 build_metadata.AdditionalFiles.TargetPath = UGFnZXMvRGV2aWNlcy9EZXRhaWxzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 

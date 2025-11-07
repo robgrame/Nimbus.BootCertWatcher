@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using Microsoft.Extensions.Options;
+using SecureBootWatcher.Shared.Models;
 using SecureBootWatcher.Shared.Storage;
 
 namespace SecureBootDashboard.Web.Services;
@@ -154,6 +155,90 @@ public sealed class SecureBootApiClient : ISecureBootApiClient
         catch
         {
             return false;
+        }
+    }
+
+    public async Task<IReadOnlyList<AnomalyDetectionResult>> GetActiveAnomaliesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching active anomalies");
+            
+            var anomalies = await _httpClient.GetFromJsonAsync<List<AnomalyDetectionResult>>(
+                "/api/Anomalies",
+                cancellationToken);
+
+            if (anomalies == null)
+            {
+                return new List<AnomalyDetectionResult>();
+            }
+
+            return anomalies;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to fetch active anomalies from API");
+            return new List<AnomalyDetectionResult>();
+        }
+    }
+
+    public async Task<AnomalyDetectionResult?> GetAnomalyAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching anomaly detail for ID: {AnomalyId}", id);
+            
+            var response = await _httpClient.GetAsync($"/api/Anomalies/{id}", cancellationToken);
+            
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+
+            response.EnsureSuccessStatusCode();
+            
+            return await response.Content.ReadFromJsonAsync<AnomalyDetectionResult>(cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to fetch anomaly detail for ID: {AnomalyId}", id);
+            return null;
+        }
+    }
+
+    public async Task<IReadOnlyList<AnomalyDetectionResult>> TriggerAnomalyScanAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Triggering manual anomaly scan");
+            
+            var response = await _httpClient.PostAsync("/api/Anomalies/scan", null, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            
+            var anomalies = await response.Content.ReadFromJsonAsync<List<AnomalyDetectionResult>>(cancellationToken);
+            return anomalies ?? new List<AnomalyDetectionResult>();
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to trigger anomaly scan");
+            return new List<AnomalyDetectionResult>();
+        }
+    }
+
+    public async Task ResolveAnomalyAsync(Guid id, string resolvedBy, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Resolving anomaly {AnomalyId} by {ResolvedBy}", id, resolvedBy);
+            
+            var content = JsonContent.Create(new { ResolvedBy = resolvedBy });
+            var response = await _httpClient.PostAsync($"/api/Anomalies/{id}/resolve", content, cancellationToken);
+            response.EnsureSuccessStatusCode();
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to resolve anomaly {AnomalyId}", id);
+            throw;
         }
     }
 }

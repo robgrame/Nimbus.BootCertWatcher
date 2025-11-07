@@ -129,6 +129,25 @@
             </div>
         </div>
 
+        <!-- Anomalies Alert Row -->
+        @if (Model.ActiveAnomaliesCount > 0)
+        {
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="alert alert-warning d-flex align-items-center" role="alert">
+                        <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                        <div class="flex-grow-1">
+                            <h5 class="alert-heading mb-1">Anomalies Detected</h5>
+                            <p class="mb-0">
+                                @Model.ActiveAnomaliesCount active anomal@(Model.ActiveAnomaliesCount == 1 ? "y" : "ies") detected. 
+                                <a asp-page="/Anomalies/List" class="alert-link fw-bold">View details →</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
         <!-- Charts Section -->
         <div class="row mb-4">
             <!-- Compliance Pie Chart -->
