@@ -112,6 +112,10 @@ try
         }
     });
 
+    // Configure Export Service
+    Log.Information("Configuring Export Service...");
+    builder.Services.AddScoped<IExportService, ExportService>();
+
     // Configure Azure Queue Processor
     Log.Information("Configuring Queue Processor...");
     var queueConfig = builder.Configuration.GetSection("QueueProcessor");
