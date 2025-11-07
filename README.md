@@ -132,18 +132,23 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
 - Includes certificate enumeration models and validation logic
 
 ### 3. **SecureBootDashboard.Api** (ASP.NET Core 8)
-- REST API for ingesting reports and querying aggregated data
+- REST API (v1) and GraphQL API (v2) for ingesting reports and querying aggregated data
 - Two storage backends:
   - **EF Core + SQL Server**: full relational persistence with migrations
   - **File-based JSON store**: lightweight option for air-gapped or SQL-free environments
 - Background queue processor for Azure Queue consumption
-- Endpoints:
+- **REST API v1 Endpoints**:
   - `POST /api/SecureBootReports` – ingest client payloads
   - `GET /api/Devices` – list devices with summaries
   - `GET /api/Devices/{id}` – device details
   - `GET /api/Devices/{id}/reports` – report history
   - `GET /api/SecureBootReports/{id}` – individual report details
   - `GET /health` – health checks
+- **GraphQL API v2** (`/graphql`):
+  - Flexible querying for devices, reports, and events
+  - Type-safe schema with introspection
+  - Banana Cake Pop IDE in development mode
+  - See [GraphQL API Documentation](docs/GRAPHQL_API.md) for details
 
 ### 4. **SecureBootDashboard.Web** (ASP.NET Core 8 Razor Pages)
 - Modern, responsive dashboard UI for viewing devices, reports, and compliance
@@ -492,7 +497,7 @@ For questions, issues, or support:
 
 ### v2.0 (Q3 2025)
 - [ ] Linux client support (.NET 8)
-- [ ] API v2 with GraphQL
+- [x] API v2 with GraphQL ✅ **COMPLETED**
 - [ ] Machine learning anomaly detection
 - [ ] Integration with ServiceNow/Jira
 

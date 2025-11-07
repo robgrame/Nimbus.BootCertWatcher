@@ -1,14 +1,17 @@
 using Microsoft.EntityFrameworkCore;
 using SecureBootDashboard.Api.Configuration;
 using SecureBootDashboard.Api.Data;
+using SecureBootDashboard.Api.GraphQL.Queries;
+using SecureBootDashboard.Api.GraphQL.Mutations;
 using SecureBootDashboard.Api.Services;
 using SecureBootDashboard.Api.Storage;
 using SecureBootWatcher.Shared.Storage;
 using Serilog;
 using Serilog.Events;
+using HotChocolate.Types;
 
 // Configure Serilog before building the app
-var logPath = Path.Combine(AppContext.BaseDirectory, "logs", "api-.log");
+var logPath = System.IO.Path.Combine(AppContext.BaseDirectory, "logs", "api-.log");
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
@@ -29,7 +32,7 @@ try
     Log.Information("========================================");
     Log.Information("Environment: {Environment}", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production");
     Log.Information("Base Directory: {BaseDirectory}", AppContext.BaseDirectory);
-    Log.Information("Log Path: {LogPath}", Path.GetFullPath(logPath));
+    Log.Information("Log Path: {LogPath}", System.IO.Path.GetFullPath(logPath));
     Log.Information("Machine Name: {MachineName}", Environment.MachineName);
     Log.Information("User: {User}", Environment.UserName);
     Log.Information(".NET Version: {DotNetVersion}", Environment.Version);
@@ -49,6 +52,12 @@ try
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
+
+    // Configure GraphQL
+    Log.Information("Configuring GraphQL...");
+    builder.Services
+        .AddGraphQLServer()
+        .AddQueryType<Query>();
 
     // Log connection string (masked)
     var connectionString = builder.Configuration.GetConnectionString("SqlServer");
@@ -141,6 +150,8 @@ try
     app.UseHttpsRedirection();
 
     app.MapControllers();
+    app.MapGraphQL();
+    Log.Information("GraphQL endpoint enabled at: /graphql");
     app.MapHealthChecks("/health");
 
     Log.Information("========================================");
