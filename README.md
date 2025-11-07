@@ -191,9 +191,6 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
 - Root/sudo privileges (for EFI variable access at `/sys/firmware/efi/efivars`)
 - Network or Azure connectivity for sinks
 - Optional: `mokutil` for Secure Boot status checking
-- **PowerShell 5.0+** with SecureBoot module
-- Administrator/SYSTEM privileges (for registry and certificate access)
-- Network or Azure connectivity for sinks
 
 ### Runtime (Dashboard API/Web)
 - **Azure App Service** (Linux or Windows) *or* on-premises IIS/Kestrel
