@@ -47,6 +47,13 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
 - **Microsoft Detection**: Identifies Microsoft-issued certificates vs. third-party
 - **Certificate Details**: Complete X.509 properties including algorithms, key sizes, validity periods
 
+### 🤖 Automated Remediation
+- **Workflow Engine**: Define automated responses to device conditions and alerts
+- **Flexible Triggers**: Based on deployment state, certificate expiration, fleet, manufacturer, and more
+- **Multiple Actions**: Log entries, device tag updates, notifications, webhooks
+- **Execution History**: Track all workflow executions with detailed results
+- **Priority-based**: Control execution order with configurable priorities
+
 ### 📡 Flexible Architecture
 - **Multiple Sinks**: File share, Azure Queue Storage, or direct HTTP API ingestion
 - **Hybrid Deployment**: Supports cloud (Azure App Service) and on-premises hosting
@@ -294,6 +301,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 - **[Device List Separation](docs/DEVICE_LIST_SEPARATION.md)** - UI reorganization details
 - **[Certificate Enumeration](docs/CERTIFICATE_ENUMERATION.md)** - UEFI certificate tracking
 - **[Logo & Banner Implementation](docs/LOGO_BANNER_IMPLEMENTATION.md)** - Branding assets
+- **[Automated Remediation Workflows](docs/AUTOMATED_REMEDIATION_WORKFLOWS.md)** - Workflow automation guide
 
 ### Operations & Troubleshooting
 - **[Logging Guide](docs/LOGGING_GUIDE.md)** - Serilog configuration and best practices
@@ -487,7 +495,7 @@ For questions, issues, or support:
 ### v1.2 (Q2 2025)
 - [ ] Multi-tenant support with RBAC
 - [ ] Certificate compliance policies
-- [ ] Automated remediation workflows
+- [x] Automated remediation workflows
 - [ ] Enhanced analytics (30/60/90 day trends)
 
 ### v2.0 (Q3 2025)

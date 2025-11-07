@@ -1,0 +1,259 @@
+@page "{id:guid}"
+@model SecureBootDashboard.Web.Pages.Workflows.DetailsModel
+@{
+    ViewData["Title"] = "Workflow Details";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-page="./List">Workflows</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">@Model.Workflow?.Name</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    @if (Model.Workflow == null)
+    {
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Workflow not found.
+        </div>
+    }
+    else
+    {
+        <div class="row mb-3">
+            <div class="col">
+                <h2>
+                    <i class="fas fa-project-diagram me-2"></i>@Model.Workflow.Name
+                    @if (Model.Workflow.IsEnabled)
+                    {
+                        <span class="badge bg-success ms-2">Enabled</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary ms-2">Disabled</span>
+                    }
+                </h2>
+                @if (!string.IsNullOrEmpty(Model.Workflow.Description))
+                {
+                    <p class="text-muted">@Model.Workflow.Description</p>
+                }
+            </div>
+            <div class="col-auto">
+                <a asp-page="./Edit" asp-route-id="@Model.Workflow.Id" class="btn btn-primary">
+                    <i class="fas fa-edit me-1"></i>Edit
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Configuration</h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Priority</dt>
+                            <dd class="col-sm-8"><span class="badge bg-secondary">@Model.Workflow.Priority</span></dd>
+
+                            <dt class="col-sm-4">Created</dt>
+                            <dd class="col-sm-8">@Model.Workflow.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
+
+                            <dt class="col-sm-4">Last Updated</dt>
+                            <dd class="col-sm-8">@Model.Workflow.UpdatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
+
+                            @if (!string.IsNullOrEmpty(Model.Workflow.CreatedBy))
+                            {
+                                <dt class="col-sm-4">Created By</dt>
+                                <dd class="col-sm-8">@Model.Workflow.CreatedBy</dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Trigger Conditions</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (HasAnyTrigger(Model.Workflow.Trigger))
+                        {
+                            <dl class="row mb-0">
+                                @if (!string.IsNullOrEmpty(Model.Workflow.Trigger.DeploymentState))
+                                {
+                                    <dt class="col-sm-5">Deployment State</dt>
+                                    <dd class="col-sm-7"><code>@Model.Workflow.Trigger.DeploymentState</code></dd>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.Workflow.Trigger.FleetIdMatches))
+                                {
+                                    <dt class="col-sm-5">Fleet ID</dt>
+                                    <dd class="col-sm-7"><code>@Model.Workflow.Trigger.FleetIdMatches</code></dd>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.Workflow.Trigger.ManufacturerMatches))
+                                {
+                                    <dt class="col-sm-5">Manufacturer</dt>
+                                    <dd class="col-sm-7"><code>@Model.Workflow.Trigger.ManufacturerMatches</code></dd>
+                                }
+                                @if (Model.Workflow.Trigger.NoReportForDays.HasValue)
+                                {
+                                    <dt class="col-sm-5">No Report For</dt>
+                                    <dd class="col-sm-7">@Model.Workflow.Trigger.NoReportForDays days</dd>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.Workflow.Trigger.AlertContains))
+                                {
+                                    <dt class="col-sm-5">Alert Contains</dt>
+                                    <dd class="col-sm-7"><code>@Model.Workflow.Trigger.AlertContains</code></dd>
+                                }
+                                @if (Model.Workflow.Trigger.HasExpiredCertificates.HasValue)
+                                {
+                                    <dt class="col-sm-5">Has Expired Certs</dt>
+                                    <dd class="col-sm-7">@Model.Workflow.Trigger.HasExpiredCertificates</dd>
+                                }
+                                @if (Model.Workflow.Trigger.CertificateExpiringWithinDays.HasValue)
+                                {
+                                    <dt class="col-sm-5">Certs Expiring Within</dt>
+                                    <dd class="col-sm-7">@Model.Workflow.Trigger.CertificateExpiringWithinDays days</dd>
+                                }
+                            </dl>
+                        }
+                        else
+                        {
+                            <p class="text-muted mb-0">No trigger conditions defined (matches all)</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Actions (@Model.Workflow.Actions.Count)</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.Workflow.Actions.Any())
+                        {
+                            <div class="list-group">
+                                @foreach (var action in Model.Workflow.Actions.OrderBy(a => a.Order))
+                                {
+                                    <div class="list-group-item">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">
+                                                <span class="badge bg-primary me-2">@action.Order</span>
+                                                @action.ActionType.ToString()
+                                            </h6>
+                                        </div>
+                                        <pre class="mb-0 mt-2" style="background-color: #f5f5f5; padding: 10px; border-radius: 4px;"><code>@action.ConfigurationJson</code></pre>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted mb-0">No actions defined</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-warning">
+                        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Execution History</h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.Executions.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Device</th>
+                                            <th>Status</th>
+                                            <th>Duration</th>
+                                            <th>Result</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var execution in Model.Executions)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <small>@execution.StartedAtUtc.ToString("yyyy-MM-dd HH:mm:ss")</small>
+                                                </td>
+                                                <td>
+                                                    <a asp-page="/Devices/Details" asp-route-id="@execution.DeviceId">
+                                                        @execution.DeviceName
+                                                    </a>
+                                                </td>
+                                                <td>
+                                                    @switch (execution.Status.ToString())
+                                                    {
+                                                        case "Completed":
+                                                            <span class="badge bg-success">Completed</span>
+                                                            break;
+                                                        case "Failed":
+                                                            <span class="badge bg-danger">Failed</span>
+                                                            break;
+                                                        case "PartialSuccess":
+                                                            <span class="badge bg-warning">Partial</span>
+                                                            break;
+                                                        default:
+                                                            <span class="badge bg-info">@execution.Status</span>
+                                                            break;
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (execution.CompletedAtUtc.HasValue)
+                                                    {
+                                                        var duration = execution.CompletedAtUtc.Value - execution.StartedAtUtc;
+                                                        <small>@duration.TotalSeconds.ToString("F2")s</small>
+                                                    }
+                                                    else
+                                                    {
+                                                        <small class="text-muted">-</small>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <small class="text-muted">@execution.ResultMessage</small>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted mb-0">No executions yet</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@functions {
+    private bool HasAnyTrigger(dynamic trigger)
+    {
+        return !string.IsNullOrEmpty(trigger?.DeploymentState) ||
+               !string.IsNullOrEmpty(trigger?.FleetIdMatches) ||
+               !string.IsNullOrEmpty(trigger?.ManufacturerMatches) ||
+               trigger?.NoReportForDays != null ||
+               !string.IsNullOrEmpty(trigger?.AlertContains) ||
+               trigger?.HasExpiredCertificates != null ||
+               trigger?.CertificateExpiringWithinDays != null;
+    }
+}
