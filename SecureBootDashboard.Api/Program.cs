@@ -8,6 +8,7 @@ using SecureBootDashboard.Api.Storage;
 using SecureBootWatcher.Shared.Storage;
 using Serilog;
 using Serilog.Events;
+using HotChocolate.Types;
 
 // Configure Serilog before building the app
 var logPath = System.IO.Path.Combine(AppContext.BaseDirectory, "logs", "api-.log");
@@ -56,8 +57,7 @@ try
     Log.Information("Configuring GraphQL...");
     builder.Services
         .AddGraphQLServer()
-        .AddQueryType<Query>()
-        .AddMutationType<Mutation>();
+        .AddQueryType<Query>();
 
     // Log connection string (masked)
     var connectionString = builder.Configuration.GetConnectionString("SqlServer");
