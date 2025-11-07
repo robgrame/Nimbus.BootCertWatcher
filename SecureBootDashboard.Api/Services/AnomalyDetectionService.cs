@@ -278,7 +278,10 @@ namespace SecureBootDashboard.Api.Services
                 entity.ResolvedBy = resolvedBy;
                 entity.ResolvedAtUtc = DateTimeOffset.UtcNow;
                 await _dbContext.SaveChangesAsync(cancellationToken);
-                _logger.LogInformation("Anomaly {AnomalyId} resolved by {ResolvedBy}", anomalyId, resolvedBy);
+                
+                // Sanitize user input before logging to prevent log forging
+                var sanitizedResolvedBy = resolvedBy.Replace("\n", "").Replace("\r", "");
+                _logger.LogInformation("Anomaly {AnomalyId} resolved by {ResolvedBy}", anomalyId, sanitizedResolvedBy);
             }
         }
 
