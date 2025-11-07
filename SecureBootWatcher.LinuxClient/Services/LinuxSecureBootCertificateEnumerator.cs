@@ -73,11 +73,28 @@ namespace SecureBootWatcher.LinuxClient.Services
                     collection.PlatformKeys.Count,
                     collection.ExpiredCertificateCount);
             }
-            catch (Exception ex)
+            catch (UnauthorizedAccessException ex)
             {
-                _logger.LogError(ex, "Failed to enumerate Secure Boot certificates");
+                _logger.LogError(ex, "Access denied while enumerating Secure Boot certificates. Try running with elevated permissions.");
                 collection.ErrorMessage = ex.Message;
             }
+            catch (IOException ex)
+            {
+                _logger.LogError(ex, "I/O error while enumerating Secure Boot certificates");
+                collection.ErrorMessage = ex.Message;
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogError(ex, "Invalid operation while enumerating Secure Boot certificates");
+                collection.ErrorMessage = ex.Message;
+            }
+            // Optionally, catch other expected exceptions here
+            // If you want to catch truly unexpected exceptions, uncomment below:
+            // catch (Exception ex) when (!(ex is OutOfMemoryException || ex is StackOverflowException || ex is ThreadAbortException))
+            // {
+            //     _logger.LogError(ex, "Unexpected error while enumerating Secure Boot certificates");
+            //     collection.ErrorMessage = ex.Message;
+            // }
 
             return collection;
         }
