@@ -6,7 +6,7 @@ namespace SecureBootWatcher.LinuxClient.Services
 {
     /// <summary>
     /// Service for enumerating Secure Boot certificates from UEFI firmware databases.
-  /// </summary>
+    /// </summary>
     internal interface ISecureBootCertificateEnumerator
     {
         /// <summary>
