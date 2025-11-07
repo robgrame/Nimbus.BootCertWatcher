@@ -139,7 +139,11 @@ namespace SecureBootWatcher.LinuxClient.Services
                             records.Add(record);
                         }
                     }
-                    catch (Exception ex)
+                    catch (ArgumentException ex)
+                    {
+                        _logger.LogDebug(ex, "Failed to parse journal entry: {Line}", line);
+                    }
+                    catch (ArgumentOutOfRangeException ex)
                     {
                         _logger.LogDebug(ex, "Failed to parse journal entry: {Line}", line);
                     }
