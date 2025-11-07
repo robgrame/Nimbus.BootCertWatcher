@@ -89,11 +89,11 @@ private readonly ILogger<PowerShellSecureBootCertificateEnumerator> _logger;
               var script = "Confirm-SecureBootUEFI";
     var result = await ExecutePowerShellAsync(script, cancellationToken);
 
-      if (result.Contains("True", StringComparison.OrdinalIgnoreCase))
+      if (result.IndexOf("True", StringComparison.OrdinalIgnoreCase) >= 0)
     {
            return true;
         }
-                else if (result.Contains("False", StringComparison.OrdinalIgnoreCase))
+                else if (result.IndexOf("False", StringComparison.OrdinalIgnoreCase) >= 0)
          {
         return false;
         }
@@ -128,7 +128,7 @@ private readonly ILogger<PowerShellSecureBootCertificateEnumerator> _logger;
 
        var base64Data = await ExecutePowerShellAsync(script, cancellationToken);
 
-   if (string.IsNullOrWhiteSpace(base64Data) || base64Data.Contains("Error", StringComparison.OrdinalIgnoreCase))
+   if (string.IsNullOrWhiteSpace(base64Data) || base64Data.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0)
     {
     _logger.LogDebug("No data returned for {Database}", databaseName);
  return;
