@@ -172,6 +172,8 @@ namespace SecureBootDashboard.Api.Controllers
                 return NotFound();
             }
 
+            var latestReport = device.Reports.FirstOrDefault();
+
             return new DeviceDetailResponse(
                 device.Id,
                 device.MachineName,
@@ -184,6 +186,9 @@ namespace SecureBootDashboard.Api.Controllers
                 device.TagsJson,
                 device.CreatedAtUtc,
                 device.LastSeenUtc,
+                device.UEFISecureBootEnabled,
+                latestReport?.RegistryStateJson,
+                latestReport?.CertificatesJson,
                 device.Reports.Select(r => new ReportHistoryItem(
                     r.Id,
                     r.CreatedAtUtc,
@@ -341,6 +346,9 @@ namespace SecureBootDashboard.Api.Controllers
             string? TagsJson,
             DateTimeOffset FirstSeenUtc,
             DateTimeOffset LastSeenUtc,
+            bool? UEFISecureBootEnabled,
+            string? LatestRegistryStateJson,
+            string? LatestCertificatesJson,
             IReadOnlyCollection<ReportHistoryItem> RecentReports);
 
         public sealed record ReportHistoryItem(

@@ -41,6 +41,9 @@ public sealed record DeviceDetail(
     string? TagsJson,
     DateTimeOffset FirstSeenUtc,
     DateTimeOffset LastSeenUtc,
+    bool? UEFISecureBootEnabled,
+    string? LatestRegistryStateJson,
+    string? LatestCertificatesJson,
     IReadOnlyCollection<ReportHistoryItem> RecentReports);
 
 public sealed record ReportHistoryItem(

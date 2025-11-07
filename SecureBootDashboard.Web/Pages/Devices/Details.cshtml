@@ -95,6 +95,32 @@
                                 <td><code>@(Model.Device.FirmwareVersion ?? "Unknown")</code></td>
                             </tr>
                             <tr>
+                                <th><i class="fas fa-shield-alt"></i> Secure Boot:</th>
+                                <td>
+                                    @if (Model.Device.UEFISecureBootEnabled.HasValue)
+                                    {
+                                        if (Model.Device.UEFISecureBootEnabled.Value)
+                                        {
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle"></i> Enabled
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-times-circle"></i> Disabled
+                                            </span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-question-circle"></i> Unknown
+                                        </span>
+                                    }
+                                </td>
+                            </tr>
+                            <tr>
                                 <th><i class="fas fa-fingerprint"></i> Device ID:</th>
                                 <td><small class="text-muted"><code>@Model.Device.Id</code></small></td>
                             </tr>
@@ -157,6 +183,186 @@
                 </div>
             </div>
         </div>
+
+        var registryState = Model.GetLatestRegistryState();
+        var certificates = Model.GetLatestCertificates();
+
+        @if (registryState != null)
+        {
+            <!-- Registry Update Progression Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-tasks"></i> Secure Boot Update Progression</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-chart-pie"></i> Deployment Status</h6>
+                            <div class="progress mb-2" style="height: 30px;">
+                                <div class="progress-bar @(registryState.CompletionPercentage == 100 ? "bg-success" : "bg-warning")" 
+                                     role="progressbar" 
+                                     style="width: @registryState.CompletionPercentage%;" 
+                                     aria-valuenow="@registryState.CompletionPercentage" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    @registryState.CompletionPercentage%
+                                </div>
+                            </div>
+                            <p class="mb-0"><strong>State:</strong> @registryState.ProgressionState</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-info-circle"></i> Registry Details</h6>
+                            <dl class="row mb-0">
+                                <dt class="col-sm-6">Available Updates:</dt>
+                                <dd class="col-sm-6"><code>@(registryState.AvailableUpdates?.ToString() ?? "N/A")</code></dd>
+                                
+                                <dt class="col-sm-6">Deployment State:</dt>
+                                <dd class="col-sm-6">
+                                    @switch (registryState.UefiCa2023Status.ToString())
+                                    {
+                                        case "Deployed":
+                                            <span class="badge bg-success">Deployed</span>
+                                            break;
+                                        case "Pending":
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                            break;
+                                        case "Error":
+                                            <span class="badge bg-danger">Error</span>
+                                            break;
+                                        default:
+                                            <span class="badge bg-secondary">@registryState.UefiCa2023Status</span>
+                                            break;
+                                    }
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    @if (registryState.UpdateSteps.Any())
+                    {
+                        <h6 class="mt-3"><i class="fas fa-list-ol"></i> Update Steps</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Step</th>
+                                        <th>Status</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var step in registryState.UpdateSteps)
+                                    {
+                                        <tr>
+                                            <td>@step.Name</td>
+                                            <td>
+                                                @if (step.IsCompleted)
+                                                {
+                                                    <span class="badge bg-success"><i class="fas fa-check"></i> Completed</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary"><i class="fas fa-clock"></i> Pending</span>
+                                                }
+                                            </td>
+                                            <td>@step.Description</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+
+                    @if (registryState.PendingUpdates.Any())
+                    {
+                        <div class="alert alert-info mt-3">
+                            <h6><i class="fas fa-clock"></i> Pending Updates</h6>
+                            <ul class="mb-0">
+                                @foreach (var update in registryState.PendingUpdates)
+                                {
+                                    <li>@update</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (certificates != null)
+        {
+            <!-- Certificates Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-certificate"></i> Secure Boot Certificates</h5>
+                </div>
+                <div class="card-body">
+                    @if (certificates.SignatureDatabase?.Any() == true)
+                    {
+                        <h6><i class="fas fa-database"></i> Signature Database (db) - @certificates.SignatureDatabase.Count certificates</h6>
+                        <div class="table-responsive mb-3">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Subject</th>
+                                        <th>Issuer</th>
+                                        <th>Valid From</th>
+                                        <th>Valid To</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var cert in certificates.SignatureDatabase.Take(10))
+                                    {
+                                        var isExpired = cert.NotAfter.HasValue && cert.NotAfter.Value < DateTimeOffset.UtcNow;
+                                        var isExpiringSoon = !isExpired && cert.NotAfter.HasValue && cert.NotAfter.Value < DateTimeOffset.UtcNow.AddDays(90);
+                                        
+                                        <tr class="@(isExpired ? "table-danger" : isExpiringSoon ? "table-warning" : "")">
+                                            <td><small>@(cert.Subject ?? "N/A")</small></td>
+                                            <td><small>@(cert.Issuer ?? "N/A")</small></td>
+                                            <td><small>@(cert.NotBefore.HasValue ? cert.NotBefore.Value.ToString("yyyy-MM-dd") : "N/A")</small></td>
+                                            <td><small>@(cert.NotAfter.HasValue ? cert.NotAfter.Value.ToString("yyyy-MM-dd") : "N/A")</small></td>
+                                            <td>
+                                                @if (isExpired)
+                                                {
+                                                    <span class="badge bg-danger"><i class="fas fa-times-circle"></i> Expired</span>
+                                                }
+                                                else if (isExpiringSoon)
+                                                {
+                                                    <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> Expiring Soon</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-success"><i class="fas fa-check-circle"></i> Valid</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+
+                    @if (certificates.ForbiddenDatabase?.Any() == true)
+                    {
+                        <h6><i class="fas fa-ban"></i> Forbidden Signature Database (dbx) - @certificates.ForbiddenDatabase.Count entries</h6>
+                        <p class="text-muted">Contains @certificates.ForbiddenDatabase.Count forbidden signatures</p>
+                    }
+
+                    @if (certificates.KeyExchangeKeys?.Any() == true)
+                    {
+                        <h6><i class="fas fa-key"></i> Key Exchange Keys (KEK) - @certificates.KeyExchangeKeys.Count certificates</h6>
+                        <p class="text-muted">@certificates.KeyExchangeKeys.Count key exchange key(s) configured</p>
+                    }
+
+                    @if (certificates.PlatformKeys?.Any() == true)
+                    {
+                        <h6><i class="fas fa-lock"></i> Platform Key (PK) - @certificates.PlatformKeys.Count certificate</h6>
+                        <p class="text-muted">Platform key is configured</p>
+                    }
+                </div>
+            </div>
+        }
 
         <!-- Recent Reports Card -->
         <div class="card">
