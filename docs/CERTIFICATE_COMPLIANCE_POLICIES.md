@@ -234,7 +234,7 @@ Potential future improvements:
 
 ## Related Documentation
 
-- [Certificate Enumeration Guide](CERTIFICATE_ENUMERATION.md)
-- [API Reference](WEB_IMPLEMENTATION_SUMMARY.md)
-- [Deployment Guide](DEPLOYMENT.md)
-- [Architecture Overview](ARCHITECTURE_DIAGRAM.md)
+- [Certificate Enumeration Guide](CERTIFICATE_ENUMERATION.md) - Learn about certificate data collection
+- [Deployment Guide](DEPLOYMENT.md) - Production deployment instructions
+- [Architecture Diagram](ARCHITECTURE_DIAGRAM.md) - System architecture overview
+- [API Implementation](WEB_IMPLEMENTATION_SUMMARY.md) - Web dashboard and API details

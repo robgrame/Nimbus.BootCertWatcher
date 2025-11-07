@@ -178,9 +178,10 @@ namespace SecureBootDashboard.Api.Controllers
                         {
                             certificates = JsonSerializer.Deserialize<SecureBootCertificateCollection>(latestReport.CertificatesJson);
                         }
-                        catch
+                        catch (JsonException ex)
                         {
-                            // Ignore deserialization errors
+                            _logger.LogWarning(ex, "Failed to deserialize certificates for device {DeviceId}, report {ReportId}", 
+                                device.Id, latestReport.Id);
                         }
                     }
 

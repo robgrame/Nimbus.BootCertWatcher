@@ -218,6 +218,25 @@
         
         // Update hidden field before form submission
         document.querySelector('form').addEventListener('submit', function(e) {
+            // Validate that at least one rule exists
+            if (rules.length === 0) {
+                alert('Please add at least one rule to the policy.');
+                e.preventDefault();
+                return false;
+            }
+            
+            // Validate each rule has required values
+            const invalidRules = rules.filter(r => {
+                const needsValue = [1, 2, 3, 4, 5, 8].includes(parseInt(r.RuleType));
+                return needsValue && (!r.Value || r.Value.trim() === '');
+            });
+            
+            if (invalidRules.length > 0) {
+                alert('All rules must have a value specified. Please complete all rule configurations.');
+                e.preventDefault();
+                return false;
+            }
+            
             const rulesData = rules.map(r => ({
                 RuleType: parseInt(r.RuleType),
                 Severity: parseInt(r.Severity),

@@ -181,9 +181,10 @@ namespace SecureBootDashboard.Api.Controllers
                 {
                     rules = JsonSerializer.Deserialize<List<PolicyRule>>(entity.RulesJson) ?? new List<PolicyRule>();
                 }
-                catch
+                catch (JsonException ex)
                 {
-                    // If deserialization fails, return empty list
+                    // Log deserialization failure but continue with empty rules
+                    System.Diagnostics.Debug.WriteLine($"Failed to deserialize rules for policy '{entity.Name}' (ID: {entity.Id}): {ex.Message}");
                 }
             }
 
