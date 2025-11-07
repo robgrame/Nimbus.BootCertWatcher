@@ -1,39 +1,53 @@
 /* SignalR Connection Status Indicator */
 
+/* OLD small indicator - keeping for backward compatibility but hidden */
 .signalr-status-indicator {
-    position: fixed;
-    top: 70px;
-    right: 20px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    z-index: 1000;
+    display: none;
+}
+
+/* NEW Navbar Status Indicator */
+.signalr-status-navbar {
+    cursor: default;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
     transition: all 0.3s ease;
-    box-shadow: 0 0 0 3px rgba(108, 117, 125, 0.3);
-    
-    /* Default state: gray (disconnected/initializing) */
-    background-color: #6c757d;
 }
 
-.signalr-status-indicator.connected {
-    background-color: #28a745;
-    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.3);
+.signalr-status-navbar.connected {
+    background-color: rgba(40, 167, 69, 0.1);
+    color: #28a745 !important;
 }
 
-.signalr-status-indicator.reconnecting {
-    background-color: #ffc107;
-    box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.3);
+.signalr-status-navbar.connected #signalr-icon {
+    color: #28a745;
+}
+
+.signalr-status-navbar.reconnecting {
+    background-color: rgba(255, 193, 7, 0.1);
+    color: #ffc107 !important;
+}
+
+.signalr-status-navbar.reconnecting #signalr-icon {
+    color: #ffc107;
     animation: pulse 1.5s ease-in-out infinite;
 }
 
-.signalr-status-indicator.disconnected {
-    background-color: #6c757d;
-    box-shadow: 0 0 0 3px rgba(108, 117, 125, 0.3);
+.signalr-status-navbar.disconnected {
+    background-color: rgba(108, 117, 125, 0.1);
+    color: #6c757d !important;
 }
 
-.signalr-status-indicator.error {
-    background-color: #dc3545;
-    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.3);
+.signalr-status-navbar.disconnected #signalr-icon {
+    color: #6c757d;
+}
+
+.signalr-status-navbar.error {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: #dc3545 !important;
+}
+
+.signalr-status-navbar.error #signalr-icon {
+    color: #dc3545;
     animation: pulse 1s ease-in-out infinite;
 }
 
@@ -50,11 +64,13 @@
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    .signalr-status-indicator {
-        top: 60px;
-        right: 15px;
-        width: 10px;
-        height: 10px;
+    .signalr-status-navbar {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.8rem;
+    }
+    
+    .signalr-status-navbar #signalr-text {
+        display: none;
     }
 }
 

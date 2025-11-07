@@ -265,7 +265,7 @@ class DashboardRealtimeClient {
             this.onConnectionStateChanged(state);
         }
 
-        // Update UI indicator
+        // Update OLD small indicator (hidden but keep for compatibility)
         const indicator = document.getElementById('signalr-status-indicator');
         if (indicator) {
             indicator.className = 'signalr-status-indicator';
@@ -286,6 +286,39 @@ class DashboardRealtimeClient {
                 case 'error':
                     indicator.classList.add('error');
                     indicator.title = 'Real-time updates: Connection error';
+                    break;
+            }
+        }
+        
+        // Update NEW navbar indicator
+        const navbarIndicator = document.getElementById('signalr-status-navbar');
+        const navbarIcon = document.getElementById('signalr-icon');
+        const navbarText = document.getElementById('signalr-text');
+        
+        if (navbarIndicator && navbarIcon && navbarText) {
+            // Remove all state classes
+            navbarIndicator.className = 'nav-link signalr-status-navbar';
+            
+            switch (state) {
+                case 'connected':
+                    navbarIndicator.classList.add('connected');
+                    navbarIcon.className = 'fas fa-circle-check me-1';
+                    navbarText.textContent = 'Real-time Attivo';
+                    break;
+                case 'reconnecting':
+                    navbarIndicator.classList.add('reconnecting');
+                    navbarIcon.className = 'fas fa-circle-notch fa-spin me-1';
+                    navbarText.textContent = 'Riconnessione...';
+                    break;
+                case 'disconnected':
+                    navbarIndicator.classList.add('disconnected');
+                    navbarIcon.className = 'fas fa-circle-xmark me-1';
+                    navbarText.textContent = 'Disconnesso';
+                    break;
+                case 'error':
+                    navbarIndicator.classList.add('error');
+                    navbarIcon.className = 'fas fa-circle-exclamation me-1';
+                    navbarText.textContent = 'Errore';
                     break;
             }
         }

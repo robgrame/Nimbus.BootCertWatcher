@@ -55,9 +55,6 @@
         <p class="splash-loading-text">Caricamento in corso...</p>
     </div>
 
-    @* SignalR Connection Status Indicator *@
-    <div id="signalr-status-indicator" class="signalr-status-indicator" title="Real-time updates: Connecting..."></div>
-
     <header>
         <nav class="navbar navbar-expand-sm navbar-dark bg-dark border-bottom box-shadow mb-3">
             <div class="container-fluid">
@@ -92,6 +89,17 @@
                             </a>
                         </li>
                     </ul>
+                    
+                    @* SignalR Status in Navbar *@
+                    <ul class="navbar-nav mx-3">
+                        <li class="nav-item">
+                            <span class="nav-link signalr-status-navbar" id="signalr-status-navbar">
+                                <i class="fas fa-circle-notch fa-spin me-1" id="signalr-icon"></i>
+                                <span id="signalr-text">Connessione...</span>
+                            </span>
+                        </li>
+                    </ul>
+                    
                     @if (User.Identity?.IsAuthenticated == true)
                     {
                         <ul class="navbar-nav">
