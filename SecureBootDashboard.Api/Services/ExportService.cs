@@ -34,7 +34,7 @@ public class ExportService : IExportService
             var headers = new[]
             {
                 "Machine Name", "Domain", "Fleet ID", "Manufacturer", "Model",
-                "Report Count", "Latest State", "Last Seen UTC", "Status"
+                "Report Count", "Latest State", "Secure Boot", "Last Seen UTC", "Status"
             };
 
             for (int i = 0; i < headers.Length; i++)
@@ -58,11 +58,33 @@ public class ExportService : IExportService
                 worksheet.Cell(row, 5).Value = device.Model ?? "N/A";
                 worksheet.Cell(row, 6).Value = device.ReportCount;
                 worksheet.Cell(row, 7).Value = device.LatestDeploymentState ?? "Unknown";
-                worksheet.Cell(row, 8).Value = device.LastSeenUtc.ToString("yyyy-MM-dd HH:mm:ss");
+                
+                // Secure Boot column
+                var secureBootCell = worksheet.Cell(row, 8);
+                if (device.UEFISecureBootEnabled.HasValue)
+                {
+                    secureBootCell.Value = device.UEFISecureBootEnabled.Value ? "Enabled" : "Disabled";
+                    if (device.UEFISecureBootEnabled.Value)
+                    {
+                        secureBootCell.Style.Fill.BackgroundColor = XLColor.FromHtml("#C6EFCE");
+                        secureBootCell.Style.Font.FontColor = XLColor.FromHtml("#006100");
+                    }
+                    else
+                    {
+                        secureBootCell.Style.Fill.BackgroundColor = XLColor.FromHtml("#FFC7CE");
+                        secureBootCell.Style.Font.FontColor = XLColor.FromHtml("#9C0006");
+                    }
+                }
+                else
+                {
+                    secureBootCell.Value = "Unknown";
+                }
+                
+                worksheet.Cell(row, 9).Value = device.LastSeenUtc.ToString("yyyy-MM-dd HH:mm:ss");
 
                 // Status column with color coding
                 var daysSinceLastSeen = (DateTimeOffset.UtcNow - device.LastSeenUtc).TotalDays;
-                var statusCell = worksheet.Cell(row, 9);
+                var statusCell = worksheet.Cell(row, 10);
 
                 if (daysSinceLastSeen < 1)
                 {
@@ -154,6 +176,7 @@ public class ExportService : IExportService
                 Model = d.Model ?? "N/A",
                 ReportCount = d.ReportCount,
                 LatestState = d.LatestDeploymentState ?? "Unknown",
+                SecureBoot = d.UEFISecureBootEnabled.HasValue ? (d.UEFISecureBootEnabled.Value ? "Enabled" : "Disabled") : "Unknown",
                 LastSeenUtc = d.LastSeenUtc.ToString("yyyy-MM-dd HH:mm:ss"),
                 DaysSinceLastSeen = (DateTimeOffset.UtcNow - d.LastSeenUtc).TotalDays,
                 Status = (DateTimeOffset.UtcNow - d.LastSeenUtc).TotalDays < 1 ? "Active" :

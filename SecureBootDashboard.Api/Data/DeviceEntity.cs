@@ -21,6 +21,8 @@ namespace SecureBootDashboard.Api.Data
 
         public DateTime? FirmwareReleaseDate { get; set; } // Added property
 
+        public bool? UEFISecureBootEnabled { get; set; } // Secure Boot enabled status
+
         public string? FleetId { get; set; }
 
         public string? TagsJson { get; set; }

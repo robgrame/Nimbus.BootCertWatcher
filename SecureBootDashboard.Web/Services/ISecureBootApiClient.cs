@@ -26,7 +26,8 @@ public sealed record DeviceSummary(
     DateTimeOffset LastSeenUtc,
     int ReportCount,
     string? LatestDeploymentState,
-    DateTimeOffset? LatestReportDate);
+    DateTimeOffset? LatestReportDate,
+    bool? UEFISecureBootEnabled);
 
 public sealed record DeviceDetail(
     Guid Id,
@@ -40,6 +41,9 @@ public sealed record DeviceDetail(
     string? TagsJson,
     DateTimeOffset FirstSeenUtc,
     DateTimeOffset LastSeenUtc,
+    bool? UEFISecureBootEnabled,
+    string? LatestRegistryStateJson,
+    string? LatestCertificatesJson,
     IReadOnlyCollection<ReportHistoryItem> RecentReports);
 
 public sealed record ReportHistoryItem(

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SecureBootDashboard.Api.Data;
 
@@ -11,9 +12,11 @@ using SecureBootDashboard.Api.Data;
 namespace SecureBootDashboard.Api.Data.Migrations
 {
     [DbContext(typeof(SecureBootDbContext))]
-    partial class SecureBootDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251107233431_AddUEFISecureBootEnabledToDevice")]
+    partial class AddUEFISecureBootEnabledToDevice
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

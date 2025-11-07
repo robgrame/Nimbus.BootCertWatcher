@@ -40,4 +40,5 @@ public sealed record ExportDeviceSummary(
     string? Model,
     int ReportCount,
     string? LatestDeploymentState,
-    DateTimeOffset LastSeenUtc);
+    DateTimeOffset LastSeenUtc,
+    bool? UEFISecureBootEnabled);

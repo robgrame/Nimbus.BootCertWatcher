@@ -55,7 +55,8 @@ namespace SecureBootDashboard.Api.Controllers
                     d.LastSeenUtc,
                     d.Reports.Count,
                     latestReport?.DeploymentState,
-                    latestReport?.CreatedAtUtc);
+                    latestReport?.CreatedAtUtc,
+                    d.UEFISecureBootEnabled);
             }).ToArray();
         }
 
@@ -89,7 +90,8 @@ namespace SecureBootDashboard.Api.Controllers
                         d.Model,
                         d.Reports.Count,
                         latestReport?.DeploymentState,
-                        d.LastSeenUtc
+                        d.LastSeenUtc,
+                        d.UEFISecureBootEnabled
                     );
                 }).ToList();
 
@@ -136,7 +138,8 @@ namespace SecureBootDashboard.Api.Controllers
                         d.Model,
                         d.Reports.Count,
                         latestReport?.DeploymentState,
-                        d.LastSeenUtc
+                        d.LastSeenUtc,
+                        d.UEFISecureBootEnabled
                     );
                 }).ToList();
 
@@ -169,6 +172,8 @@ namespace SecureBootDashboard.Api.Controllers
                 return NotFound();
             }
 
+            var latestReport = device.Reports.FirstOrDefault();
+
             return new DeviceDetailResponse(
                 device.Id,
                 device.MachineName,
@@ -181,6 +186,9 @@ namespace SecureBootDashboard.Api.Controllers
                 device.TagsJson,
                 device.CreatedAtUtc,
                 device.LastSeenUtc,
+                device.UEFISecureBootEnabled,
+                latestReport?.RegistryStateJson,
+                latestReport?.CertificatesJson,
                 device.Reports.Select(r => new ReportHistoryItem(
                     r.Id,
                     r.CreatedAtUtc,
@@ -323,7 +331,8 @@ namespace SecureBootDashboard.Api.Controllers
             DateTimeOffset LastSeenUtc,
             int ReportCount,
             string? LatestDeploymentState,
-            DateTimeOffset? LatestReportDate);
+            DateTimeOffset? LatestReportDate,
+            bool? UEFISecureBootEnabled);
 
         public sealed record DeviceDetailResponse(
             Guid Id,
@@ -337,6 +346,9 @@ namespace SecureBootDashboard.Api.Controllers
             string? TagsJson,
             DateTimeOffset FirstSeenUtc,
             DateTimeOffset LastSeenUtc,
+            bool? UEFISecureBootEnabled,
+            string? LatestRegistryStateJson,
+            string? LatestCertificatesJson,
             IReadOnlyCollection<ReportHistoryItem> RecentReports);
 
         public sealed record ReportHistoryItem(
