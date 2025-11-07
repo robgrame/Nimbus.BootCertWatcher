@@ -92,12 +92,18 @@ namespace SecureBootDashboard.Api.Controllers
         /// </summary>
         [HttpPost("{id:guid}/resolve")]
         [ProducesResponseType(204)]
+        [ProducesResponseType(400)]
         [ProducesResponseType(404)]
         public async Task<IActionResult> ResolveAnomalyAsync(
             Guid id, 
             [FromBody] ResolveAnomalyRequest request, 
             CancellationToken cancellationToken)
         {
+            if (string.IsNullOrWhiteSpace(request.ResolvedBy))
+            {
+                return BadRequest(new { error = "ResolvedBy is required" });
+            }
+
             try
             {
                 var anomaly = await _anomalyService.GetAnomalyAsync(id, cancellationToken);
@@ -106,7 +112,7 @@ namespace SecureBootDashboard.Api.Controllers
                     return NotFound();
                 }
 
-                await _anomalyService.ResolveAnomalyAsync(id, request.ResolvedBy ?? "Unknown", cancellationToken);
+                await _anomalyService.ResolveAnomalyAsync(id, request.ResolvedBy, cancellationToken);
                 return NoContent();
             }
             catch (Exception ex)

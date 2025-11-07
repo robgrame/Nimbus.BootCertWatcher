@@ -26,6 +26,15 @@ namespace SecureBootDashboard.Api.Services
         private readonly SecureBootDbContext _dbContext;
         private readonly ILogger<AnomalyDetectionService> _logger;
 
+        // Configuration constants
+        private const int MinimumDeviceCountForStatistics = 3;
+        private const double StatisticalThreshold = 2.5; // Standard deviations
+        private const int ReportingFrequencyLookbackDays = 7;
+        private const int DeploymentStateLookbackDays = 14;
+        private const int InactivityThresholdDays = 14;
+        private const int PendingStateAnomalyThreshold = 3; // consecutive reports
+        private const int ErrorStateAnomalyThreshold = 2; // reports
+
         public AnomalyDetectionService(SecureBootDbContext dbContext, ILogger<AnomalyDetectionService> logger)
         {
             _dbContext = dbContext;
@@ -91,7 +100,7 @@ namespace SecureBootDashboard.Api.Services
         private async Task<List<AnomalyDetectionResult>> DetectReportingFrequencyAnomaliesAsync(CancellationToken cancellationToken)
         {
             var anomalies = new List<AnomalyDetectionResult>();
-            var lookbackPeriod = DateTimeOffset.UtcNow.AddDays(-7);
+            var lookbackPeriod = DateTimeOffset.UtcNow.AddDays(-ReportingFrequencyLookbackDays);
 
             // Get devices with their report counts
             var deviceReportStats = await _dbContext.Devices
@@ -105,15 +114,15 @@ namespace SecureBootDashboard.Api.Services
                 .Where(d => d.TotalReports > 0)
                 .ToListAsync(cancellationToken);
 
-            if (deviceReportStats.Count < 3)
+            if (deviceReportStats.Count < MinimumDeviceCountForStatistics)
                 return anomalies;
 
             // Calculate statistical thresholds
             var reportCounts = deviceReportStats.Select(d => (double)d.ReportCount).ToArray();
             var mean = reportCounts.Average();
             var stdDev = Math.Sqrt(reportCounts.Select(x => Math.Pow(x - mean, 2)).Average());
-            var upperThreshold = mean + (2.5 * stdDev); // 2.5 standard deviations
-            var lowerThreshold = Math.Max(0, mean - (2.5 * stdDev));
+            var upperThreshold = mean + (StatisticalThreshold * stdDev);
+            var lowerThreshold = Math.Max(0, mean - (StatisticalThreshold * stdDev));
 
             // Identify anomalies
             foreach (var device in deviceReportStats)
@@ -126,11 +135,11 @@ namespace SecureBootDashboard.Api.Services
                     string description;
                     if (device.ReportCount > upperThreshold)
                     {
-                        description = $"Excessive reporting detected. Device reported {device.ReportCount} times in 7 days (expected: ~{mean:F1})";
+                        description = $"Excessive reporting detected. Device reported {device.ReportCount} times in {ReportingFrequencyLookbackDays} days (expected: ~{mean:F1})";
                     }
                     else
                     {
-                        description = $"Insufficient reporting detected. Device reported {device.ReportCount} times in 7 days (expected: ~{mean:F1})";
+                        description = $"Insufficient reporting detected. Device reported {device.ReportCount} times in {ReportingFrequencyLookbackDays} days (expected: ~{mean:F1})";
                     }
 
                     anomalies.Add(new AnomalyDetectionResult
@@ -152,7 +161,7 @@ namespace SecureBootDashboard.Api.Services
         private async Task<List<AnomalyDetectionResult>> DetectDeploymentStateAnomaliesAsync(CancellationToken cancellationToken)
         {
             var anomalies = new List<AnomalyDetectionResult>();
-            var lookbackPeriod = DateTimeOffset.UtcNow.AddDays(-14);
+            var lookbackPeriod = DateTimeOffset.UtcNow.AddDays(-DeploymentStateLookbackDays);
 
             // Find devices stuck in non-deployed states
             var stuckDevices = await _dbContext.Devices
@@ -163,14 +172,14 @@ namespace SecureBootDashboard.Api.Services
             foreach (var device in stuckDevices)
             {
                 var recentReports = device.Reports.Take(5).ToList();
-                if (recentReports.Count < 3)
+                if (recentReports.Count < PendingStateAnomalyThreshold)
                     continue;
 
                 // Check if device has been in Pending or Error state for multiple reports
                 var pendingCount = recentReports.Count(r => r.DeploymentState == "Pending");
                 var errorCount = recentReports.Count(r => r.DeploymentState == "Error");
 
-                if (pendingCount >= 3)
+                if (pendingCount >= PendingStateAnomalyThreshold)
                 {
                     anomalies.Add(new AnomalyDetectionResult
                     {
@@ -184,7 +193,7 @@ namespace SecureBootDashboard.Api.Services
                     });
                 }
 
-                if (errorCount >= 2)
+                if (errorCount >= ErrorStateAnomalyThreshold)
                 {
                     anomalies.Add(new AnomalyDetectionResult
                     {
@@ -205,7 +214,7 @@ namespace SecureBootDashboard.Api.Services
         private async Task<List<AnomalyDetectionResult>> DetectInactivityAnomaliesAsync(CancellationToken cancellationToken)
         {
             var anomalies = new List<AnomalyDetectionResult>();
-            var inactivityThreshold = DateTimeOffset.UtcNow.AddDays(-14);
+            var inactivityThreshold = DateTimeOffset.UtcNow.AddDays(-InactivityThresholdDays);
 
             // Find devices that haven't reported recently but were active before
             var inactiveDevices = await _dbContext.Devices
