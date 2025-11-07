@@ -1,4 +1,5 @@
 @page "{id:guid}"
+@using SecureBootWatcher.Shared.Models
 @model SecureBootDashboard.Web.Pages.Workflows.DetailsModel
 @{
     ViewData["Title"] = "Workflow Details";
@@ -10,7 +11,7 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a asp-page="./List">Workflows</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">@Model.Workflow?.Name</li>
+                    <li class="breadcrumb-item active" aria-current="page">@(Model.Workflow?.Name ?? "Unknown Workflow")</li>
                 </ol>
             </nav>
         </div>
@@ -246,14 +247,16 @@
 </div>
 
 @functions {
-    private bool HasAnyTrigger(dynamic trigger)
+    private bool HasAnyTrigger(WorkflowTrigger? trigger)
     {
-        return !string.IsNullOrEmpty(trigger?.DeploymentState) ||
-               !string.IsNullOrEmpty(trigger?.FleetIdMatches) ||
-               !string.IsNullOrEmpty(trigger?.ManufacturerMatches) ||
-               trigger?.NoReportForDays != null ||
-               !string.IsNullOrEmpty(trigger?.AlertContains) ||
-               trigger?.HasExpiredCertificates != null ||
-               trigger?.CertificateExpiringWithinDays != null;
+        if (trigger == null) return false;
+        
+        return !string.IsNullOrEmpty(trigger.DeploymentState) ||
+               !string.IsNullOrEmpty(trigger.FleetIdMatches) ||
+               !string.IsNullOrEmpty(trigger.ManufacturerMatches) ||
+               trigger.NoReportForDays.HasValue ||
+               !string.IsNullOrEmpty(trigger.AlertContains) ||
+               trigger.HasExpiredCertificates.HasValue ||
+               trigger.CertificateExpiringWithinDays.HasValue;
     }
 }

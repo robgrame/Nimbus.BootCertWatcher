@@ -86,7 +86,7 @@
     }
 </div>
 
-<form method="post" id="deleteForm" style="display:none;">
+<form method="post" asp-page-handler="Delete" id="deleteForm" style="display:none;">
     <input type="hidden" name="id" id="deleteId" />
 </form>
 
@@ -95,7 +95,6 @@
         function confirmDelete(id, name) {
             if (confirm(`Are you sure you want to delete workflow "${name}"?`)) {
                 document.getElementById('deleteId').value = id;
-                document.getElementById('deleteForm').action = '/Workflows/Delete';
                 document.getElementById('deleteForm').submit();
             }
         }

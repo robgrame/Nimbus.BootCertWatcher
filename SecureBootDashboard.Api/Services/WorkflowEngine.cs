@@ -18,16 +18,13 @@ namespace SecureBootDashboard.Api.Services
     {
         private readonly SecureBootDbContext _dbContext;
         private readonly ILogger<WorkflowEngine> _logger;
-        private readonly IServiceProvider _serviceProvider;
 
         public WorkflowEngine(
             SecureBootDbContext dbContext,
-            ILogger<WorkflowEngine> logger,
-            IServiceProvider serviceProvider)
+            ILogger<WorkflowEngine> logger)
         {
             _dbContext = dbContext;
             _logger = logger;
-            _serviceProvider = serviceProvider;
         }
 
         /// <summary>
