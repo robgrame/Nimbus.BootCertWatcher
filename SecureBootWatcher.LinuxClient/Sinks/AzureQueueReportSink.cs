@@ -83,7 +83,7 @@ namespace SecureBootWatcher.LinuxClient.Sinks
         {
             try
   {
-     // Metodo 1: Connection String (non raccomandato per produzione)
+     // Method 1: Connection String (not recommended for production)
     if (options.AuthenticationMethod.Equals("ConnectionString", StringComparison.OrdinalIgnoreCase) &&
         !string.IsNullOrWhiteSpace(options.ConnectionString))
         {
