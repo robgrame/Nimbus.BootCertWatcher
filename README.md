@@ -126,12 +126,22 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
   - **Web API**: HTTP POST directly to the dashboard ingestion endpoint
 - Configured via `appsettings.json` with fleet-specific settings
 
-### 2. **SecureBootWatcher.Shared** (netstandard2.0)
+### 2. **SecureBootWatcher.LinuxClient** (.NET 8) **NEW**
+- Runs on Linux systems with UEFI firmware support
+- Cross-platform client for monitoring Secure Boot certificates on Linux
+- Reads EFI variables from `/sys/firmware/efi/efivars`
+- Queries systemd journal (journald) for boot-related events
+- Enumerates UEFI certificates using direct EFI variable access
+- Supports same three reporting sinks as Windows client
+- Targets `linux-x64` and `linux-arm64` architectures
+- Configured via `appsettings.json` with fleet-specific settings
+
+### 3. **SecureBootWatcher.Shared** (netstandard2.0)
 - Shared models, configuration, validation, and storage contracts
 - Used by client, API, and web projects for consistent DTOs
 - Includes certificate enumeration models and validation logic
 
-### 3. **SecureBootDashboard.Api** (ASP.NET Core 8)
+### 4. **SecureBootDashboard.Api** (ASP.NET Core 8)
 - REST API for ingesting reports and querying aggregated data
 - Two storage backends:
   - **EF Core + SQL Server**: full relational persistence with migrations
@@ -145,7 +155,7 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
   - `GET /api/SecureBootReports/{id}` – individual report details
   - `GET /health` – health checks
 
-### 4. **SecureBootDashboard.Web** (ASP.NET Core 8 Razor Pages)
+### 5. **SecureBootDashboard.Web** (ASP.NET Core 8 Razor Pages)
 - Modern, responsive dashboard UI for viewing devices, reports, and compliance
 - **Features**:
   - Splash screen with smooth animations
@@ -161,15 +171,26 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
 ## Prerequisites
 
 ### Development
-- **.NET SDK 8.0+** (for API & Web projects)
-- **.NET Framework 4.8 Developer Pack** (for client)
+- **.NET SDK 8.0+** (for API, Web, and Linux client projects)
+- **.NET Framework 4.8 Developer Pack** (for Windows client)
 - **SQL Server** (LocalDB, Express, or full instance) *or* configure file storage
 - **Visual Studio 2022** or **VS Code** with C# extensions
-- **PowerShell 5.0+** (for certificate enumeration and deployment scripts)
+- **PowerShell 5.0+** (for Windows certificate enumeration and deployment scripts)
 
-### Runtime (Client)
+### Runtime (Windows Client)
 - **Windows 10/11** or **Windows Server 2016+** with UEFI firmware
 - **.NET Framework 4.8 runtime**
+- **PowerShell 5.0+** with SecureBoot module
+- Administrator/SYSTEM privileges (for registry and certificate access)
+- Network or Azure connectivity for sinks
+
+### Runtime (Linux Client) **NEW**
+- **Linux distribution** with UEFI firmware support (Ubuntu 20.04+, RHEL 8+, Debian 11+, etc.)
+- **.NET 8 runtime** (`dotnet-runtime-8.0`)
+- **systemd** with journald (for event logging)
+- Root/sudo privileges (for EFI variable access at `/sys/firmware/efi/efivars`)
+- Network or Azure connectivity for sinks
+- Optional: `mokutil` for Secure Boot status checking
 - **PowerShell 5.0+** with SecureBoot module
 - Administrator/SYSTEM privileges (for registry and certificate access)
 - Network or Azure connectivity for sinks
@@ -271,12 +292,26 @@ Navigate to:
 - **Web Dashboard**: `https://localhost:7001`
 - **API Swagger**: `https://localhost:5001/swagger`
 
-### 7. Run the Client
+### 7. Run the Windows Client
 ```powershell
 cd SecureBootWatcher.Client\bin\Debug\net48
 .\SecureBootWatcher.Client.exe
 ```
 Watch logs for successful registry snapshot, certificate enumeration, event capture, and confirm payloads reach your API.
+
+### 8. Run the Linux Client (Optional)
+```bash
+cd SecureBootWatcher.LinuxClient
+dotnet run
+
+# Or publish and run as self-contained:
+dotnet publish -c Release -r linux-x64 --self-contained
+cd bin/Release/net8.0/linux-x64/publish
+sudo ./SecureBootWatcher.LinuxClient
+```
+**Note**: Root/sudo privileges are required to access EFI variables at `/sys/firmware/efi/efivars`.
+
+Watch logs for successful EFI variable access, certificate enumeration, journal event capture, and confirm payloads reach your API.
 
 ---
 
@@ -491,7 +526,7 @@ For questions, issues, or support:
 - [ ] Enhanced analytics (30/60/90 day trends)
 
 ### v2.0 (Q3 2025)
-- [ ] Linux client support (.NET 8)
+- [x] Linux client support (.NET 8) **COMPLETED**
 - [ ] API v2 with GraphQL
 - [ ] Machine learning anomaly detection
 - [ ] Integration with ServiceNow/Jira
