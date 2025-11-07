@@ -113,7 +113,7 @@ namespace SecureBootDashboard.Api.Storage
 
         private string GetReportPath(Guid id)
         {
-            return Path.Combine(_options.BasePath, $"{id:N}.json");
+            return System.IO.Path.Combine(_options.BasePath, $"{id:N}.json");
         }
 
         private sealed record FileReportDocument(Guid Id, DeviceDocument Device, string RegistryStateJson, string? CertificatesJson, string? AlertsJson, string? DeploymentState, string? ClientVersion, string? CorrelationId, DateTimeOffset CreatedAtUtc, IReadOnlyList<EventDocument> Events)
@@ -211,6 +211,6 @@ namespace SecureBootDashboard.Api.Storage
 
     public sealed class FileReportStoreOptions
     {
-        public string BasePath { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "SecureBootDashboard", "reports");
+        public string BasePath { get; set; } = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "SecureBootDashboard", "reports");
     }
 }
