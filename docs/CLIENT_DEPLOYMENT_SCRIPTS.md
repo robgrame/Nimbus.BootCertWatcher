@@ -34,6 +34,8 @@ Builds the SecureBootWatcher client, creates a deployment package, and optionall
 | `-CreateScheduledTask` | Install locally and create scheduled task | False | No |
 | `-InstallPath` | Installation directory | `C:\Program Files\SecureBootWatcher` | No |
 | `-TaskTime` | Scheduled task run time | `09:00AM` | No |
+| `-ScheduleType` | **NEW**: Schedule frequency (Once/Daily/Hourly/Custom) | `Daily` | No |
+| `-RepeatEveryHours` | **NEW**: Hours between runs (for Custom schedule) | `4` | No |
 | `-SkipBuild` | Skip build step (use existing binaries) | False | No |
 | `-PackageZipPath` | **NEW**: Path to precompiled ZIP package | Empty | No |
 
@@ -94,21 +96,38 @@ Output: Creates `.\client-package\SecureBootWatcher-Client.zip`
 
 #### 3. Local Installation (for testing)
 ```powershell
-# Install on current machine with scheduled task
+# Install on current machine with scheduled task (daily)
 .\scripts\Deploy-Client.ps1 `
     -ApiBaseUrl "https://app-secureboot-api-prod.azurewebsites.net" `
     -CreateScheduledTask
 
-# Install to custom location
+# Install with hourly schedule
 .\scripts\Deploy-Client.ps1 `
     -ApiBaseUrl "https://localhost:5001" `
     -CreateScheduledTask `
-    -InstallPath "C:\Temp\SecureBootWatcher"
+    -ScheduleType Hourly
 
-# Install with custom schedule (3:00 PM daily)
+# Install with custom schedule (every 6 hours)
 .\scripts\Deploy-Client.ps1 `
     -ApiBaseUrl "https://app-secureboot-api-prod.azurewebsites.net" `
     -CreateScheduledTask `
+    -ScheduleType Custom `
+    -RepeatEveryHours 6
+
+# Install to custom location with custom schedule
+.\scripts\Deploy-Client.ps1 `
+    -ApiBaseUrl "https://localhost:5001" `
+    -CreateScheduledTask `
+    -InstallPath "C:\Temp\SecureBootWatcher" `
+    -ScheduleType Custom `
+    -RepeatEveryHours 4 `
+    -TaskTime "08:00AM"
+
+# Install with one-time execution
+.\scripts\Deploy-Client.ps1 `
+    -ApiBaseUrl "https://app-secureboot-api-prod.azurewebsites.net" `
+    -CreateScheduledTask `
+    -ScheduleType Once `
     -TaskTime "3:00PM"
 ```
 

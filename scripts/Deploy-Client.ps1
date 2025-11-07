@@ -26,6 +26,14 @@ param(
     [string]$TaskTime = "09:00AM",
     
     [Parameter(Mandatory = $false)]
+    [ValidateSet("Once", "Daily", "Hourly", "Custom")]
+    [string]$ScheduleType = "Daily",
+    
+    [Parameter(Mandatory = $false)]
+    [ValidateRange(1, 24)]
+    [int]$RepeatEveryHours = 4,
+    
+    [Parameter(Mandatory = $false)]
     [switch]$SkipBuild,
     
     [Parameter(Mandatory = $false)]
@@ -242,12 +250,39 @@ if ($CreateScheduledTask) {
             Unregister-ScheduledTask -TaskName "SecureBootWatcher" -Confirm:$false
         }
         
-        # Create new task
+        # Create action
         $action = New-ScheduledTaskAction -Execute $exePath -WorkingDirectory $InstallPath
-        $trigger = New-ScheduledTaskTrigger -Daily -At $TaskTime
-        $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-        $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
         
+        # Create trigger based on schedule type
+        $trigger = $null
+        $scheduleDescription = ""
+        
+        switch ($ScheduleType) {
+            "Once" {
+                $trigger = New-ScheduledTaskTrigger -Once -At $TaskTime
+                $scheduleDescription = "Once at $TaskTime"
+            }
+            "Daily" {
+                $trigger = New-ScheduledTaskTrigger -Daily -At $TaskTime
+                $scheduleDescription = "Daily at $TaskTime"
+            }
+            "Hourly" {
+                # Create a trigger that repeats every hour
+                $trigger = New-ScheduledTaskTrigger -Once -At $TaskTime -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration ([TimeSpan]::MaxValue)
+                $scheduleDescription = "Every hour starting at $TaskTime"
+            }
+            "Custom" {
+                # Create a trigger that repeats every N hours
+                $trigger = New-ScheduledTaskTrigger -Once -At $TaskTime -RepetitionInterval (New-TimeSpan -Hours $RepeatEveryHours) -RepetitionDuration ([TimeSpan]::MaxValue)
+                $scheduleDescription = "Every $RepeatEveryHours hours starting at $TaskTime"
+            }
+        }
+        
+        # Create principal and settings
+        $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+        $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew
+        
+        # Register task
         Register-ScheduledTask `
             -TaskName "SecureBootWatcher" `
             -Action $action `
@@ -259,7 +294,7 @@ if ($CreateScheduledTask) {
         Write-Host "  Scheduled task created" -ForegroundColor Green
         Write-Host "     Task Name: SecureBootWatcher" -ForegroundColor Gray
         Write-Host "     Run As: SYSTEM" -ForegroundColor Gray
-        Write-Host "     Schedule: Daily at $TaskTime" -ForegroundColor Gray
+        Write-Host "     Schedule: $scheduleDescription" -ForegroundColor Gray
         Write-Host "     Executable: $exePath" -ForegroundColor Gray
     }
     catch {
@@ -311,7 +346,23 @@ if ($CreateScheduledTask) {
     Write-Host "Installation:" -ForegroundColor White
     Write-Host "  Location: $InstallPath" -ForegroundColor Cyan
     Write-Host "  Task Name: SecureBootWatcher" -ForegroundColor Cyan
-    Write-Host "  Schedule: Daily at $TaskTime" -ForegroundColor Cyan
+    
+    # Show schedule details
+    switch ($ScheduleType) {
+        "Once" {
+            Write-Host "  Schedule: Once at $TaskTime" -ForegroundColor Cyan
+        }
+        "Daily" {
+            Write-Host "  Schedule: Daily at $TaskTime" -ForegroundColor Cyan
+        }
+        "Hourly" {
+            Write-Host "  Schedule: Every hour starting at $TaskTime" -ForegroundColor Cyan
+        }
+        "Custom" {
+            Write-Host "  Schedule: Every $RepeatEveryHours hours starting at $TaskTime" -ForegroundColor Cyan
+        }
+    }
+    
     Write-Host ""
     Write-Host "To test the client manually:" -ForegroundColor White
     Write-Host "  cd `"$InstallPath`"" -ForegroundColor Cyan
@@ -322,6 +373,9 @@ if ($CreateScheduledTask) {
     Write-Host ""
     Write-Host "To view task history:" -ForegroundColor White
     Write-Host "  Get-ScheduledTaskInfo -TaskName SecureBootWatcher" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "To view task details:" -ForegroundColor White
+    Write-Host "  Get-ScheduledTask -TaskName SecureBootWatcher | Format-List *" -ForegroundColor Cyan
 } else {
     Write-Host "Next Steps:" -ForegroundColor White
     Write-Host ""
@@ -332,6 +386,12 @@ if ($CreateScheduledTask) {
         Write-Host ""
         Write-Host "2. To install with custom API URL:" -ForegroundColor Yellow
         Write-Host "   .\Deploy-Client.ps1 -PackageZipPath `"$PackageZipPath`" -ApiBaseUrl `"https://your-api.com`" -CreateScheduledTask" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "3. To install with hourly schedule:" -ForegroundColor Yellow
+        Write-Host "   .\Deploy-Client.ps1 -PackageZipPath `"$PackageZipPath`" -CreateScheduledTask -ScheduleType Hourly" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "4. To install with custom interval (e.g., every 4 hours):" -ForegroundColor Yellow
+        Write-Host "   .\Deploy-Client.ps1 -PackageZipPath `"$PackageZipPath`" -CreateScheduledTask -ScheduleType Custom -RepeatEveryHours 4" -ForegroundColor Cyan
     } else {
         Write-Host "1. Distribute the package:" -ForegroundColor Yellow
         Write-Host "   - Via Group Policy (NETLOGON share)" -ForegroundColor Gray
@@ -344,8 +404,10 @@ if ($CreateScheduledTask) {
         Write-Host ""
         Write-Host "3. Configure appsettings.json on each device" -ForegroundColor Yellow
         Write-Host ""
-        Write-Host "4. Create scheduled task:" -ForegroundColor Yellow
-        Write-Host "   .\Deploy-Client.ps1 -PackageZipPath `"$packagePath`" -CreateScheduledTask" -ForegroundColor Cyan
+        Write-Host "4. Create scheduled task (examples):" -ForegroundColor Yellow
+        Write-Host "   Daily: .\Deploy-Client.ps1 -PackageZipPath `"$packagePath`" -CreateScheduledTask" -ForegroundColor Cyan
+        Write-Host "   Hourly: .\Deploy-Client.ps1 -PackageZipPath `"$packagePath`" -CreateScheduledTask -ScheduleType Hourly" -ForegroundColor Cyan
+        Write-Host "   Every 4h: .\Deploy-Client.ps1 -PackageZipPath `"$packagePath`" -CreateScheduledTask -ScheduleType Custom -RepeatEveryHours 4" -ForegroundColor Cyan
         Write-Host ""
         Write-Host "Or use this script with -CreateScheduledTask to install locally:" -ForegroundColor Yellow
         Write-Host "   .\Deploy-Client.ps1 -ApiBaseUrl `"https://your-api.com`" -CreateScheduledTask" -ForegroundColor Cyan
@@ -367,14 +429,38 @@ Write-Host ""
 Write-Host "  # Build and create package:" -ForegroundColor Gray
 Write-Host "  .\Deploy-Client.ps1" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  # Install from precompiled package:" -ForegroundColor Gray
+Write-Host "  # Install from precompiled package (daily at 9 AM):" -ForegroundColor Gray
 Write-Host "  .\Deploy-Client.ps1 -PackageZipPath `".\client-package\SecureBootWatcher-Client.zip`" -CreateScheduledTask" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  # Install with custom API and Fleet:" -ForegroundColor Gray
+Write-Host "  # Install with hourly schedule:" -ForegroundColor Gray
+Write-Host "  .\Deploy-Client.ps1 -PackageZipPath `".\client-package\SecureBootWatcher-Client.zip`" ``" -ForegroundColor Cyan
+Write-Host "                      -CreateScheduledTask ``" -ForegroundColor Cyan
+Write-Host "                      -ScheduleType Hourly" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "  # Install with custom interval (every 6 hours):" -ForegroundColor Gray
+Write-Host "  .\Deploy-Client.ps1 -PackageZipPath `".\client-package\SecureBootWatcher-Client.zip`" ``" -ForegroundColor Cyan
+Write-Host "                      -CreateScheduledTask ``" -ForegroundColor Cyan
+Write-Host "                      -ScheduleType Custom ``" -ForegroundColor Cyan
+Write-Host "                      -RepeatEveryHours 6" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "  # Install with custom API, Fleet, and schedule:" -ForegroundColor Gray
 Write-Host "  .\Deploy-Client.ps1 -PackageZipPath `".\client-package\SecureBootWatcher-Client.zip`" ``" -ForegroundColor Cyan
 Write-Host "                      -ApiBaseUrl `"https://api.contoso.com`" ``" -ForegroundColor Cyan
 Write-Host "                      -FleetId `"fleet-prod`" ``" -ForegroundColor Cyan
-Write-Host "                      -CreateScheduledTask" -ForegroundColor Cyan
+Write-Host "                      -CreateScheduledTask ``" -ForegroundColor Cyan
+Write-Host "                      -ScheduleType Custom ``" -ForegroundColor Cyan
+Write-Host "                      -RepeatEveryHours 4 ``" -ForegroundColor Cyan
+Write-Host "                      -TaskTime `"08:00AM`"" -ForegroundColor Cyan
+Write-Host ""
+
+Write-Host "Schedule Options:" -ForegroundColor White
+Write-Host "  -ScheduleType Once        : Run once at specified time" -ForegroundColor Gray
+Write-Host "  -ScheduleType Daily       : Run daily at specified time (default)" -ForegroundColor Gray
+Write-Host "  -ScheduleType Hourly      : Run every hour" -ForegroundColor Gray
+Write-Host "  -ScheduleType Custom      : Run every N hours (use -RepeatEveryHours)" -ForegroundColor Gray
+Write-Host ""
+Write-Host "  -RepeatEveryHours <1-24>  : Repeat interval for Custom schedule (default: 4)" -ForegroundColor Gray
+Write-Host "  -TaskTime <time>          : Start time for schedule (default: 09:00AM)" -ForegroundColor Gray
 Write-Host ""
 
 Write-Host "Documentation:" -ForegroundColor White
