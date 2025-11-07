@@ -60,7 +60,7 @@ public class Query
         [Service] SecureBootDbContext dbContext,
         CancellationToken cancellationToken)
     {
-        var clampedLimit = Math.Clamp(limit, 1, 200);
+        var clampedLimit = ClampLimit(limit);
 
         var reports = await dbContext.Reports
             .AsNoTracking()
@@ -97,7 +97,7 @@ public class Query
         [Service] SecureBootDbContext dbContext,
         CancellationToken cancellationToken)
     {
-        var clampedLimit = Math.Clamp(limit, 1, 200);
+        var clampedLimit = ClampLimit(limit);
 
         var reports = await dbContext.Reports
             .AsNoTracking()
@@ -125,4 +125,9 @@ public class Query
 
         return events.Select(EventType.FromEntity).ToList();
     }
+
+    /// <summary>
+    /// Clamps the limit parameter to valid range (1-200).
+    /// </summary>
+    private static int ClampLimit(int limit) => Math.Clamp(limit, 1, 200);
 }
