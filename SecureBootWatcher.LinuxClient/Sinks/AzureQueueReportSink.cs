@@ -150,7 +150,7 @@ return null;
               return null;
         }
          }
-          // Opzione B: Carica certificato da Windows Certificate Store
+          // Option B: Load certificate from Windows Certificate Store
         else if (!string.IsNullOrWhiteSpace(options.CertificateThumbprint))
    {
            try
