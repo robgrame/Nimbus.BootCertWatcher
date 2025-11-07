@@ -128,7 +128,7 @@ return null;
 
          X509Certificate2? certificate = null;
 
-          // Opzione A: Carica certificato da file
+          // Option A: Load certificate from file
      if (!string.IsNullOrWhiteSpace(options.CertificatePath))
     {
        try
