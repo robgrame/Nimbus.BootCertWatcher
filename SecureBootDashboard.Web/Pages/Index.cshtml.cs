@@ -47,8 +47,13 @@ public class IndexModel : PageModel
         try
         {
             // Validate TrendDays
+            int originalTrendDays = TrendDays;
             if (TrendDays < 7) TrendDays = 7;
             if (TrendDays > 90) TrendDays = 90;
+            if (originalTrendDays != TrendDays)
+            {
+                ErrorMessage = $"Il valore di 'TrendDays' ({originalTrendDays}) non è valido. È stato impostato a {TrendDays} (valori validi: 7-90).";
+            }
             
             ApiHealthy = await _apiClient.IsHealthyAsync(HttpContext.RequestAborted);
             
