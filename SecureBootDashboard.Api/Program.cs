@@ -152,7 +152,7 @@ try
         
         Log.Information("  Command Queue URI: {QueueUri}", updateQueueUri);
         Log.Information("  Command Queue Name: {QueueName}", updateQueueName);
-        Log.Information("  Auth Method: {AuthMethod}", updateAuthMethod);
+        Log.Information("  Auth Method is configured.");
     }
     
     builder.Services.Configure<CertificateUpdateServiceOptions>(updateConfig);
