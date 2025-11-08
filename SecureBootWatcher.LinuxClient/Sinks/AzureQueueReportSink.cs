@@ -126,28 +126,26 @@ return null;
             return null;
       }
 
-         X509Certificate2? certificate = null;
-
-          // Option A: Load certificate from file
+         // Option A: Load certificate from file
      if (!string.IsNullOrWhiteSpace(options.CertificatePath))
     {
        try
       {
             if (!string.IsNullOrWhiteSpace(options.CertificatePassword))
   {
-         using (var certificate = new X509Certificate2(options.CertificatePath, options.CertificatePassword))
+         using (var certFromFile = new X509Certificate2(options.CertificatePath, options.CertificatePassword))
          {
              _logger.LogInformation("Loaded certificate from file: {Path}", options.CertificatePath);
-             credential = new ClientCertificateCredential(options.TenantId, options.ClientId, certificate);
+             credential = new ClientCertificateCredential(options.TenantId, options.ClientId, certFromFile);
              return new QueueClient(queueUri, credential);
          }
       }
   else
      {
-         using (var certificate = new X509Certificate2(options.CertificatePath))
+         using (var certFromFile = new X509Certificate2(options.CertificatePath))
          {
              _logger.LogInformation("Loaded certificate from file (no password): {Path}", options.CertificatePath);
-             credential = new ClientCertificateCredential(options.TenantId, options.ClientId, certificate);
+             credential = new ClientCertificateCredential(options.TenantId, options.ClientId, certFromFile);
              return new QueueClient(queueUri, credential);
          }
      }
