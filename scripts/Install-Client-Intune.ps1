@@ -8,7 +8,10 @@ param(
     [string]$ApiBaseUrl = "",
     
     [Parameter(Mandatory = $false)]
-    [string]$FleetId = ""
+    [string]$FleetId = "",
+    
+    [Parameter(Mandatory = $false)]
+    [string]$CertificatePassword = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -17,6 +20,7 @@ $ErrorActionPreference = "Stop"
 $installPath = "C:\Program Files\SecureBootWatcher"
 $taskName = "SecureBootWatcher"
 $logPath = Join-Path $env:ProgramData "SecureBootWatcher\install.log"
+$certificateFileName = "SecureBootWatcher.pfx"  # Expected certificate file name in package
 
 # Get script directory (where the package content is extracted by Intune)
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -40,19 +44,87 @@ Write-InstallLog "Script directory: $scriptDir"
 Write-InstallLog "Target directory: $installPath"
 
 try {
-    # Step 1: Create installation directory
+    # Step 1: Import certificate if present
+    $certificatePath = Join-Path $scriptDir $certificateFileName
+    if (Test-Path $certificatePath) {
+        Write-InstallLog "Certificate found, importing to LocalMachine\My store"
+        
+        try {
+            # Convert password to SecureString
+            $securePassword = if (-not [string]::IsNullOrEmpty($CertificatePassword)) {
+                ConvertTo-SecureString -String $CertificatePassword -AsPlainText -Force
+            } else {
+                ConvertTo-SecureString -String "" -AsPlainText -Force  # Empty password
+            }
+            
+            # Import certificate to LocalMachine\My store
+            $cert = Import-PfxCertificate `
+                -FilePath $certificatePath `
+                -CertStoreLocation Cert:\LocalMachine\My `
+                -Password $securePassword `
+                -Exportable
+            
+            Write-InstallLog "Certificate imported successfully"
+            Write-InstallLog "  Thumbprint: $($cert.Thumbprint)"
+            Write-InstallLog "  Subject: $($cert.Subject)"
+            Write-InstallLog "  Expiration: $($cert.NotAfter)"
+            
+            # Grant SYSTEM account read permissions on private key
+            Write-InstallLog "Granting SYSTEM account permissions on private key"
+            
+            try {
+                $rsaCert = [System.Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPrivateKey($cert)
+                $keyName = $rsaCert.Key.UniqueName
+                $keyPath = "C:\ProgramData\Microsoft\Crypto\Keys\$keyName"
+                
+                if (-not (Test-Path $keyPath)) {
+                    # Try RSA folder
+                    $keyPath = "C:\ProgramData\Microsoft\Crypto\RSA\MachineKeys\$keyName"
+                }
+                
+                if (Test-Path $keyPath) {
+                    # Grant Read permission to SYSTEM account
+                    $result = icacls $keyPath /grant "SYSTEM:(R)"
+                    
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-InstallLog "  Permissions granted to SYSTEM account"
+                    } else {
+                        Write-InstallLog "  WARNING: Failed to grant permissions (exit code: $LASTEXITCODE)"
+                    }
+                } else {
+                    Write-InstallLog "  WARNING: Private key file not found at expected location"
+                }
+            }
+            catch {
+                Write-InstallLog "  WARNING: Could not set private key permissions: $_"
+            }
+        }
+        catch {
+            Write-InstallLog "WARNING: Certificate import failed: $_"
+            Write-InstallLog "Continuing installation (certificate may already be installed)"
+        }
+    } else {
+        Write-InstallLog "No certificate file found in package (optional)"
+    }
+
+    # Step 2: Create installation directory
     Write-InstallLog "Creating installation directory"
     if (-not (Test-Path $installPath)) {
         New-Item -ItemType Directory -Path $installPath -Force | Out-Null
     }
 
-    # Step 2: Copy files from script directory to installation directory
+    # Step 3: Copy files from script directory to installation directory
     Write-InstallLog "Copying client files"
     
     # Files are already extracted by Intune to $scriptDir
-    # Copy everything except this install script
+    # Copy everything except scripts and certificate
     $filesToCopy = Get-ChildItem -Path $scriptDir -File | 
-        Where-Object { $_.Name -notlike "Install-*.ps1" -and $_.Name -notlike "Uninstall-*.ps1" -and $_.Name -notlike "Detect-*.ps1" }
+        Where-Object { 
+            $_.Name -notlike "Install-*.ps1" -and 
+            $_.Name -notlike "Uninstall-*.ps1" -and 
+            $_.Name -notlike "Detect-*.ps1" -and
+            $_.Name -notlike "*.pfx"  # Don't copy certificate to install directory
+        }
     
     foreach ($file in $filesToCopy) {
         Copy-Item -Path $file.FullName -Destination $installPath -Force
@@ -72,7 +144,7 @@ try {
         }
     }
 
-    # Step 3: Configure appsettings.json if parameters provided
+    # Step 4: Configure appsettings.json if parameters provided
     if (-not [string]::IsNullOrEmpty($ApiBaseUrl) -or -not [string]::IsNullOrEmpty($FleetId)) {
         $appsettingsPath = Join-Path $installPath "appsettings.json"
         
@@ -95,7 +167,7 @@ try {
         }
     }
 
-    # Step 4: Create scheduled task
+    # Step 5: Create scheduled task
     Write-InstallLog "Creating scheduled task"
     
     $exePath = Join-Path $installPath "SecureBootWatcher.Client.exe"
