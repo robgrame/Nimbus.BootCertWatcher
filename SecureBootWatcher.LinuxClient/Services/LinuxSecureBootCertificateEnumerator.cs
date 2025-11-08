@@ -228,7 +228,10 @@ namespace SecureBootWatcher.LinuxClient.Services
             {
                 _logger.LogWarning(ex, "Access denied accessing EFI variables for {Database}. Try running with sudo.", databaseName);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (
+                !(ex is OutOfMemoryException) &&
+                !(ex is StackOverflowException) &&
+                !(ex is ThreadAbortException))
             {
                 _logger.LogWarning(ex, "Failed to enumerate {Database}", databaseName);
             }
