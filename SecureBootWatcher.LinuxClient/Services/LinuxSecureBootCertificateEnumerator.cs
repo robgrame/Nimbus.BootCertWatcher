@@ -145,7 +145,25 @@ namespace SecureBootWatcher.LinuxClient.Services
                 process.Start();
 
                 var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
-                await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    if (!process.HasExited)
+                    {
+                        try
+                        {
+                            process.Kill();
+                        }
+                        catch (Exception killEx)
+                        {
+                            _logger.LogWarning(killEx, "Failed to kill mokutil process on cancellation.");
+                        }
+                    }
+                    throw;
+                }
 
                 if (output.Contains("SecureBoot enabled", StringComparison.OrdinalIgnoreCase))
                 {
