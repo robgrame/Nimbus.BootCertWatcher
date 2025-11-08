@@ -78,22 +78,14 @@ namespace SecureBootDashboard.Api.Controllers
             Guid commandId,
             CancellationToken cancellationToken)
         {
-            try
-            {
-                var status = await _updateService.GetCommandStatusAsync(commandId, cancellationToken);
+            var status = await _updateService.GetCommandStatusAsync(commandId, cancellationToken);
 
-                if (status == null)
-                {
-                    return NotFound(new { Error = "Command not found" });
-                }
-
-                return Ok(status);
-            }
-            catch (Exception ex)
+            if (status == null)
             {
-                _logger.LogError(ex, "Failed to get command status for {CommandId}", commandId);
-                return StatusCode(500, new { Error = "Failed to get command status" });
+                return NotFound(new { Error = "Command not found" });
             }
+
+            return Ok(status);
         }
 
         /// <summary>
