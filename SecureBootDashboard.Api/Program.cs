@@ -148,7 +148,6 @@ try
     {
         var updateQueueUri = updateConfig.GetValue<string>("QueueServiceUri");
         var updateQueueName = updateConfig.GetValue<string>("CommandQueueName");
-        var updateAuthMethod = updateConfig.GetValue<string>("AuthenticationMethod");
         
         Log.Information("  Command Queue URI: {QueueUri}", updateQueueUri);
         Log.Information("  Command Queue Name: {QueueName}", updateQueueName);
