@@ -38,45 +38,45 @@ namespace SecureBootWatcher.LinuxClient.Sinks
         }
 
         public async Task EmitAsync(SecureBootStatusReport report, CancellationToken cancellationToken)
-     {
-   var sinkOptions = _options.CurrentValue.Sinks.AzureQueue;
-       if (string.IsNullOrWhiteSpace(sinkOptions.QueueName))
-      {
-           _logger.LogDebug("Azure Queue sink is disabled because QueueName is not configured.");
-    return;
-   }
+        {
+            var sinkOptions = _options.CurrentValue.Sinks.AzureQueue;
+            if (string.IsNullOrWhiteSpace(sinkOptions.QueueName))
+            {
+                _logger.LogDebug("Azure Queue sink is disabled because QueueName is not configured.");
+                return;
+            }
 
- var queueClient = CreateQueueClient(sinkOptions);
-    if (queueClient == null)
-      {
-        _logger.LogWarning("Azure Queue sink skipped because required configuration is missing.");
-    return;
-   }
+            var queueClient = CreateQueueClient(sinkOptions);
+            if (queueClient == null)
+            {
+                _logger.LogWarning("Azure Queue sink skipped because required configuration is missing.");
+                return;
+            }
 
-      await queueClient.CreateIfNotExistsAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            await queueClient.CreateIfNotExistsAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
 
             var envelope = new SecureBootQueueEnvelope
-  {
-  Report = report,
-             EnqueuedAtUtc = DateTimeOffset.UtcNow
+            {
+                Report = report,
+                EnqueuedAtUtc = DateTimeOffset.UtcNow
             };
 
-     var payload = JsonSerializer.Serialize(envelope, new JsonSerializerOptions
-        {
-         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    WriteIndented = false
-    });
+            var payload = JsonSerializer.Serialize(envelope, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = false
+            });
 
             await _retryPolicy.ExecuteAsync(async token =>
-        {
-          await queueClient.SendMessageAsync(
-       BinaryData.FromString(payload),
-       visibilityTimeout: sinkOptions.VisibilityTimeout,
-     cancellationToken: token).ConfigureAwait(false);
+            {
+                await queueClient.SendMessageAsync(
+                    BinaryData.FromString(payload),
+                    visibilityTimeout: sinkOptions.VisibilityTimeout,
+                    cancellationToken: token).ConfigureAwait(false);
 
-      _logger.LogInformation("Secure Boot report enqueued to {QueueName} using {AuthMethod} authentication.", 
-        queueClient.Name, sinkOptions.AuthenticationMethod);
-      }, cancellationToken).ConfigureAwait(false);
+                _logger.LogInformation("Secure Boot report enqueued to {QueueName} using {AuthMethod} authentication.",
+                    queueClient.Name, sinkOptions.AuthenticationMethod);
+            }, cancellationToken).ConfigureAwait(false);
         }
 
    private QueueClient? CreateQueueClient(AzureQueueSinkOptions options)
