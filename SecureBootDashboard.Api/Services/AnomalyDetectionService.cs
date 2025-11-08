@@ -89,9 +89,17 @@ namespace SecureBootDashboard.Api.Services
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 _logger.LogInformation("Detected {Count} new anomalies", detectedAnomalies.Count);
             }
+            catch (OperationCanceledException ocex)
+            {
+                _logger.LogWarning(ocex, "Anomaly detection was canceled");
+            }
+            catch (DbUpdateException dbex)
+            {
+                _logger.LogError(dbex, "Database update error while detecting anomalies");
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error detecting anomalies");
+                _logger.LogError(ex, "Unexpected error detecting anomalies");
             }
 
             return detectedAnomalies;
