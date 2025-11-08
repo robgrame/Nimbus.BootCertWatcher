@@ -17,29 +17,28 @@ namespace SecureBootWatcher.LinuxClient.Storage
             _checkpointFilePath = Path.Combine(root, "event-checkpoint.txt");
         }
 
-        public Task<DateTimeOffset?> GetLastCheckpointAsync(CancellationToken cancellationToken)
+        public async Task<DateTimeOffset?> GetLastCheckpointAsync(CancellationToken cancellationToken)
         {
             if (!File.Exists(_checkpointFilePath))
             {
-                return Task.FromResult<DateTimeOffset?>(null);
+                return null;
             }
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            var content = File.ReadAllText(_checkpointFilePath);
+            var content = await File.ReadAllTextAsync(_checkpointFilePath, cancellationToken);
             if (DateTimeOffset.TryParseExact(content, "O", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed))
             {
-                return Task.FromResult<DateTimeOffset?>(parsed);
+                return parsed;
             }
 
-            return Task.FromResult<DateTimeOffset?>(null);
+            return null;
         }
 
-        public Task SetCheckpointAsync(DateTimeOffset timestampUtc, CancellationToken cancellationToken)
+        public async Task SetCheckpointAsync(DateTimeOffset timestampUtc, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            File.WriteAllText(_checkpointFilePath, timestampUtc.ToString("O", CultureInfo.InvariantCulture));
-            return Task.CompletedTask;
+            await File.WriteAllTextAsync(_checkpointFilePath, timestampUtc.ToString("O", CultureInfo.InvariantCulture), cancellationToken);
         }
     }
 }
