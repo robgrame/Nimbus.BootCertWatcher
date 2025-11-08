@@ -53,7 +53,7 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
 - **Dual Storage**: EF Core with SQL Server or file-based JSON storage
 - **Queue Processing**: Background service for Azure Queue consumption
 
-### 🤖 Machine Learning Anomaly Detection
+### 📈 Statistical Anomaly Detection
 - **Automatic Detection**: Background service runs hourly to identify unusual patterns
 - **Statistical Analysis**: Uses 2.5σ thresholds to detect anomalies in device behavior
 - **Multiple Detection Types**: Reporting frequency, deployment state, and inactivity anomalies
