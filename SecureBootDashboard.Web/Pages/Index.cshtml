@@ -132,7 +132,7 @@
         <!-- Charts Section -->
         <div class="row mb-4">
             <!-- Compliance Pie Chart -->
-            <div class="col-lg-4 col-md-6 mb-4">
+            <div class="col-lg-3 col-md-6 mb-4">
                 <a asp-page="/Devices/List" class="card-link">
                     <div class="card h-100 shadow-sm chart-card">
                         <div class="card-header bg-primary text-white">
@@ -156,8 +156,33 @@
                 </a>
             </div>
 
+            <!-- Secure Boot Status Pie Chart (NEW) -->
+            <div class="col-lg-3 col-md-6 mb-4">
+                <a asp-page="/Devices/List" class="card-link">
+                    <div class="card h-100 shadow-sm chart-card">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-shield-alt"></i> Secure Boot Status
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="secureBootChart"></canvas>
+                            <div class="text-center mt-3">
+                                <h4 class="text-success">@Model.SecureBootEnabledPercentage.ToString("F1")%</h4>
+                                <p class="text-muted mb-0">Secure Boot Abilitato</p>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-light text-center">
+                            <small class="text-muted">
+                                <i class="fas fa-arrow-right"></i> Clicca per dettagli
+                            </small>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
             <!-- Deployment State Pie Chart -->
-            <div class="col-lg-4 col-md-6 mb-4">
+            <div class="col-lg-3 col-md-6 mb-4">
                 <a asp-page="/Devices/List" class="card-link">
                     <div class="card h-100 shadow-sm chart-card">
                         <div class="card-header bg-info text-white">
@@ -181,10 +206,10 @@
             </div>
 
             <!-- Compliance Trend Line Chart -->
-            <div class="col-lg-4 col-md-12 mb-4">
+            <div class="col-lg-3 col-md-12 mb-4">
                 <a asp-page="/Devices/List" class="card-link">
                     <div class="card h-100 shadow-sm chart-card">
-                        <div class="card-header bg-success text-white">
+                        <div class="card-header bg-warning text-dark">
                             <h5 class="mb-0">
                                 <i class="fas fa-chart-line"></i> Compliance Trend (7 giorni)
                             </h5>
@@ -353,6 +378,9 @@
         const chartColors = {
             compliant: 'rgba(40, 167, 69, 0.8)',
             nonCompliant: 'rgba(220, 53, 69, 0.8)',
+            secureBootEnabled: 'rgba(40, 167, 69, 0.8)',
+            secureBootDisabled: 'rgba(220, 53, 69, 0.8)',
+            secureBootUnknown: 'rgba(108, 117, 125, 0.8)',
             deployed: 'rgba(40, 167, 69, 0.8)',
             pending: 'rgba(255, 193, 7, 0.8)',
             error: 'rgba(220, 53, 69, 0.8)',
@@ -403,7 +431,58 @@
             });
         }
 
-        // 2. Deployment States Pie Chart
+        // 2. Secure Boot Status Pie Chart (NEW)
+        const secureBootCtx = document.getElementById('secureBootChart');
+        if (secureBootCtx) {
+            new Chart(secureBootCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Enabled', 'Disabled', 'Unknown'],
+                    datasets: [{
+                        data: [
+                            @Model.SecureBootEnabledDevices,
+                            @Model.SecureBootDisabledDevices,
+                            @Model.SecureBootUnknownDevices
+                        ],
+                        backgroundColor: [
+                            chartColors.secureBootEnabled,
+                            chartColors.secureBootDisabled,
+                            chartColors.secureBootUnknown
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    const total = @Model.TotalDevices;
+                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 3. Deployment States Pie Chart
         const deploymentStateCtx = document.getElementById('deploymentStateChart');
         if (deploymentStateCtx) {
             new Chart(deploymentStateCtx, {
@@ -456,7 +535,7 @@
             });
         }
 
-        // 3. Compliance Trend Line Chart
+        // 4. Compliance Trend Line Chart
         const complianceTrendCtx = document.getElementById('complianceTrendChart');
         if (complianceTrendCtx) {
             const trendData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ComplianceTrendData));

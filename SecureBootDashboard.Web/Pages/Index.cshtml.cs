@@ -41,6 +41,12 @@ public class IndexModel : PageModel
     public int NonCompliantDevices => TotalDevices - DeployedDevices;
     public double CompliancePercentage => TotalDevices > 0 ? (double)CompliantDevices / TotalDevices * 100 : 0;
 
+    // Secure Boot status metrics
+    public int SecureBootEnabledDevices => Devices.Count(d => d.UEFISecureBootEnabled == true);
+    public int SecureBootDisabledDevices => Devices.Count(d => d.UEFISecureBootEnabled == false);
+    public int SecureBootUnknownDevices => Devices.Count(d => !d.UEFISecureBootEnabled.HasValue);
+    public double SecureBootEnabledPercentage => TotalDevices > 0 ? (double)SecureBootEnabledDevices / TotalDevices * 100 : 0;
+
     // Trend data (last 7 days)
     public Dictionary<string, int> ComplianceTrendData { get; private set; } = new();
 

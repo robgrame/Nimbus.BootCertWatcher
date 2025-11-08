@@ -267,21 +267,21 @@ if ($CreateScheduledTask) {
         switch ($ScheduleType) {
             "Once" {
                 $trigger = New-ScheduledTaskTrigger -Once -At $TaskTime -RandomDelay $randomDelayTimeSpan
-                $scheduleDescription = "Once at $TaskTime (±$randomDelay min)"
+                $scheduleDescription = "Once at $TaskTime (ï¿½$randomDelay min)"
             }
             "Daily" {
                 $trigger = New-ScheduledTaskTrigger -Daily -At $TaskTime -RandomDelay $randomDelayTimeSpan
-                $scheduleDescription = "Daily at $TaskTime (±$randomDelay min)"
+                $scheduleDescription = "Daily at $TaskTime (ï¿½$randomDelay min)"
             }
             "Hourly" {
                 # Create a trigger that repeats every hour
-                $trigger = New-ScheduledTaskTrigger -Once -At $TaskTime -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration ([TimeSpan]::MaxValue) -RandomDelay $randomDelayTimeSpan
-                $scheduleDescription = "Every hour starting at $TaskTime (±$randomDelay min)"
+                $trigger = New-ScheduledTaskTrigger -Once -At $TaskTime -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration ((New-TimeSpan -Days 3650)) -RandomDelay $randomDelayTimeSpan
+                $scheduleDescription = "Every hour starting at $TaskTime (ï¿½$randomDelay min)"
             }
             "Custom" {
                 # Create a trigger that repeats every N hours
-                $trigger = New-ScheduledTaskTrigger -Once -At $TaskTime -RepetitionInterval (New-TimeSpan -Hours $RepeatEveryHours) -RepetitionDuration ([TimeSpan]::MaxValue) -RandomDelay $randomDelayTimeSpan
-                $scheduleDescription = "Every $RepeatEveryHours hours starting at $TaskTime (±$randomDelay min)"
+                $trigger = New-ScheduledTaskTrigger -Once -At $TaskTime -RepetitionInterval (New-TimeSpan -Hours $RepeatEveryHours) -RepetitionDuration ((New-TimeSpan -Days 3650)) -RandomDelay $randomDelayTimeSpan
+                $scheduleDescription = "Every $RepeatEveryHours hours starting at $TaskTime (ï¿½$randomDelay min)"
             }
         }
         
