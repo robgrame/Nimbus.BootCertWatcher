@@ -164,11 +164,7 @@ namespace SecureBootWatcher.LinuxClient.Services
                 _logger.LogDebug("mokutil command not found");
                 return null;
             }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(ex, "Failed to check Secure Boot with mokutil");
-                return null;
-            }
+            // Remove generic catch block to avoid masking unexpected errors.
         }
 
         private async Task EnumerateDatabaseAsync(
