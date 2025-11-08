@@ -135,14 +135,22 @@ return null;
       {
             if (!string.IsNullOrWhiteSpace(options.CertificatePassword))
   {
-         certificate = new X509Certificate2(options.CertificatePath, options.CertificatePassword);
-          _logger.LogInformation("Loaded certificate from file: {Path}", options.CertificatePath);
+         using (var certificate = new X509Certificate2(options.CertificatePath, options.CertificatePassword))
+         {
+             _logger.LogInformation("Loaded certificate from file: {Path}", options.CertificatePath);
+             credential = new ClientCertificateCredential(options.TenantId, options.ClientId, certificate);
+             return new QueueClient(queueUri, credential);
+         }
       }
   else
      {
-         certificate = new X509Certificate2(options.CertificatePath);
- _logger.LogInformation("Loaded certificate from file (no password): {Path}", options.CertificatePath);
-}
+         using (var certificate = new X509Certificate2(options.CertificatePath))
+         {
+             _logger.LogInformation("Loaded certificate from file (no password): {Path}", options.CertificatePath);
+             credential = new ClientCertificateCredential(options.TenantId, options.ClientId, certificate);
+             return new QueueClient(queueUri, credential);
+         }
+     }
     }
                catch (Exception ex)
  {
