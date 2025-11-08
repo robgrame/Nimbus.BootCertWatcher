@@ -180,84 +180,84 @@ return null;
              if (certificates.Count == 0)
          {
     _logger.LogError("Certificate not found in store. Thumbprint: {Thumbprint}, Location: {Location}, Store: {Store}",
-options.CertificateThumbprint, storeLocation, storeName);
-              return null;
-      }
+                options.CertificateThumbprint, storeLocation, storeName);
+                return null;
+            }
 
-        certificate = certificates[0];
-        _logger.LogInformation("Loaded certificate from store. Thumbprint: {Thumbprint}, Subject: {Subject}",
-    certificate.Thumbprint, certificate.Subject);
-    }
-         catch (Exception ex)
-{
-       _logger.LogError(ex, "Failed to load certificate from store. Thumbprint: {Thumbprint}", options.CertificateThumbprint);
-    return null;
-     }
-       }
-       else
-   {
-    _logger.LogError("Either CertificatePath or CertificateThumbprint must be specified for Certificate authentication.");
+            certificate = certificates[0];
+            _logger.LogInformation("Loaded certificate from store. Thumbprint: {Thumbprint}, Subject: {Subject}",
+                certificate.Thumbprint, certificate.Subject);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load certificate from store. Thumbprint: {Thumbprint}", options.CertificateThumbprint);
             return null;
-      }
-
-     if (certificate == null)
+        }
+    }
+    else
     {
-  _logger.LogError("Certificate could not be loaded.");
-               return null;
-   }
+        _logger.LogError("Either CertificatePath or CertificateThumbprint must be specified for Certificate authentication.");
+        return null;
+    }
+
+    if (certificate == null)
+    {
+        _logger.LogError("Certificate could not be loaded.");
+        return null;
+    }
 
     _logger.LogInformation("Using Certificate-based authentication with Client ID: {ClientId}", options.ClientId);
-     credential = new ClientCertificateCredential(options.TenantId, options.ClientId, certificate);
-  return new QueueClient(queueUri, credential);
-      }
+    credential = new ClientCertificateCredential(options.TenantId, options.ClientId, certificate);
+    return new QueueClient(queueUri, credential);
+}
 
-      // Method 4: Managed Identity (recommended for Azure VMs, App Services, etc.)
-   if (options.AuthenticationMethod.Equals("ManagedIdentity", StringComparison.OrdinalIgnoreCase))
-        {
-              if (!string.IsNullOrWhiteSpace(options.ClientId))
-      {
-      // User-Assigned Managed Identity
+// Method 4: Managed Identity (recommended for Azure VMs, App Services, etc.)
+if (options.AuthenticationMethod.Equals("ManagedIdentity", StringComparison.OrdinalIgnoreCase))
+{
+    if (!string.IsNullOrWhiteSpace(options.ClientId))
+    {
+        // User-Assigned Managed Identity
         _logger.LogInformation("Using User-Assigned Managed Identity with Client ID: {ClientId}", options.ClientId);
         credential = new ManagedIdentityCredential(options.ClientId);
-         }
+    }
     else
-        {
-     // System-Assigned Managed Identity
-      _logger.LogInformation("Using System-Assigned Managed Identity");
-       credential = new ManagedIdentityCredential();
-           }
- 
-       return new QueueClient(queueUri, credential);
-     }
+    {
+        // System-Assigned Managed Identity
+        _logger.LogInformation("Using System-Assigned Managed Identity");
+        credential = new ManagedIdentityCredential();
+    }
 
-   // Method 5: DefaultAzureCredential (automatically tries multiple authentication methods)
-    if (options.AuthenticationMethod.Equals("DefaultAzureCredential", StringComparison.OrdinalIgnoreCase) ||
-     string.IsNullOrWhiteSpace(options.AuthenticationMethod))
-      {
-        _logger.LogInformation("Using DefaultAzureCredential (tries Managed Identity, Azure CLI, Visual Studio, Environment Variables, etc.)");
-           
-  var credentialOptions = new DefaultAzureCredentialOptions();
-       
+    return new QueueClient(queueUri, credential);
+}
+
+// Method 5: DefaultAzureCredential (automatically tries multiple authentication methods)
+if (options.AuthenticationMethod.Equals("DefaultAzureCredential", StringComparison.OrdinalIgnoreCase) ||
+    string.IsNullOrWhiteSpace(options.AuthenticationMethod))
+{
+    _logger.LogInformation("Using DefaultAzureCredential (tries Managed Identity, Azure CLI, Visual Studio, Environment Variables, etc.)");
+
+    var credentialOptions = new DefaultAzureCredentialOptions();
+
     // If a ClientId is specified, use it for Managed Identity
- if (!string.IsNullOrWhiteSpace(options.ClientId))
-      {
-             credentialOptions.ManagedIdentityClientId = options.ClientId;
-         _logger.LogInformation("Configured DefaultAzureCredential with Managed Identity Client ID: {ClientId}", options.ClientId);
-          }
+    if (!string.IsNullOrWhiteSpace(options.ClientId))
+    {
+        credentialOptions.ManagedIdentityClientId = options.ClientId;
+        _logger.LogInformation("Configured DefaultAzureCredential with Managed Identity Client ID: {ClientId}", options.ClientId);
+    }
 
-        credential = new DefaultAzureCredential(credentialOptions);
-          return new QueueClient(queueUri, credential);
-     }
+    credential = new DefaultAzureCredential(credentialOptions);
+    return new QueueClient(queueUri, credential);
+}
 
-       _logger.LogError("Invalid AuthenticationMethod: {Method}. Valid values are: ManagedIdentity, AppRegistration, Certificate, DefaultAzureCredential, ConnectionString.", 
-        options.AuthenticationMethod);
-        return null;
- }
-     catch (Exception ex)
-      {
-      _logger.LogError(ex, "Failed to create Azure Queue client with authentication method: {Method}", options.AuthenticationMethod);
-      return null;
-      }
-        }
+_logger.LogError("Invalid AuthenticationMethod: {Method}. Valid values are: ManagedIdentity, AppRegistration, Certificate, DefaultAzureCredential, ConnectionString.",
+    options.AuthenticationMethod);
+return null;
+}
+catch (Exception ex)
+{
+    _logger.LogError(ex, "Failed to create Azure Queue client with authentication method: {Method}", options.AuthenticationMethod);
+    return null;
+}
+}
     }
 }
