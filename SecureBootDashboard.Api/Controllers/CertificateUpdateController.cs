@@ -42,33 +42,25 @@ namespace SecureBootDashboard.Api.Controllers
             {
                 // Sanitize fleet ID for logging to prevent log forging
                 var sanitizedFleetId = request.FleetId?.Replace("\r", "").Replace("\n", "") ?? "ALL";
-                _logger.LogInformation(
-                    "Received certificate update request for fleet {FleetId}",
-                    sanitizedFleetId);
+            // Sanitize fleet ID for logging to prevent log forging
+            var sanitizedFleetId = request.FleetId?.Replace("\r", "").Replace("\n", "") ?? "ALL";
+            _logger.LogInformation(
+                "Received certificate update request for fleet {FleetId}",
+                sanitizedFleetId);
 
-                // Sanitize IssuedBy and Notes to prevent log forging
-                var sanitizedIssuedBy = request.IssuedBy?.Replace("\r", "").Replace("\n", "");
-                var sanitizedNotes = request.Notes?.Replace("\r", "").Replace("\n", "");
-
-                var command = new CertificateUpdateCommand
-                {
-                    FleetId = request.FleetId,
-                    TargetDevices = request.TargetDevices ?? Array.Empty<string>(),
-                    UpdateFlags = request.UpdateFlags,
-                    IssuedBy = sanitizedIssuedBy,
-                    Notes = sanitizedNotes,
-                    ExpiresAtUtc = request.ExpiresAtUtc
-                };
-
-                var result = await _updateService.SendUpdateCommandAsync(command, cancellationToken);
-
-                return Ok(result);
-            }
-            catch (Exception ex)
+            var command = new CertificateUpdateCommand
             {
-                _logger.LogError(ex, "Failed to trigger certificate update");
-                return StatusCode(500, new { Error = "Failed to trigger certificate update" });
-            }
+                FleetId = request.FleetId,
+                TargetDevices = request.TargetDevices ?? Array.Empty<string>(),
+                UpdateFlags = request.UpdateFlags,
+                IssuedBy = request.IssuedBy,
+                Notes = request.Notes,
+                ExpiresAtUtc = request.ExpiresAtUtc
+            };
+
+            var result = await _updateService.SendUpdateCommandAsync(command, cancellationToken);
+
+            return Ok(result);
         }
 
         /// <summary>
