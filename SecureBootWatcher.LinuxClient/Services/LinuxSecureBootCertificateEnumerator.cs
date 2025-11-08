@@ -390,7 +390,12 @@ namespace SecureBootWatcher.LinuxClient.Services
                 x509.Dispose();
                 return cert;
             }
-            catch (Exception ex)
+            catch (System.Security.Cryptography.CryptographicException ex)
+            {
+                _logger.LogDebug(ex, "Failed to parse certificate from {Database}", databaseName);
+                return null;
+            }
+            catch (FormatException ex)
             {
                 _logger.LogDebug(ex, "Failed to parse certificate from {Database}", databaseName);
                 return null;
