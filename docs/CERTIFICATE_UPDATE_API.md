@@ -316,10 +316,10 @@ while (true)
             
             // Report status
             await ReportUpdateStatusAsync(command.CommandId);
+            
+            // Delete message only if processed by this device
+            await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
         }
-        
-        // Delete message
-        await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
     }
     
     await Task.Delay(TimeSpan.FromMinutes(5));
