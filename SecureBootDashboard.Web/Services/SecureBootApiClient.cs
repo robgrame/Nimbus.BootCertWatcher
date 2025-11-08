@@ -238,7 +238,8 @@ public sealed class SecureBootApiClient : ISecureBootApiClient
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Failed to resolve anomaly {AnomalyId}", id);
-            throw;
+            // Suppress exception for consistency with other methods
+            return;
         }
     }
 }
