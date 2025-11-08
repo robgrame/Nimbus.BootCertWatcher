@@ -264,23 +264,32 @@ if ($CreateScheduledTask) {
         $trigger = $null
         $scheduleDescription = ""
         
+        # Parse TaskTime to ensure it's a valid DateTime
+        try {
+            $taskDateTime = [DateTime]::Parse($TaskTime)
+        }
+        catch {
+            Write-Host "  Warning: Invalid TaskTime '$TaskTime', using 09:00AM" -ForegroundColor Yellow
+            $taskDateTime = [DateTime]::Parse("09:00AM")
+        }
+        
         switch ($ScheduleType) {
             "Once" {
-                $trigger = New-ScheduledTaskTrigger -Once -At $TaskTime -RandomDelay $randomDelayTimeSpan
+                $trigger = New-ScheduledTaskTrigger -Once -At $taskDateTime -RandomDelay $randomDelayTimeSpan
                 $scheduleDescription = "Once at $TaskTime (�$randomDelay min)"
             }
             "Daily" {
-                $trigger = New-ScheduledTaskTrigger -Daily -At $TaskTime -RandomDelay $randomDelayTimeSpan
+                $trigger = New-ScheduledTaskTrigger -Daily -At $taskDateTime -RandomDelay $randomDelayTimeSpan
                 $scheduleDescription = "Daily at $TaskTime (�$randomDelay min)"
             }
             "Hourly" {
                 # Create a trigger that repeats every hour
-                $trigger = New-ScheduledTaskTrigger -Once -At $TaskTime -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration ((New-TimeSpan -Days 3650)) -RandomDelay $randomDelayTimeSpan
+                $trigger = New-ScheduledTaskTrigger -Once -At $taskDateTime -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration ((New-TimeSpan -Days 3650)) -RandomDelay $randomDelayTimeSpan
                 $scheduleDescription = "Every hour starting at $TaskTime (�$randomDelay min)"
             }
             "Custom" {
                 # Create a trigger that repeats every N hours
-                $trigger = New-ScheduledTaskTrigger -Once -At $TaskTime -RepetitionInterval (New-TimeSpan -Hours $RepeatEveryHours) -RepetitionDuration ((New-TimeSpan -Days 3650)) -RandomDelay $randomDelayTimeSpan
+                $trigger = New-ScheduledTaskTrigger -Once -At $taskDateTime -RepetitionInterval (New-TimeSpan -Hours $RepeatEveryHours) -RepetitionDuration ((New-TimeSpan -Days 3650)) -RandomDelay $randomDelayTimeSpan
                 $scheduleDescription = "Every $RepeatEveryHours hours starting at $TaskTime (�$randomDelay min)"
             }
         }
