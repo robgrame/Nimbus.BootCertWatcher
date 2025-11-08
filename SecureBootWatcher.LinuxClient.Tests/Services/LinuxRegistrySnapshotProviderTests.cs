@@ -45,7 +45,7 @@ public class LinuxRegistrySnapshotProviderTests
         // Arrange
         var logger = NullLogger<LinuxRegistrySnapshotProvider>.Instance;
         var provider = new LinuxRegistrySnapshotProvider(logger);
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         
         // Act
         var result = await provider.CaptureAsync(cts.Token);
