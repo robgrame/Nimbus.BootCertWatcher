@@ -11,7 +11,7 @@ using SecureBootWatcher.Shared.Models;
 namespace SecureBootDashboard.Api.Services
 {
     /// <summary>
-    /// Service for detecting anomalies in device behavior using ML.NET
+    /// Service for detecting anomalies in device behavior using statistical analysis (mean and standard deviation)
     /// </summary>
     public interface IAnomalyDetectionService
     {
