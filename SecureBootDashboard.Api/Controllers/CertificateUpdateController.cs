@@ -41,7 +41,6 @@ namespace SecureBootDashboard.Api.Controllers
             try
             {
                 // Sanitize fleet ID for logging to prevent log forging
-            // Sanitize fleet ID for logging to prevent log forging
             var sanitizedFleetId = request.FleetId?.Replace("\r", "").Replace("\n", "") ?? "ALL";
             _logger.LogInformation(
                 "Received certificate update request for fleet {FleetId}",
