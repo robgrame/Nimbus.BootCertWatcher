@@ -501,7 +501,8 @@ For questions, issues, or support:
 ### v2.0 (Q3 2025)
 - [ ] Linux client support (.NET 8)
 - [ ] API v2 with GraphQL
-- [x] **Machine learning anomaly detection** ✨ *Completed in Nov 2025*
+- [x] **Statistical anomaly detection** ✨ *Completed in Nov 2025*
+- [ ] **Machine learning anomaly detection (ML.NET)** *Planned for future release*
 - [ ] Integration with ServiceNow/Jira
 
 See [GitHub Projects](https://github.com/robgrame/Nimbus.BootCertWatcher/projects) for detailed roadmap.
