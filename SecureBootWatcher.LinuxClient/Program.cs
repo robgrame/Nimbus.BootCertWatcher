@@ -210,7 +210,7 @@ namespace SecureBootWatcher.LinuxClient
 				
 				if (options.Sinks.AzureQueue.AuthenticationMethod.Equals("Certificate", StringComparison.OrdinalIgnoreCase))
 				{
-					Log.Information("    Certificate Store: {Location}\\{Store}", 
+					Log.Information("    Certificate Store: {Location}/{Store}", 
 						options.Sinks.AzureQueue.CertificateStoreLocation, 
 						options.Sinks.AzureQueue.CertificateStoreName);
 					
