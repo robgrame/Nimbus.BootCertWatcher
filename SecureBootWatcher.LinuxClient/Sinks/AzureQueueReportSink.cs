@@ -224,7 +224,7 @@ options.CertificateThumbprint, storeLocation, storeName);
        return new QueueClient(queueUri, credential);
      }
 
-   // Metodo 5: DefaultAzureCredential (prova più metodi automaticamente)
+   // Method 5: DefaultAzureCredential (automatically tries multiple authentication methods)
     if (options.AuthenticationMethod.Equals("DefaultAzureCredential", StringComparison.OrdinalIgnoreCase) ||
      string.IsNullOrWhiteSpace(options.AuthenticationMethod))
       {
