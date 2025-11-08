@@ -45,7 +45,8 @@ public class ListModel : PageModel
     {
         try
         {
-            _logger.LogInformation("Manual anomaly scan triggered by user");
+            var userName = User.Identity?.Name ?? "Unknown User";
+            _logger.LogInformation("Manual anomaly scan triggered by user {User}", userName);
             Anomalies = await _apiClient.TriggerAnomalyScanAsync(HttpContext.RequestAborted);
             ScanTriggered = true;
             _logger.LogInformation("Manual scan completed. Found {Count} anomalies", Anomalies.Count);
