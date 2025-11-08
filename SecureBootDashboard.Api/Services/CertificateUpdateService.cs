@@ -234,19 +234,20 @@ namespace SecureBootDashboard.Api.Services
                         using var store = new X509Store(storeName, storeLocation);
                         store.Open(OpenFlags.ReadOnly);
 
-                        var certificates = store.Certificates.Find(
+                        using (var certificates = store.Certificates.Find(
                             X509FindType.FindByThumbprint,
                             options.CertificateThumbprint.Replace(" ", "").Replace(":", ""),
-                            validOnly: false);
-
-                        if (certificates.Count == 0)
+                            validOnly: false))
                         {
-                            _logger.LogError("Certificate not found in store");
-                            return null;
-                        }
+                            if (certificates.Count == 0)
+                            {
+                                _logger.LogError("Certificate not found in store");
+                                return null;
+                            }
 
-                        certificate = certificates[0];
-                        _logger.LogInformation("Loaded certificate from store for command queue");
+                            certificate = certificates[0];
+                            _logger.LogInformation("Loaded certificate from store for command queue");
+                        }
                     }
 
                     if (certificate == null)
