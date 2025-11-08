@@ -40,7 +40,7 @@ namespace SecureBootWatcher.Client.Services
 
                 if (collection.SecureBootEnabled != true)
                 {
-                    _logger.LogWarning("Secure Boot is not enabled on this device.");
+                    _logger.LogInformation("Secure Boot is not enabled on this device. Certificate enumeration skipped.");
                     collection.ErrorMessage = "Secure Boot is not enabled";
                     return Task.FromResult(collection);
                 }

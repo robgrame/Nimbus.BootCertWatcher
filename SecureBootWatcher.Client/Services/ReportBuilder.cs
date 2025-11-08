@@ -111,28 +111,90 @@ namespace SecureBootWatcher.Client.Services
 
         private void TryPopulateHardwareInfo(DeviceIdentity identity)
         {
+            // Try to get computer system information
             try
             {
                 using var systemSearcher = new ManagementObjectSearcher("SELECT Manufacturer, Model FROM Win32_ComputerSystem");
-                foreach (var system in systemSearcher.Get())
+                using var systemCollection = systemSearcher.Get();
+                
+                foreach (ManagementObject system in systemCollection)
                 {
-                    identity.Manufacturer = system["Manufacturer"]?.ToString();
-                    identity.Model = system["Model"]?.ToString();
-                    break;
+                    try
+                    {
+                        identity.Manufacturer = system["Manufacturer"]?.ToString();
+                        identity.Model = system["Model"]?.ToString();
+                    }
+                    catch (ManagementException ex) when (ex.ErrorCode == ManagementStatus.NotFound)
+                    {
+                        _logger.LogDebug("Win32_ComputerSystem property not found: {Message}", ex.Message);
+                    }
+                    finally
+                    {
+                        system?.Dispose();
+                    }
+                    break; // Only process first result
                 }
-
-                using var biosSearcher = new ManagementObjectSearcher("SELECT SMBIOSBIOSVersion FROM Win32_BIOS");
-                foreach (var bios in biosSearcher.Get())
-                {
-                    identity.FirmwareVersion = bios["SMBIOSBIOSVersion"]?.ToString();
-                    identity.FirmwareReleaseDate = ManagementDateTimeConverter.ToDateTime(bios["ReleaseDate"]?.ToString() ?? string.Empty);
-                    break;
-                }
+            }
+            catch (ManagementException ex)
+            {
+                _logger.LogDebug(ex, "Failed to query Win32_ComputerSystem. Manufacturer and Model will be unavailable.");
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to populate hardware metadata for Secure Boot report.");
+                _logger.LogWarning(ex, "Unexpected error querying Win32_ComputerSystem.");
             }
+
+            // Try to get BIOS information
+            try
+            {
+                using var biosSearcher = new ManagementObjectSearcher("SELECT SMBIOSBIOSVersion, ReleaseDate FROM Win32_BIOS");
+                using var biosCollection = biosSearcher.Get();
+                
+                foreach (ManagementObject bios in biosCollection)
+                {
+                    try
+                    {
+                        identity.FirmwareVersion = bios["SMBIOSBIOSVersion"]?.ToString();
+                        
+                        var releaseDate = bios["ReleaseDate"]?.ToString();
+                        if (!string.IsNullOrEmpty(releaseDate))
+                        {
+                            try
+                            {
+                                identity.FirmwareReleaseDate = ManagementDateTimeConverter.ToDateTime(releaseDate);
+                            }
+                            catch (ArgumentOutOfRangeException)
+                            {
+                                _logger.LogDebug("Invalid ReleaseDate format from Win32_BIOS: {ReleaseDate}", releaseDate);
+                            }
+                        }
+                    }
+                    catch (ManagementException ex) when (ex.ErrorCode == ManagementStatus.NotFound)
+                    {
+                        _logger.LogDebug("Win32_BIOS property not found: {Message}", ex.Message);
+                    }
+                    finally
+                    {
+                        bios?.Dispose();
+                    }
+                    break; // Only process first result
+                }
+            }
+            catch (ManagementException ex)
+            {
+                _logger.LogDebug(ex, "Failed to query Win32_BIOS. Firmware information will be unavailable.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Unexpected error querying Win32_BIOS.");
+            }
+            
+            // Log summary of what was collected
+            _logger.LogDebug(
+                "Hardware info collected: Manufacturer={Manufacturer}, Model={Model}, FirmwareVersion={FirmwareVersion}",
+                identity.Manufacturer ?? "N/A",
+                identity.Model ?? "N/A", 
+                identity.FirmwareVersion ?? "N/A");
         }
 
         private static void PopulateAlerts(SecureBootStatusReport report)

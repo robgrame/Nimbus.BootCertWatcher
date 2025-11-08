@@ -30,7 +30,7 @@ namespace SecureBootWatcher.Client.Services
                 using var baseKey = Registry.LocalMachine.OpenSubKey(SecureBootRegistrySnapshot.RegistryRootPath, false);
                 if (baseKey == null)
                 {
-                    _logger.LogWarning("Secure Boot servicing registry path was not found. Returning empty snapshot.");
+                    _logger.LogDebug("Secure Boot base registry path not found at {Path}. This is normal for devices without Secure Boot servicing configured.", SecureBootRegistrySnapshot.RegistryRootPath);
                     return Task.FromResult(snapshot);
                 }
 
@@ -45,6 +45,10 @@ namespace SecureBootWatcher.Client.Services
                     snapshot.UefiCa2023Error = ReadUInt(servicingKey, "UefiCa2023Error");
                     snapshot.WindowsUEFICA2023CapableCode = ReadUInt(servicingKey, "WindowsUEFICA2023CapableCode");
                 }
+                else
+                {
+                    _logger.LogDebug("Servicing subkey not found. Device may not have Secure Boot servicing registry keys.");
+                }
 
                 using var stateKey = baseKey.OpenSubKey("State", false);
                 if (stateKey != null)
@@ -53,10 +57,14 @@ namespace SecureBootWatcher.Client.Services
                     snapshot.PolicyVersion = ReadUInt(stateKey, "PolicyVersion");
                     snapshot.UEFISecureBootEnabled = ReadBool(stateKey, "UEFISecureBootEnabled");
                 }
+                else
+                {
+                    _logger.LogDebug("State subkey not found. UEFI Secure Boot status will be unavailable.");
+                }
             }
             catch (SecurityException ex)
             {
-                _logger.LogError(ex, "Failed to read Secure Boot registry keys due to insufficient permissions.");
+                _logger.LogError(ex, "Access denied reading Secure Boot registry keys. Run as Administrator or check permissions.");
             }
             catch (Exception ex)
             {
@@ -78,7 +86,7 @@ namespace SecureBootWatcher.Client.Services
                 using var baseKey = Registry.LocalMachine.OpenSubKey(SecureBootDeviceAttributesRegistrySnapshot.RegistryRootPath, false);
                 if (baseKey == null)
                 {
-                    _logger.LogWarning("Secure Boot Device Attributes registry path was not found. Returning empty snapshot.");
+                    _logger.LogDebug("Device Attributes registry path not found at {Path}. This is normal for devices without Secure Boot servicing configured.", SecureBootDeviceAttributesRegistrySnapshot.RegistryRootPath);
                     return Task.FromResult(snapshot);
                 }
 
@@ -100,11 +108,11 @@ namespace SecureBootWatcher.Client.Services
             }
             catch (SecurityException ex)
             {
-                _logger.LogError(ex, "Failed to read Secure Boot Device Attributes registry keys due to insufficient permissions.");
+                _logger.LogError(ex, "Access denied reading Device Attributes registry keys. Run as Administrator or check permissions.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error while reading Secure Boot Device Attributes registry keys.");
+                _logger.LogError(ex, "Unexpected error while reading Device Attributes registry keys.");
             }
 
             return Task.FromResult(snapshot);
