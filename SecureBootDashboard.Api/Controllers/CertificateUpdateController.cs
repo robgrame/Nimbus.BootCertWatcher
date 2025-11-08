@@ -61,6 +61,12 @@ namespace SecureBootDashboard.Api.Controllers
             var result = await _updateService.SendUpdateCommandAsync(command, cancellationToken);
 
             return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to trigger certificate update for fleet {FleetId}", request.FleetId);
+                return StatusCode(500, new { Error = "Failed to trigger certificate update" });
+            }
         }
 
         /// <summary>
