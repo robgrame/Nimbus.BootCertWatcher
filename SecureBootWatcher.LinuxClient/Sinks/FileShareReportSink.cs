@@ -42,7 +42,7 @@ namespace SecureBootWatcher.LinuxClient.Sinks
             });
 
             cancellationToken.ThrowIfCancellationRequested();
-            File.WriteAllText(path, json);
+            await File.WriteAllTextAsync(path, json, cancellationToken);
             _logger.LogInformation("Secure Boot report persisted to file share at {Path}.", path);
         }
 
