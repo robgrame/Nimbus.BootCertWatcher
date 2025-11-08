@@ -125,34 +125,31 @@ namespace SecureBootDashboard.Api.Services
             var lowerThreshold = Math.Max(0, mean - (StatisticalThreshold * stdDev));
 
             // Identify anomalies
-            foreach (var device in deviceReportStats)
+            foreach (var device in deviceReportStats.Where(d => d.ReportCount > upperThreshold || d.ReportCount < lowerThreshold))
             {
-                if (device.ReportCount > upperThreshold || device.ReportCount < lowerThreshold)
+                var severity = Math.Abs(device.ReportCount - mean) / Math.Max(stdDev, 1);
+                severity = Math.Min(severity / 3.0, 1.0); // Normalize to 0-1
+
+                string description;
+                if (device.ReportCount > upperThreshold)
                 {
-                    var severity = Math.Abs(device.ReportCount - mean) / Math.Max(stdDev, 1);
-                    severity = Math.Min(severity / 3.0, 1.0); // Normalize to 0-1
-
-                    string description;
-                    if (device.ReportCount > upperThreshold)
-                    {
-                        description = $"Excessive reporting detected. Device reported {device.ReportCount} times in {ReportingFrequencyLookbackDays} days (expected: ~{mean:F1})";
-                    }
-                    else
-                    {
-                        description = $"Insufficient reporting detected. Device reported {device.ReportCount} times in {ReportingFrequencyLookbackDays} days (expected: ~{mean:F1})";
-                    }
-
-                    anomalies.Add(new AnomalyDetectionResult
-                    {
-                        DeviceId = device.Id,
-                        DeviceName = device.MachineName,
-                        Type = AnomalyType.ReportingFrequency,
-                        Description = description,
-                        Severity = severity,
-                        DetectedAtUtc = DateTimeOffset.UtcNow,
-                        Status = AnomalyStatus.Active
-                    });
+                    description = $"Excessive reporting detected. Device reported {device.ReportCount} times in {ReportingFrequencyLookbackDays} days (expected: ~{mean:F1})";
                 }
+                else
+                {
+                    description = $"Insufficient reporting detected. Device reported {device.ReportCount} times in {ReportingFrequencyLookbackDays} days (expected: ~{mean:F1})";
+                }
+
+                anomalies.Add(new AnomalyDetectionResult
+                {
+                    DeviceId = device.Id,
+                    DeviceName = device.MachineName,
+                    Type = AnomalyType.ReportingFrequency,
+                    Description = description,
+                    Severity = severity,
+                    DetectedAtUtc = DateTimeOffset.UtcNow,
+                    Status = AnomalyStatus.Active
+                });
             }
 
             return anomalies;
