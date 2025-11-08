@@ -152,10 +152,10 @@ try
         Log.Information("  Command Queue URI: {QueueUri}", updateQueueUri);
         Log.Information("  Command Queue Name: {QueueName}", updateQueueName);
         Log.Information("  Auth Method is configured.");
+
+        builder.Services.Configure<CertificateUpdateServiceOptions>(updateConfig);
+        builder.Services.AddScoped<ICertificateUpdateService, CertificateUpdateService>();
     }
-    
-    builder.Services.Configure<CertificateUpdateServiceOptions>(updateConfig);
-    builder.Services.AddScoped<ICertificateUpdateService, CertificateUpdateService>();
 
     // Configure Azure Queue Processor
     Log.Information("Configuring Queue Processor...");
