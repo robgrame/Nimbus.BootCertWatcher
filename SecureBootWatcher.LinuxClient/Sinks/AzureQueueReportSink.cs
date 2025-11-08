@@ -232,7 +232,7 @@ options.CertificateThumbprint, storeLocation, storeName);
            
   var credentialOptions = new DefaultAzureCredentialOptions();
        
-    // Se è specificato un ClientId, usa quello per Managed Identity
+    // If a ClientId is specified, use it for Managed Identity
  if (!string.IsNullOrWhiteSpace(options.ClientId))
       {
              credentialOptions.ManagedIdentityClientId = options.ClientId;
