@@ -150,9 +150,19 @@ return null;
          }
      }
     }
-               catch (Exception ex)
+               catch (CryptographicException ex)
  {
-       _logger.LogError(ex, "Failed to load certificate from file: {Path}", options.CertificatePath);
+       _logger.LogError(ex, "Cryptographic error loading certificate from file: {Path}", options.CertificatePath);
+              return null;
+        }
+               catch (IOException ex)
+ {
+       _logger.LogError(ex, "IO error loading certificate from file: {Path}", options.CertificatePath);
+              return null;
+        }
+               catch (UnauthorizedAccessException ex)
+ {
+       _logger.LogError(ex, "Access denied loading certificate from file: {Path}", options.CertificatePath);
               return null;
         }
          }
