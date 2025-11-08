@@ -138,6 +138,26 @@ try
     Log.Information("Configuring Export Service...");
     builder.Services.AddScoped<IExportService, ExportService>();
 
+    // Configure Certificate Update Service
+    Log.Information("Configuring Certificate Update Service...");
+    var updateConfig = builder.Configuration.GetSection("CertificateUpdateService");
+    var updateEnabled = updateConfig.GetValue<bool>("Enabled");
+    Log.Information("Certificate Update Service Enabled: {Enabled}", updateEnabled);
+    
+    if (updateEnabled)
+    {
+        var updateQueueUri = updateConfig.GetValue<string>("QueueServiceUri");
+        var updateQueueName = updateConfig.GetValue<string>("CommandQueueName");
+        var updateAuthMethod = updateConfig.GetValue<string>("AuthenticationMethod");
+        
+        Log.Information("  Command Queue URI: {QueueUri}", updateQueueUri);
+        Log.Information("  Command Queue Name: {QueueName}", updateQueueName);
+        Log.Information("  Auth Method: {AuthMethod}", updateAuthMethod);
+    }
+    
+    builder.Services.Configure<CertificateUpdateServiceOptions>(updateConfig);
+    builder.Services.AddScoped<ICertificateUpdateService, CertificateUpdateService>();
+
     // Configure Azure Queue Processor
     Log.Information("Configuring Queue Processor...");
     var queueConfig = builder.Configuration.GetSection("QueueProcessor");
