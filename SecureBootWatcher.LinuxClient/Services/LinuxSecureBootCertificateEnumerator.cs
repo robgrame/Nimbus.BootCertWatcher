@@ -305,7 +305,15 @@ namespace SecureBootWatcher.LinuxClient.Services
                                     certificates.Add(cert);
                                 }
                             }
-                            catch (Exception ex)
+                            catch (CryptographicException ex)
+                            {
+                                _logger.LogDebug(ex, "Failed to parse individual certificate in {Database}", databaseName);
+                            }
+                            catch (FormatException ex)
+                            {
+                                _logger.LogDebug(ex, "Failed to parse individual certificate in {Database}", databaseName);
+                            }
+                            catch (ArgumentException ex)
                             {
                                 _logger.LogDebug(ex, "Failed to parse individual certificate in {Database}", databaseName);
                             }
