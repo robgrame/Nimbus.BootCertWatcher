@@ -56,11 +56,13 @@ namespace SecureBootDashboard.Api.Services
             var targetDevices = await GetTargetDevicesAsync(command, cancellationToken);
             var targetCount = targetDevices.Count;
 
+            // Sanitize fleet ID for logging to prevent log forging
+            var sanitizedFleetId = command.FleetId?.Replace("\r", "").Replace("\n", "") ?? "ALL";
             _logger.LogInformation(
                 "Certificate update command {CommandId} targeting {Count} devices in fleet {FleetId}",
                 command.CommandId,
                 targetCount,
-                command.FleetId ?? "ALL");
+                sanitizedFleetId);
 
             if (targetCount == 0)
             {
