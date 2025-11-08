@@ -117,7 +117,7 @@ return null;
        return new QueueClient(queueUri, credential);
      }
 
-     // Metodo 3: Certificate-based authentication (PIÙ SICURO - raccomandato per produzione)
+     // Method 3: Certificate-based authentication (MORE SECURE - recommended for production)
        if (options.AuthenticationMethod.Equals("Certificate", StringComparison.OrdinalIgnoreCase))
       {
                if (string.IsNullOrWhiteSpace(options.TenantId) || string.IsNullOrWhiteSpace(options.ClientId))
