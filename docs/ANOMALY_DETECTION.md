@@ -1,8 +1,8 @@
-# Machine Learning Anomaly Detection
+# Statistical Anomaly Detection
 
 ## Overview
 
-The Secure Boot Certificate Watcher now includes an ML-powered anomaly detection system that automatically identifies unusual patterns in device behavior, certificate management, and reporting patterns across your fleet.
+The Secure Boot Certificate Watcher now includes a statistical anomaly detection system that automatically identifies unusual patterns in device behavior, certificate management, and reporting patterns across your fleet.
 
 ## Features
 
