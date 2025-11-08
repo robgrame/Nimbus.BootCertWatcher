@@ -41,15 +41,33 @@ namespace SecureBootWatcher.LinuxClient.Sinks
 
             var route = sinkOptions.IngestionRoute.StartsWith("/") ? sinkOptions.IngestionRoute : "/" + sinkOptions.IngestionRoute;
 
-            var response = await client.PostAsJsonAsync(route, report, cancellationToken).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
+            try
             {
-                var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                _logger.LogError("Secure Boot report submission failed with status {StatusCode}: {Body}", (int)response.StatusCode, content);
+                var response = await client.PostAsJsonAsync(route, report, cancellationToken).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    _logger.LogError("Secure Boot report submission failed with status {StatusCode}: {Body}", (int)response.StatusCode, content);
+                    return;
+                }
+
+                _logger.LogInformation("Secure Boot report submitted to API at {Endpoint}.", client.BaseAddress);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Secure Boot report submission failed due to HTTP error: {Message}", ex.Message);
                 return;
             }
-
-            _logger.LogInformation("Secure Boot report submitted to API at {Endpoint}.", client.BaseAddress);
+            catch (TaskCanceledException ex)
+            {
+                _logger.LogError(ex, "Secure Boot report submission was canceled or timed out: {Message}", ex.Message);
+                return;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Secure Boot report submission failed due to unexpected error: {Message}", ex.Message);
+                return;
+            }
         }
     }
 }
