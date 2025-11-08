@@ -19,23 +19,23 @@ using SecureBootWatcher.Shared.Transport;
 namespace SecureBootWatcher.LinuxClient.Sinks
 {
     internal sealed class AzureQueueReportSink : IReportSink
-  {
-   private readonly ILogger<AzureQueueReportSink> _logger;
- private readonly IOptionsMonitor<SecureBootWatcherOptions> _options;
+    {
+        private readonly ILogger<AzureQueueReportSink> _logger;
+        private readonly IOptionsMonitor<SecureBootWatcherOptions> _options;
         private readonly AsyncRetryPolicy _retryPolicy;
 
-  public AzureQueueReportSink(ILogger<AzureQueueReportSink> logger, IOptionsMonitor<SecureBootWatcherOptions> options)
-   {
-       _logger = logger;
-  _options = options;
+        public AzureQueueReportSink(ILogger<AzureQueueReportSink> logger, IOptionsMonitor<SecureBootWatcherOptions> options)
+        {
+            _logger = logger;
+            _options = options;
             _retryPolicy = Policy
-      .Handle<RequestFailedException>()
-          .Or<TimeoutException>()
-        .WaitAndRetryAsync(3, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)), (ex, span, attempt, _) =>
-   {
-          _logger.LogWarning(ex, "Retrying Azure Queue send attempt {Attempt} after {Delay}.", attempt, span);
-    });
- }
+                .Handle<RequestFailedException>()
+                .Or<TimeoutException>()
+                .WaitAndRetryAsync(3, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)), (ex, span, attempt, _) =>
+                {
+                    _logger.LogWarning(ex, "Retrying Azure Queue send attempt {Attempt} after {Delay}.", attempt, span);
+                });
+        }
 
         public async Task EmitAsync(SecureBootStatusReport report, CancellationToken cancellationToken)
      {
