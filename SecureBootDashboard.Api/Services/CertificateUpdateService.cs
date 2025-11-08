@@ -234,20 +234,19 @@ namespace SecureBootDashboard.Api.Services
                         using var store = new X509Store(storeName, storeLocation);
                         store.Open(OpenFlags.ReadOnly);
 
-                        using (var certificates = store.Certificates.Find(
+                        var certificates = store.Certificates.Find(
                             X509FindType.FindByThumbprint,
                             options.CertificateThumbprint.Replace(" ", "").Replace(":", ""),
-                            validOnly: false))
-                        {
-                            if (certificates.Count == 0)
-                            {
-                                _logger.LogError("Certificate not found in store");
-                                return null;
-                            }
+                            validOnly: false);
 
-                            certificate = certificates[0];
-                            _logger.LogInformation("Loaded certificate from store for command queue");
+                        if (certificates.Count == 0)
+                        {
+                            _logger.LogError("Certificate not found in store");
+                            return null;
                         }
+
+                        certificate = certificates[0];
+                        _logger.LogInformation("Loaded certificate from store for command queue");
                     }
 
                     if (certificate == null)
@@ -290,9 +289,24 @@ namespace SecureBootDashboard.Api.Services
                 _logger.LogError("Invalid AuthenticationMethod: {Method}", options.AuthenticationMethod);
                 return null;
             }
+            catch (Azure.Identity.AuthenticationFailedException ex)
+            {
+                _logger.LogError(ex, "Authentication failed while creating command queue client");
+                return null;
+            }
+            catch (Azure.RequestFailedException ex)
+            {
+                _logger.LogError(ex, "Azure request failed while creating command queue client");
+                return null;
+            }
+            catch (UriFormatException ex)
+            {
+                _logger.LogError(ex, "Invalid queue URI format");
+                return null;
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to create command queue client");
+                _logger.LogError(ex, "Unexpected error while creating command queue client");
                 return null;
             }
         }

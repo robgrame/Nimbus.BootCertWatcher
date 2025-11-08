@@ -101,6 +101,7 @@ namespace SecureBootDashboard.Api.Controllers
             /// <summary>
             /// Specific device machine names to target. If empty, targets all devices in fleet.
             /// </summary>
+            [MaxLength(1000, ErrorMessage = "Cannot target more than 1000 devices at once")]
             public string[]? TargetDevices { get; init; }
 
             /// <summary>
