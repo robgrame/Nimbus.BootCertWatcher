@@ -136,7 +136,11 @@ namespace SecureBootWatcher.LinuxClient.Services
                     _logger.LogWarning("DMI info path {Path} not found. Hardware metadata will be incomplete.", dmiPath);
                 }
             }
-            catch (Exception ex)
+            catch (IOException ex)
+            {
+                _logger.LogWarning(ex, "Failed to populate hardware metadata for Secure Boot report.");
+            }
+            catch (UnauthorizedAccessException ex)
             {
                 _logger.LogWarning(ex, "Failed to populate hardware metadata for Secure Boot report.");
             }
