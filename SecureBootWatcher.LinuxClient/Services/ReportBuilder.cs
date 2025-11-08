@@ -151,7 +151,11 @@ namespace SecureBootWatcher.LinuxClient.Services
                     return File.ReadAllText(path);
                 }
             }
-            catch (Exception ex)
+            catch (IOException ex)
+            {
+                _logger.LogDebug(ex, "Failed to read file {Path}", path);
+            }
+            catch (UnauthorizedAccessException ex)
             {
                 _logger.LogDebug(ex, "Failed to read file {Path}", path);
             }
