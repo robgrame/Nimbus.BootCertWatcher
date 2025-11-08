@@ -117,6 +117,8 @@ namespace SecureBootDashboard.Api.Controllers
             /// User or system that issued this command.
             /// </summary>
             [Required]
+            [MaxLength(100)]
+            [RegularExpression(@"^[\w\-.]+$", ErrorMessage = "IssuedBy must be alphanumeric and may include dash, underscore, or dot.")]
             public string? IssuedBy { get; init; }
 
             /// <summary>
