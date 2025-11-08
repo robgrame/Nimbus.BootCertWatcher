@@ -157,9 +157,13 @@ namespace SecureBootWatcher.LinuxClient.Services
                         {
                             process.Kill();
                         }
-                        catch (Exception killEx)
+                        catch (InvalidOperationException killEx)
                         {
-                            _logger.LogWarning(killEx, "Failed to kill mokutil process on cancellation.");
+                            _logger.LogWarning(killEx, "Failed to kill mokutil process on cancellation (invalid operation).");
+                        }
+                        catch (System.ComponentModel.Win32Exception killEx)
+                        {
+                            _logger.LogWarning(killEx, "Failed to kill mokutil process on cancellation (Win32 error).");
                         }
                     }
                     throw;
