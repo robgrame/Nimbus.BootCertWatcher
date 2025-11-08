@@ -245,7 +245,7 @@ namespace SecureBootDashboard.Api.Services
                             return null;
                         }
 
-                        certificate = certificates[0];
+                        certificate = new X509Certificate2(certificates[0].RawData);
                         _logger.LogInformation("Loaded certificate from store for command queue");
                     }
 
