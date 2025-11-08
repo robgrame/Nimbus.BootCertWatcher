@@ -46,13 +46,17 @@ namespace SecureBootDashboard.Api.Controllers
                     "Received certificate update request for fleet {FleetId}",
                     sanitizedFleetId);
 
+                // Sanitize IssuedBy and Notes to prevent log forging
+                var sanitizedIssuedBy = request.IssuedBy?.Replace("\r", "").Replace("\n", "");
+                var sanitizedNotes = request.Notes?.Replace("\r", "").Replace("\n", "");
+
                 var command = new CertificateUpdateCommand
                 {
                     FleetId = request.FleetId,
                     TargetDevices = request.TargetDevices ?? Array.Empty<string>(),
                     UpdateFlags = request.UpdateFlags,
-                    IssuedBy = request.IssuedBy,
-                    Notes = request.Notes,
+                    IssuedBy = sanitizedIssuedBy,
+                    Notes = sanitizedNotes,
                     ExpiresAtUtc = request.ExpiresAtUtc
                 };
 
