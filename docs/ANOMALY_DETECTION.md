@@ -247,7 +247,7 @@ For large fleets:
 
 Potential improvements for future versions:
 
-- **ML Model Training**: Replace statistical analysis with trained ML.NET models
+- **ML Model Training**: Implement ML.NET models to enhance the current statistical analysis
 - **Time Series Analysis**: Detect trends and seasonal patterns
 - **Predictive Alerts**: Forecast potential issues before they occur
 - **Custom Thresholds**: Per-fleet configuration of detection parameters
