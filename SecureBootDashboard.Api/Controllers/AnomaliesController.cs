@@ -103,7 +103,10 @@ namespace SecureBootDashboard.Api.Controllers
             {
                 return BadRequest(new { error = "ResolvedBy is required" });
             }
-
+            if (request.ResolvedBy != null && request.ResolvedBy.Length > 256)
+            {
+                return BadRequest(new { error = "ResolvedBy must not exceed 256 characters" });
+            }
             try
             {
                 var anomaly = await _anomalyService.GetAnomalyAsync(id, cancellationToken);
