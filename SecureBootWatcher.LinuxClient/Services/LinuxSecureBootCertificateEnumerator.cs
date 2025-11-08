@@ -124,11 +124,7 @@ namespace SecureBootWatcher.LinuxClient.Services
                 _logger.LogWarning(ex, "Failed to check Secure Boot enabled state. Try running with sudo.");
                 return null;
             }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to check Secure Boot enabled state");
-                return null;
-            }
+            // Let other exceptions propagate
         }
 
         private async Task<bool?> CheckSecureBootWithMokutilAsync(CancellationToken cancellationToken)
