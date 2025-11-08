@@ -293,7 +293,7 @@ namespace SecureBootWatcher.LinuxClient.Services
                         // GUID SignatureOwner (16 bytes)
                         // UINT8 SignatureData[]
 
-                        var signatureOwner = new Guid(data.Skip(offset).Take(16).ToArray());
+                        // Skip SignatureOwner (16 bytes)
                         offset += 16;
 
                         var certDataSize = (int)signatureSize - 16;
