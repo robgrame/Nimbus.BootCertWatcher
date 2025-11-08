@@ -11,9 +11,9 @@ namespace SecureBootWatcher.LinuxClient.Services
     {
         /// <summary>
         /// Enumerates all Secure Boot certificates from UEFI firmware.
-  /// </summary>
+        /// </summary>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>Collection of certificates organized by database type.</returns>
-      Task<SecureBootCertificateCollection> EnumerateAsync(CancellationToken cancellationToken);
+        Task<SecureBootCertificateCollection> EnumerateAsync(CancellationToken cancellationToken);
     }
 }
