@@ -40,9 +40,7 @@ namespace SecureBootWatcher.Client.Services
 
                 if (collection.SecureBootEnabled != true)
                 {
-                    _logger.LogInformation("Secure Boot is not enabled on this device. Certificate enumeration skipped.");
-                    collection.ErrorMessage = "Secure Boot is not enabled";
-                    return Task.FromResult(collection);
+                    _logger.LogInformation("Secure Boot is not enabled on this device. Certificate enumeration will proceed to inventory firmware databases.");
                 }
 
                 // Enumerate certificates from each database
