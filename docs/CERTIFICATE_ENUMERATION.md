@@ -41,6 +41,17 @@ The system also calculates aggregate statistics:
 - **ExpiringCertificateCount** - Number of certificates expiring within 90 days
 - **SecureBootEnabled** - Whether Secure Boot is currently enabled
 
+### Important Note About Secure Boot Status
+
+**As of version 1.3.1**, certificate enumeration proceeds **regardless of whether Secure Boot is enabled or disabled**. This change allows organizations to:
+
+- **Inventory certificates on all UEFI devices**, not just those with Secure Boot enabled
+- **Plan Secure Boot deployment** by understanding the certificate landscape before enabling
+- **Maintain compliance tracking** even on devices where Secure Boot is temporarily disabled
+- **Monitor certificate expiration** proactively across the entire fleet
+
+The `SecureBootEnabled` field in the report indicates whether Secure Boot was active at the time of enumeration, but this no longer blocks certificate collection. On UEFI systems, certificate databases exist in firmware even when Secure Boot is disabled - they're just not being enforced for boot validation.
+
 ## Implementation Details
 
 ### PowerShell-Based Enumeration
@@ -91,7 +102,7 @@ The system primarily focuses on X.509 certificates (signature type GUID: `a5c059
 - **Windows 10/11** or **Windows Server 2016+** with UEFI firmware
 - **PowerShell 5.0+** with `Get-SecureBootUEFI` cmdlet available
 - **Elevated privileges** (SYSTEM or Administrator) to read UEFI variables
-- **Secure Boot must be enabled** for databases to be accessible
+- **Note**: Certificate enumeration works regardless of whether Secure Boot is enabled or disabled
 
 ### API/Database Requirements
 
@@ -124,23 +135,23 @@ Certificate details are displayed in the report detail view, organized by databa
 
 The system generates alerts based on certificate status:
 
-- **Secure Boot Not Enabled**: "Secure Boot is not enabled on this device."
 - **Expired Certificates**: "{count} expired certificate(s) detected in Secure Boot databases."
 - **Expiring Soon**: "{count} certificate(s) expiring within 90 days."
 - **Enumeration Error**: "Certificate enumeration error: {error message}"
 
+**Note**: The "Secure Boot Not Enabled" alert is no longer generated as a blocking error. The Secure Boot status is recorded in the report metadata but does not prevent certificate enumeration.
+
 ## Troubleshooting
 
 ### No Certificate Data Collected
-
-**Cause**: Secure Boot is not enabled
-**Resolution**: Enable Secure Boot in UEFI/BIOS settings
 
 **Cause**: Insufficient permissions
 **Resolution**: Ensure client runs as SYSTEM or Administrator
 
 **Cause**: PowerShell cmdlet not available
 **Resolution**: Verify Windows version supports `Get-SecureBootUEFI` (Windows 8+)
+
+**Note**: As of v1.3.1, certificate enumeration proceeds even when Secure Boot is disabled. The Secure Boot status is captured in the report but does not prevent certificate inventory.
 
 ### Empty Certificate Lists
 
