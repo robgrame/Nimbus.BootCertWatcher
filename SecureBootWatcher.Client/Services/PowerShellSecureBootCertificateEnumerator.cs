@@ -39,9 +39,7 @@ private readonly ILogger<PowerShellSecureBootCertificateEnumerator> _logger;
 
     if (collection.SecureBootEnabled != true)
        {
-    _logger.LogInformation("Secure Boot is not enabled on this device. Certificate enumeration skipped.");
-      collection.ErrorMessage = "Secure Boot is not enabled";
-            return collection;
+    _logger.LogInformation("Secure Boot is not enabled on this device. Certificate enumeration will proceed to inventory firmware databases.");
                 }
 
           // Enumerate each database
