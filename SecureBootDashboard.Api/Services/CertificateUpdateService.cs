@@ -306,6 +306,13 @@ namespace SecureBootDashboard.Api.Services
             }
             catch (Exception ex)
             {
+                // Rethrow critical exceptions
+                if (ex is OutOfMemoryException ||
+                    ex is StackOverflowException ||
+                    ex is ThreadAbortException)
+                {
+                    throw;
+                }
                 _logger.LogError(ex, "Unexpected error while creating command queue client");
                 return null;
             }
