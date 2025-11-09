@@ -56,7 +56,8 @@ namespace SecureBootDashboard.Api.Controllers
                     d.Reports.Count,
                     latestReport?.DeploymentState,
                     latestReport?.CreatedAtUtc,
-                    d.UEFISecureBootEnabled);
+                    d.UEFISecureBootEnabled,
+                    d.ClientVersion);
             }).ToArray();
         }
 
@@ -332,7 +333,8 @@ namespace SecureBootDashboard.Api.Controllers
             int ReportCount,
             string? LatestDeploymentState,
             DateTimeOffset? LatestReportDate,
-            bool? UEFISecureBootEnabled);
+            bool? UEFISecureBootEnabled,
+            string? ClientVersion);
 
         public sealed record DeviceDetailResponse(
             Guid Id,

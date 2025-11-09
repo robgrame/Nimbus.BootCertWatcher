@@ -41,26 +41,25 @@ namespace SecureBootWatcher.Client
 			
 			try
 			{
-				// Log startup information
-				Log.Information("========================================");
-				Log.Information("SecureBootWatcher Client Starting");
-				Log.Information("========================================");
-				
 				// Get version info - prioritize AssemblyInformationalVersion for GitVersioning
 				var assembly = Assembly.GetExecutingAssembly();
 				var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion 
 							  ?? assembly.GetName().Version?.ToString() 
 							  ?? "Unknown";
 				
+				// Log startup information
+				Log.Information("========================================");
+				Log.Information("SecureBootWatcher Client Starting");
+				Log.Information("========================================");
 				Log.Information("Version: {Version}", version);
 				Log.Information("Base Directory: {BaseDirectory}", AppContext.BaseDirectory);
+				Log.Information("Log File Path: {LogPath}", Path.GetFullPath(logPath));
 				Log.Information("Current Directory: {CurrentDirectory}", Environment.CurrentDirectory);
 				Log.Information("Machine Name: {MachineName}", Environment.MachineName);
 				Log.Information("Domain: {Domain}", Environment.UserDomainName);
 				Log.Information("User: {User}", Environment.UserName);
 				Log.Information(".NET Framework: {Framework}", Environment.Version);
 				Log.Information("OS: {OS}", Environment.OSVersion);
-				Log.Information("Log Path: {LogPath}", Path.GetFullPath(logPath));
 
 				Console.CancelKeyPress += (_, eventArgs) =>
 				{
@@ -127,8 +126,8 @@ namespace SecureBootWatcher.Client
 			// Add Serilog as logging provider
 			services.AddLogging(builder =>
 			{
-				builder.ClearProviders(); // Remove default providers
-				builder.AddSerilog(dispose: false); // Use Serilog (don't dispose - we manage it)
+				builder.ClearProviders();
+				builder.AddSerilog(dispose: false);
 			});
 
 			services.AddHttpClient("SecureBootIngestion");
@@ -139,6 +138,11 @@ namespace SecureBootWatcher.Client
 			services.AddSingleton<IEventLogReader, EventLogReader>();
 			services.AddSingleton<IEventCheckpointStore, FileEventCheckpointStore>();
 			services.AddSingleton<ISecureBootCertificateEnumerator, PowerShellSecureBootCertificateEnumerator>();
+			
+			// Register Client Update Service
+			services.AddSingleton<IClientUpdateService, ClientUpdateService>();
+			services.AddHttpClient<IClientUpdateService, ClientUpdateService>();
+			
 			services.AddSingleton<IReportBuilder, ReportBuilder>();
 			services.AddSingleton<SecureBootWatcherService>();
 

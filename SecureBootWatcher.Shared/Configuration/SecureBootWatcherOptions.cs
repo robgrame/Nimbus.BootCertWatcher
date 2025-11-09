@@ -19,6 +19,36 @@ namespace SecureBootWatcher.Shared.Configuration
         };
 
         public SinkOptions Sinks { get; set; } = new SinkOptions();
+
+        public ClientUpdateOptions ClientUpdate { get; set; } = new ClientUpdateOptions();
+    }
+
+    public sealed class ClientUpdateOptions
+    {
+        /// <summary>
+        /// Enable checking for client updates.
+        /// Default: true
+        /// </summary>
+        public bool CheckForUpdates { get; set; } = true;
+
+        /// <summary>
+        /// Automatically download updates when available.
+        /// Default: false (notify only)
+        /// </summary>
+        public bool AutoDownloadEnabled { get; set; } = false;
+
+        /// <summary>
+        /// Automatically install downloaded updates.
+        /// Requires AutoDownloadEnabled = true.
+        /// Default: false
+        /// </summary>
+        public bool AutoInstallEnabled { get; set; } = false;
+
+        /// <summary>
+        /// Add alert to report when update is available.
+        /// Default: true
+        /// </summary>
+        public bool NotifyOnUpdateAvailable { get; set; } = true;
     }
 
     public sealed class SinkOptions

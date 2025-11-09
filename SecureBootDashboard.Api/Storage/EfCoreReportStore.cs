@@ -48,6 +48,7 @@ namespace SecureBootDashboard.Api.Storage
                     Model = report.Device.Model,
                     FirmwareVersion = report.Device.FirmwareVersion,
                     UEFISecureBootEnabled = report.Registry?.UEFISecureBootEnabled,
+                    ClientVersion = report.Device.ClientVersion,
                     FleetId = TryGetFleet(report.Device.Tags),
                     TagsJson = Serialize(report.Device.Tags ?? new Dictionary<string, string>()),
                     CreatedAtUtc = utcNow,
@@ -64,6 +65,7 @@ namespace SecureBootDashboard.Api.Storage
                 device.Model = report.Device.Model;
                 device.FirmwareVersion = report.Device.FirmwareVersion;
                 device.UEFISecureBootEnabled = report.Registry?.UEFISecureBootEnabled ?? device.UEFISecureBootEnabled;
+                device.ClientVersion = report.Device.ClientVersion ?? device.ClientVersion;
                 device.FleetId = TryGetFleet(report.Device.Tags) ?? device.FleetId;
                 device.TagsJson = Serialize(report.Device.Tags ?? new Dictionary<string, string>());
                 device.LastSeenUtc = utcNow;

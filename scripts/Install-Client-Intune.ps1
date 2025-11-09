@@ -11,7 +11,22 @@ param(
     [string]$FleetId = "",
     
     [Parameter(Mandatory = $false)]
-    [string]$CertificatePassword = ""
+    [string]$CertificatePassword = "",
+    
+    [Parameter(Mandatory = $false)]
+    [ValidateSet("Once", "Daily", "Hourly", "Custom")]
+    [string]$ScheduleType = "Daily",
+    
+    [Parameter(Mandatory = $false)]
+    [string]$TaskTime = "09:00AM",
+    
+    [Parameter(Mandatory = $false)]
+    [ValidateRange(1, 24)]
+    [int]$RepeatEveryHours = 4,
+    
+    [Parameter(Mandatory = $false)]
+    [ValidateRange(0, 1440)]
+    [int]$RandomDelayMinutes = 60
 )
 
 $ErrorActionPreference = "Stop"
@@ -42,6 +57,7 @@ function Write-InstallLog {
 Write-InstallLog "Starting SecureBootWatcher installation"
 Write-InstallLog "Script directory: $scriptDir"
 Write-InstallLog "Target directory: $installPath"
+Write-InstallLog "Schedule configuration: Type=$ScheduleType, Time=$TaskTime, RandomDelay=$RandomDelayMinutes min"
 
 try {
     # Step 1: Import certificate if present
@@ -182,10 +198,44 @@ try {
     # Create task action
     $action = New-ScheduledTaskAction -Execute $exePath -WorkingDirectory $installPath
 
-    # Create task trigger (daily at 9 AM with random delay)
-    $taskTime = [DateTime]::Parse("09:00AM")
-    $randomDelay = New-TimeSpan -Minutes (Get-Random -Minimum 0 -Maximum 60)
-    $trigger = New-ScheduledTaskTrigger -Daily -At $taskTime -RandomDelay $randomDelay
+    # Parse task time
+    try {
+        $taskDateTime = [DateTime]::Parse($TaskTime)
+    }
+    catch {
+        Write-InstallLog "WARNING: Invalid TaskTime '$TaskTime', using 09:00AM"
+        $taskDateTime = [DateTime]::Parse("09:00AM")
+    }
+
+    # Create random delay
+    $randomDelayTimeSpan = New-TimeSpan -Minutes (Get-Random -Minimum 0 -Maximum $RandomDelayMinutes)
+    
+    # Create task trigger based on schedule type
+    $trigger = $null
+    $scheduleDescription = ""
+    
+    switch ($ScheduleType) {
+        "Once" {
+            $trigger = New-ScheduledTaskTrigger -Once -At $taskDateTime -RandomDelay $randomDelayTimeSpan
+            $scheduleDescription = "Once at $TaskTime (±$RandomDelayMinutes min)"
+        }
+        "Daily" {
+            $trigger = New-ScheduledTaskTrigger -Daily -At $taskDateTime -RandomDelay $randomDelayTimeSpan
+            $scheduleDescription = "Daily at $TaskTime (±$RandomDelayMinutes min)"
+        }
+        "Hourly" {
+            # Create a trigger that repeats every hour
+            $trigger = New-ScheduledTaskTrigger -Once -At $taskDateTime -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration ([TimeSpan]::MaxValue)
+            $trigger.RandomDelay = $randomDelayTimeSpan
+            $scheduleDescription = "Every hour starting at $TaskTime (±$RandomDelayMinutes min)"
+        }
+        "Custom" {
+            # Create a trigger that repeats every N hours
+            $trigger = New-ScheduledTaskTrigger -Once -At $taskDateTime -RepetitionInterval (New-TimeSpan -Hours $RepeatEveryHours) -RepetitionDuration ([TimeSpan]::MaxValue)
+            $trigger.RandomDelay = $randomDelayTimeSpan
+            $scheduleDescription = "Every $RepeatEveryHours hours starting at $TaskTime (±$RandomDelayMinutes min)"
+        }
+    }
 
     # Create task principal (run as SYSTEM)
     $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
@@ -207,6 +257,10 @@ try {
         -Description "Monitors Secure Boot certificate status and reports to dashboard" | Out-Null
 
     Write-InstallLog "Scheduled task created successfully"
+    Write-InstallLog "  Schedule: $scheduleDescription"
+    Write-InstallLog "  Random delay: 0-$RandomDelayMinutes minutes"
+    Write-InstallLog "  Task name: $taskName"
+    Write-InstallLog "  Run as: SYSTEM"
 
     Write-InstallLog "Installation completed successfully"
     exit 0

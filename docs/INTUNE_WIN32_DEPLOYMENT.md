@@ -101,31 +101,110 @@ C:\Temp\SecureBootWatcher-Intune\
 
 ## Program Configuration
 
-   **Install command** (without certificate password):
-   ```powershell
-   powershell.exe -ExecutionPolicy Bypass -NoProfile -File "Install-Client-Intune.ps1"
-   ```
+### Install Command Options
 
-   **Install command** (with certificate password):
-   ```powershell
-   powershell.exe -ExecutionPolicy Bypass -NoProfile -File "Install-Client-Intune.ps1" -CertificatePassword "YourCertPassword"
-   ```
+The `Install-Client-Intune.ps1` script supports the following parameters:
 
-   **Install command** (with API URL, Fleet ID, and certificate password):
-   ```powershell
-   powershell.exe -ExecutionPolicy Bypass -NoProfile -File "Install-Client-Intune.ps1" -ApiBaseUrl "https://your-api.contoso.com" -FleetId "production-fleet" -CertificatePassword "YourCertPassword"
-   ```
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `ApiBaseUrl` | string | (empty) | API base URL for WebApi sink |
+| `FleetId` | string | (empty) | Fleet identifier for grouping devices |
+| `CertificatePassword` | string | (empty) | Password for PFX certificate |
+| `ScheduleType` | string | "Daily" | Task frequency: Once, Daily, Hourly, Custom |
+| `TaskTime` | string | "09:00AM" | Start time for scheduled task |
+| `RepeatEveryHours` | int | 4 | Repeat interval for Custom schedule (1-24) |
+| `RandomDelayMinutes` | int | 60 | Random delay range (0-1440 minutes) |
 
-   **Security Recommendation**: Store certificate password in Azure Key Vault or as a script variable in Intune, not hardcoded in the install command.
+### Basic Install Commands
 
-   **Uninstall command**:
-   ```powershell
-   powershell.exe -ExecutionPolicy Bypass -NoProfile -File "Uninstall-Client-Intune.ps1"
-   ```
+**Minimal install** (default daily schedule at 9 AM):
+```powershell
+powershell.exe -ExecutionPolicy Bypass -NoProfile -File "Install-Client-Intune.ps1"
+```
 
-   **Install behavior**: System
-   
-   **Device restart behavior**: No specific action
+**With certificate password**:
+```powershell
+powershell.exe -ExecutionPolicy Bypass -NoProfile -File "Install-Client-Intune.ps1" -CertificatePassword "YourCertPassword"
+```
+
+**With API configuration**:
+```powershell
+powershell.exe -ExecutionPolicy Bypass -NoProfile -File "Install-Client-Intune.ps1" -ApiBaseUrl "https://your-api.contoso.com" -FleetId "production-fleet" -CertificatePassword "YourCertPassword"
+```
+
+### Schedule Configuration Examples
+
+**Daily at 9 AM with 60-minute random delay** (default):
+```powershell
+powershell.exe -ExecutionPolicy Bypass -NoProfile -File "Install-Client-Intune.ps1" -ScheduleType "Daily" -TaskTime "09:00AM" -RandomDelayMinutes 60
+```
+
+**Hourly execution**:
+```powershell
+powershell.exe -ExecutionPolicy Bypass -NoProfile -File "Install-Client-Intune.ps1" -ScheduleType "Hourly" -TaskTime "08:00AM" -RandomDelayMinutes 30
+```
+
+**Every 4 hours** (Custom):
+```powershell
+powershell.exe -ExecutionPolicy Bypass -NoProfile -File "Install-Client-Intune.ps1" -ScheduleType "Custom" -RepeatEveryHours 4 -TaskTime "08:00AM" -RandomDelayMinutes 15
+```
+
+**Every 6 hours with minimal random delay**:
+```powershell
+powershell.exe -ExecutionPolicy Bypass -NoProfile -File "Install-Client-Intune.ps1" -ScheduleType "Custom" -RepeatEveryHours 6 -TaskTime "00:00AM" -RandomDelayMinutes 5
+```
+
+**Daily at 2 AM (off-hours)**:
+```powershell
+powershell.exe -ExecutionPolicy Bypass -NoProfile -File "Install-Client-Intune.ps1" -ScheduleType "Daily" -TaskTime "02:00AM" -RandomDelayMinutes 120
+```
+
+**Once (for testing)**:
+```powershell
+powershell.exe -ExecutionPolicy Bypass -NoProfile -File "Install-Client-Intune.ps1" -ScheduleType "Once" -TaskTime "10:00AM" -RandomDelayMinutes 0
+```
+
+### Complete Example (Production)
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -NoProfile -File "Install-Client-Intune.ps1" `
+    -ApiBaseUrl "https://secureboot-api.contoso.com" `
+    -FleetId "corporate-fleet" `
+    -CertificatePassword "StrongP@ssw0rd!" `
+    -ScheduleType "Custom" `
+    -RepeatEveryHours 6 `
+    -TaskTime "00:00AM" `
+    -RandomDelayMinutes 30
+```
+
+This will:
+- Configure API to `https://secureboot-api.contoso.com`
+- Tag device with Fleet ID `corporate-fleet`
+- Import certificate with specified password
+- Create scheduled task running every 6 hours starting at midnight
+- Add random delay of 0-30 minutes to prevent API flooding
+
+### Recommended Configurations
+
+| Scenario | ScheduleType | Interval | TaskTime | RandomDelay |
+|----------|--------------|----------|----------|-------------|
+| **Production (default)** | Daily | - | 09:00AM | 60 min |
+| **High-frequency monitoring** | Hourly | - | 08:00AM | 30 min |
+| **Balanced** | Custom | 4 hours | 00:00AM | 15 min |
+| **Low-frequency** | Custom | 12 hours | 00:00AM | 60 min |
+| **Off-hours only** | Daily | - | 02:00AM | 120 min |
+| **Testing** | Once | - | 10:00AM | 0 min |
+
+**Security Recommendation**: Store certificate password in Azure Key Vault or as a script variable in Intune, not hardcoded in the install command.
+
+**Uninstall command**:
+```powershell
+powershell.exe -ExecutionPolicy Bypass -NoProfile -File "Uninstall-Client-Intune.ps1"
+```
+
+**Install behavior**: System
+
+**Device restart behavior**: No specific action
 
 ---
 

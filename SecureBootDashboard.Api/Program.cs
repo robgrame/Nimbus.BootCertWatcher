@@ -7,9 +7,11 @@ using SecureBootDashboard.Api.Storage;
 using SecureBootWatcher.Shared.Storage;
 using Serilog;
 using Serilog.Events;
+using System.Reflection;
 
 // Configure Serilog before building the app
-var logPath = Path.Combine(AppContext.BaseDirectory, "logs", "api-.log");
+var workspaceRoot = Directory.GetParent(AppContext.BaseDirectory)?.Parent?.Parent?.Parent?.Parent?.FullName ?? AppContext.BaseDirectory;
+var logPath = Path.Combine(workspaceRoot, "logs", "api-.log");
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
@@ -25,12 +27,19 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
+    // Get version info
+    var assembly = Assembly.GetExecutingAssembly();
+    var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion 
+                  ?? assembly.GetName().Version?.ToString() 
+                  ?? "Unknown";
+
     Log.Information("========================================");
     Log.Information("Starting SecureBootDashboard.Api application");
     Log.Information("========================================");
+    Log.Information("Version: {Version}", version);
     Log.Information("Environment: {Environment}", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production");
     Log.Information("Base Directory: {BaseDirectory}", AppContext.BaseDirectory);
-    Log.Information("Log Path: {LogPath}", Path.GetFullPath(logPath));
+    Log.Information("Log File Path: {LogPath}", Path.GetFullPath(logPath));
     Log.Information("Machine Name: {MachineName}", Environment.MachineName);
     Log.Information("User: {User}", Environment.UserName);
     Log.Information(".NET Version: {DotNetVersion}", Environment.Version);
@@ -194,10 +203,10 @@ try
 
     app.Run();
 }
-catch (HostAbortedException)
+catch (HostAbortedException ex) // Add ex parameter
 {
     // Host was aborted during startup - this is usually caused by configuration errors
-    Log.Fatal("Host was aborted during startup. Check configuration and dependencies.");
+    Log.Fatal(ex, "Host was aborted during startup. Check configuration and dependencies."); // Log the exception
     Log.Information("Common causes:");
     Log.Information("  1. Invalid SQL Server connection string or database not accessible");
     Log.Information("  2. Missing or invalid Azure Queue configuration");

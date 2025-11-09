@@ -23,6 +23,12 @@ namespace SecureBootDashboard.Api.Data
 
         public bool? UEFISecureBootEnabled { get; set; } // Secure Boot enabled status
 
+        /// <summary>
+        /// Version of the SecureBootWatcher client that last reported from this device.
+        /// Format: Major.Minor.Build.Revision (e.g., "1.0.0.0")
+        /// </summary>
+        public string? ClientVersion { get; set; }
+
         public string? FleetId { get; set; }
 
         public string? TagsJson { get; set; }

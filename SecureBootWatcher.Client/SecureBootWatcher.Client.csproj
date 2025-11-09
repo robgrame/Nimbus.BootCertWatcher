@@ -45,6 +45,17 @@
     <TargetFramework>net48</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
+    
+    <!-- Versioning -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0</InformationalVersion>
+    
+    <!-- Company and Product Info -->
+    <Company>Your Organization</Company>
+    <Product>SecureBootWatcher Client</Product>
+    <Copyright>Copyright © 2025</Copyright>
   </PropertyGroup>
 
 </Project>

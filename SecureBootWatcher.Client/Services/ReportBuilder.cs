@@ -18,6 +18,7 @@ namespace SecureBootWatcher.Client.Services
         private readonly IRegistrySnapshotProvider _registrySnapshotProvider;
         private readonly IEventLogReader _eventLogReader;
         private readonly ISecureBootCertificateEnumerator _certificateEnumerator;
+        private readonly IClientUpdateService? _updateService;
         private readonly IOptionsMonitor<SecureBootWatcherOptions> _options;
 
         public ReportBuilder(
@@ -25,13 +26,15 @@ namespace SecureBootWatcher.Client.Services
             IRegistrySnapshotProvider registrySnapshotProvider,
             IEventLogReader eventLogReader,
             ISecureBootCertificateEnumerator certificateEnumerator,
-            IOptionsMonitor<SecureBootWatcherOptions> options)
+            IOptionsMonitor<SecureBootWatcherOptions> options,
+            IClientUpdateService? updateService = null)
         {
             _logger = logger;
             _registrySnapshotProvider = registrySnapshotProvider;
             _eventLogReader = eventLogReader;
             _certificateEnumerator = certificateEnumerator;
             _options = options;
+            _updateService = updateService;
         }
 
         public async Task<SecureBootStatusReport> BuildAsync(CancellationToken cancellationToken)
@@ -51,11 +54,25 @@ namespace SecureBootWatcher.Client.Services
                 _logger.LogWarning(ex, "Failed to enumerate Secure Boot certificates. Report will continue without certificate details.");
             }
 
+            // Check for client updates
+            UpdateCheckResult? updateCheck = null;
+            if (_updateService != null && _options.CurrentValue.ClientUpdate.CheckForUpdates)
+            {
+                try
+                {
+                    updateCheck = await _updateService.CheckForUpdateAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to check for client updates");
+                }
+            }
+
             var report = new SecureBootStatusReport
             {
                 Device = BuildDeviceIdentity(),
                 Registry = registrySnapshot,
-                DeviceAttributes = deviceAttributesSnapshot, // Include device attributes snapshot
+                DeviceAttributes = deviceAttributesSnapshot,
                 Certificates = certificates,
                 Events = recentEvents.ToList(),
                 CreatedAtUtc = DateTimeOffset.UtcNow,
@@ -63,7 +80,15 @@ namespace SecureBootWatcher.Client.Services
                 CorrelationId = Guid.NewGuid().ToString("N")
             };
 
-            PopulateAlerts(report);
+            PopulateAlerts(report, updateCheck);
+
+            // Handle auto-download if enabled
+            if (updateCheck?.UpdateAvailable == true && 
+                _options.CurrentValue.ClientUpdate.AutoDownloadEnabled &&
+                _updateService != null)
+            {
+                await HandleAutoDownloadAsync(updateCheck, cancellationToken);
+            }
 
             return report;
         }
@@ -96,6 +121,7 @@ namespace SecureBootWatcher.Client.Services
             {
                 DomainName = Environment.UserDomainName,
                 UserPrincipalName = Environment.UserName,
+                ClientVersion = GetClientVersion()
             };
 
             var options = _options.CurrentValue;
@@ -197,7 +223,7 @@ namespace SecureBootWatcher.Client.Services
                 identity.FirmwareVersion ?? "N/A");
         }
 
-        private static void PopulateAlerts(SecureBootStatusReport report)
+        private void PopulateAlerts(SecureBootStatusReport report, UpdateCheckResult? updateCheck)
         {
             var alerts = new List<string>();
 
@@ -226,7 +252,6 @@ namespace SecureBootWatcher.Client.Services
                 alerts.Add("No Secure Boot events detected within the lookback window.");
             }
 
-            // Add AvailableUpdates progression information
             if (report.Registry.AvailableUpdates.HasValue)
             {
                 var progressionState = SecureBootUpdateFlagsExtensions.GetProgressionState(report.Registry.AvailableUpdates);
@@ -234,7 +259,6 @@ namespace SecureBootWatcher.Client.Services
                 
                 alerts.Add($"Deployment Progress: {progressionState} ({completionPercentage}% complete)");
 
-                // Add pending updates information
                 var pendingFlags = SecureBootUpdateFlagsExtensions.GetActiveFlags(report.Registry.AvailableUpdates);
                 if (pendingFlags.Count > 0)
                 {
@@ -242,7 +266,6 @@ namespace SecureBootWatcher.Client.Services
                 }
             }
 
-            // Add certificate-related alerts
             if (report.Certificates != null)
             {
                 if (report.Certificates.SecureBootEnabled == false)
@@ -266,9 +289,70 @@ namespace SecureBootWatcher.Client.Services
                 }
             }
 
+            // Add client update alerts
+            if (updateCheck != null && _options.CurrentValue.ClientUpdate.NotifyOnUpdateAvailable)
+            {
+                if (updateCheck.UpdateRequired)
+                {
+                    alerts.Add($"?? CLIENT UPDATE REQUIRED: Version {updateCheck.LatestVersion} is available (current: {updateCheck.CurrentVersion}). Update is mandatory.");
+                }
+                else if (updateCheck.UpdateAvailable)
+                {
+                    alerts.Add($"?? Client update available: Version {updateCheck.LatestVersion} (current: {updateCheck.CurrentVersion})");
+                }
+            }
+
             foreach (var alert in alerts)
             {
                 report.Alerts.Add(alert);
+            }
+        }
+
+        private async Task HandleAutoDownloadAsync(UpdateCheckResult updateCheck, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(updateCheck.DownloadUrl) || _updateService == null)
+            {
+                return;
+            }
+
+            try
+            {
+                _logger.LogInformation("Auto-download enabled. Downloading update from: {Url}", updateCheck.DownloadUrl);
+                
+                var downloadResult = await _updateService.DownloadUpdateAsync(updateCheck.DownloadUrl, cancellationToken);
+                
+                if (!downloadResult.Success)
+                {
+                    _logger.LogWarning("Failed to download update: {Error}", downloadResult.ErrorMessage);
+                    return;
+                }
+
+                _logger.LogInformation("Update downloaded successfully to: {Path}", downloadResult.LocalPath);
+
+                // If auto-install is enabled, schedule the update
+                if (_options.CurrentValue.ClientUpdate.AutoInstallEnabled && !string.IsNullOrWhiteSpace(downloadResult.LocalPath))
+                {
+                    _logger.LogInformation("Auto-install enabled. Scheduling update...");
+                    
+                    var scheduled = await _updateService.ScheduleUpdateAsync(downloadResult.LocalPath, cancellationToken);
+                    
+                    if (scheduled)
+                    {
+                        _logger.LogInformation("Update scheduled successfully. Will be applied after current execution completes.");
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Failed to schedule update");
+                    }
+                }
+                else
+                {
+                    _logger.LogInformation("Auto-install disabled. Update downloaded but not scheduled. Manual installation required.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling auto-download");
             }
         }
     }

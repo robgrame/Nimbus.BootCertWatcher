@@ -21,6 +21,12 @@ namespace SecureBootWatcher.Shared.Models
         public string? FirmwareVersion { get; set; }
         public DateTime? FirmwareReleaseDate { get; set; }
 
+        /// <summary>
+        /// Version of the SecureBootWatcher client that generated this report.
+        /// Format: Major.Minor.Build.Revision (e.g., "1.0.0.0")
+        /// </summary>
+        public string? ClientVersion { get; set; }
+
         public IDictionary<string, string> Tags { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     }
 }
