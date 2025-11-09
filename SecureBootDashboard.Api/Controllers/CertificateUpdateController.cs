@@ -119,7 +119,7 @@ namespace SecureBootDashboard.Api.Controllers
             /// </summary>
             [Required]
             [MaxLength(100)]
-            [RegularExpression(@"^[\w\-.]+$", ErrorMessage = "IssuedBy must be alphanumeric and may include dash, underscore, or dot.")]
+            [RegularExpression(@"^[\w\-.@]+$", ErrorMessage = "IssuedBy must be alphanumeric and may include dash, underscore, dot, or at-sign.")]
             public string? IssuedBy { get; init; }
 
             /// <summary>
