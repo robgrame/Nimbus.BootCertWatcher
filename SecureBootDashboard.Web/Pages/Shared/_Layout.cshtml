@@ -1,9 +1,11 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.Extensions.Options
+@inject IOptions<SecureBootDashboard.Web.Services.ApiSettings> ApiSettings
+<!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="api-base-url" content="@(ViewData["ApiBaseUrl"] ?? "https://localhost:5001")" />
+    <meta name="api-base-url" content="@ApiSettings.Value.BaseUrl" />
     <title>@ViewData["Title"] - Secure Boot Dashboard</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
