@@ -47,15 +47,15 @@ This guide explains how to deploy SecureBootWatcher client as a Win32 app throug
 
 ### Step 1: Prepare the Package
 
-Extract the client package to a working directory and add the certificate:
+Prepare the Intune package directory with the required files:
 
 ```powershell
 # Create working directory
 New-Item -ItemType Directory -Path "C:\Temp\SecureBootWatcher-Intune" -Force
 
-# Extract package
-Expand-Archive -Path ".\client-package\SecureBootWatcher-Client.zip" `
-    -DestinationPath "C:\Temp\SecureBootWatcher-Intune" -Force
+# Copy the pre-built client ZIP package (do NOT extract it!)
+Copy-Item ".\client-package\SecureBootWatcher-Client.zip" `
+    -Destination "C:\Temp\SecureBootWatcher-Intune\" -Force
 
 # Copy Intune scripts to the package directory
 Copy-Item ".\scripts\Install-Client-Intune.ps1" `
@@ -67,7 +67,7 @@ Copy-Item ".\scripts\Uninstall-Client-Intune.ps1" `
 Copy-Item ".\scripts\Detect-Client-Intune.ps1" `
     -Destination "C:\Temp\SecureBootWatcher-Intune\" -Force
 
-# **IMPORTANT**: Copy the PFX certificate to the package directory
+# **IMPORTANT**: Copy the PFX certificate to the package directory (optional)
 # This certificate is used for Azure Queue authentication
 Copy-Item "C:\Path\To\Your\SecureBootWatcher.pfx" `
     -Destination "C:\Temp\SecureBootWatcher-Intune\" -Force
@@ -79,12 +79,22 @@ C:\Temp\SecureBootWatcher-Intune\
 ??? Install-Client-Intune.ps1          (Install script)
 ??? Uninstall-Client-Intune.ps1        (Uninstall script)
 ??? Detect-Client-Intune.ps1           (Detection script)
-??? SecureBootWatcher.pfx              (Certificate for Azure Queue auth) ? NEW
+??? SecureBootWatcher.pfx              (Certificate for Azure Queue auth) – OPTIONAL
+??? SecureBootWatcher-Client.zip       (Client binaries package) – REQUIRED
+```
+
+**What's inside `SecureBootWatcher-Client.zip`**:
+```
+SecureBootWatcher-Client.zip\
 ??? SecureBootWatcher.Client.exe       (Main executable)
 ??? SecureBootWatcher.Shared.dll       (Shared library)
 ??? appsettings.json                   (Configuration)
 ??? [Other DLLs and dependencies]
+??? logs\                              (Log directory structure)
+    ??? README.md
 ```
+
+**Important**: The install script will automatically extract `SecureBootWatcher-Client.zip` during installation.
 
 **Certificate Requirements**:
 - File name must be: `SecureBootWatcher.pfx`
@@ -278,39 +288,49 @@ Set-AuthenticodeSignature -FilePath "Detect-Client-Intune.ps1" -Certificate $cer
 
 **Symptom**: Installation log shows:
 ```
-ERROR: No files found in package directory
-ERROR: Package directory is empty. Cannot proceed with installation.
+ERROR: Client package not found: C:\...\SecureBootWatcher-Client.zip
+ERROR: Client package ZIP file not found in package directory
 ```
 
-**Cause**: The `.intunewin` package was not prepared correctly, or Intune failed to extract it.
+**Cause**: The `.intunewin` package was not prepared correctly, or the ZIP file is missing.
 
 **Solution**:
 
 1. **Verify package contents before converting to `.intunewin`**:
    ```powershell
    # List files in the staging directory
-   Get-ChildItem -Path "C:\Temp\SecureBootWatcher-Intune" -Recurse
+   Get-ChildItem -Path "C:\Temp\SecureBootWatcher-Intune"
    
    # Should show:
    # - Install-Client-Intune.ps1
    # - Uninstall-Client-Intune.ps1
    # - Detect-Client-Intune.ps1
    # - SecureBootWatcher.pfx (optional)
-   # - SecureBootWatcher.Client.exe (REQUIRED)
-   # - SecureBootWatcher.Shared.dll (REQUIRED)
-   # - appsettings.json (REQUIRED)
-   # - Other DLLs
+   # - SecureBootWatcher-Client.zip (REQUIRED - contains all binaries)
    ```
 
-2. **Re-prepare the package**:
+2. **Verify the ZIP file exists and contains binaries**:
+   ```powershell
+   # Check ZIP file
+   Test-Path "C:\Temp\SecureBootWatcher-Intune\SecureBootWatcher-Client.zip"
+   
+   # List contents
+   Expand-Archive -Path "C:\Temp\SecureBootWatcher-Intune\SecureBootWatcher-Client.zip" `
+       -DestinationPath "C:\Temp\VerifyZip" -Force
+   
+   Get-ChildItem "C:\Temp\VerifyZip"
+   # Should show: SecureBootWatcher.Client.exe, *.dll, appsettings.json, etc.
+   ```
+
+3. **Re-prepare the package**:
    ```powershell
    # Clean and recreate
    Remove-Item "C:\Temp\SecureBootWatcher-Intune" -Recurse -Force -ErrorAction SilentlyContinue
    New-Item -ItemType Directory -Path "C:\Temp\SecureBootWatcher-Intune" -Force
    
-   # Extract client package
-   Expand-Archive -Path ".\client-package\SecureBootWatcher-Client.zip" `
-       -DestinationPath "C:\Temp\SecureBootWatcher-Intune" -Force
+   # Copy the pre-built client ZIP (IMPORTANT - don't extract it!)
+   Copy-Item ".\client-package\SecureBootWatcher-Client.zip" `
+       -Destination "C:\Temp\SecureBootWatcher-Intune\" -Force
    
    # Copy Intune scripts
    Copy-Item ".\scripts\Install-Client-Intune.ps1" -Destination "C:\Temp\SecureBootWatcher-Intune\" -Force
@@ -321,139 +341,6 @@ ERROR: Package directory is empty. Cannot proceed with installation.
    Copy-Item "C:\Path\To\SecureBootWatcher.pfx" -Destination "C:\Temp\SecureBootWatcher-Intune\" -Force
    ```
 
-3. **Convert to `.intunewin` using Microsoft Win32 Content Prep Tool**:
-   ```powershell
-   .\IntuneWinAppUtil.exe `
-       -c "C:\Temp\SecureBootWatcher-Intune" `
-       -s "Install-Client-Intune.ps1" `
-       -o "C:\Temp\IntunePackages" `
-       -q
-   ```
-
-4. **Verify the `.intunewin` file was created**:
-   ```powershell
-   Get-Item "C:\Temp\IntunePackages\Install-Client-Intune.intunewin"
-   ```
-
-### Installation Fails with "Critical file missing"
-
-**Symptom**: Installation log shows:
-```
-ERROR: Critical file missing: SecureBootWatcher.Client.exe
-ERROR: Critical file missing: appsettings.json
-```
-
-**Cause**: Client package was not built or is corrupted.
-
-**Solution**:
-
-1. **Rebuild the client package**:
-   ```powershell
-   cd C:\path\to\Nimbus.BootCertWatcher
-   .\scripts\Deploy-Client.ps1 -Configuration Release
-   ```
-
-2. **Verify package contents**:
-   ```powershell
-   Expand-Archive -Path ".\client-package\SecureBootWatcher-Client.zip" `
-       -DestinationPath "C:\Temp\VerifyPackage" -Force
-   
-   Get-ChildItem "C:\Temp\VerifyPackage"
-   ```
-
-3. **Check for required files**:
-   - `SecureBootWatcher.Client.exe` - Main executable
-   - `appsettings.json` - Configuration file
-   - `SecureBootWatcher.Shared.dll` - Shared library
-   - Various other DLL dependencies
-
-### Certificate Import Fails
-
-**Symptom**: Installation log shows:
-```
-WARNING: Certificate import failed: Cannot find path...
-```
-
-**Cause**: Certificate file not included in package or incorrect password.
-
-**Solution**:
-
-1. **Verify certificate is in package** (optional step - certificate is optional):
-   ```powershell
-   Test-Path "C:\Temp\SecureBootWatcher-Intune\SecureBootWatcher.pfx"
-   ```
-
-2. **If using certificate, test import manually**:
-   ```powershell
-   $password = ConvertTo-SecureString -String "YourPassword" -AsPlainText -Force
-   Import-PfxCertificate -FilePath "C:\Temp\SecureBootWatcher-Intune\SecureBootWatcher.pfx" `
-       -CertStoreLocation Cert:\LocalMachine\My `
-       -Password $password
-   ```
-
-3. **Verify certificate is valid**:
-   ```powershell
-   $cert = Get-Item "Cert:\LocalMachine\My\YOUR_THUMBPRINT"
-   $cert.NotAfter  # Should be in the future
-   $cert.HasPrivateKey  # Should be True
-   ```
-
-### Scheduled Task Creation Fails
-
-**Symptom**: Installation log shows:
-```
-Register-ScheduledTask : The task XML contains a value which is incorrectly formatted or out of range.
-```
-
-**Cause**: Invalid task parameters (usually RepetitionDuration or RandomDelay).
-
-**Solution**:
-
-1. **For Hourly or Custom schedules, remove RandomDelayMinutes**:
-   ```powershell
-   # Don't use RandomDelayMinutes with Hourly/Custom
-   powershell.exe -ExecutionPolicy Bypass -NoProfile -File "Install-Client-Intune.ps1" `
-       -ScheduleType Custom `
-       -RepeatEveryHours 4 `
-       -TaskTime "08:00AM"
-   ```
-
-2. **Use Daily schedule if RandomDelay is required**:
-   ```powershell
-   powershell.exe -ExecutionPolicy Bypass -NoProfile -File "Install-Client-Intune.ps1" `
-       -ScheduleType Daily `
-       -TaskTime "09:00AM" `
-       -RandomDelayMinutes 60
-   ```
-
-3. **Test task creation locally** before deploying via Intune:
-   ```powershell
-   .\scripts\Test-TaskScheduler.ps1 `
-       -ScheduleType Custom `
-       -RepeatEveryHours 4 `
-       -TaskTime "08:00AM"
-   ```
-
-### Viewing Installation Logs
-
-**Location**: `%ProgramData%\SecureBootWatcher\install.log`
-
-```powershell
-# View the log
-Get-Content "$env:ProgramData\SecureBootWatcher\install.log"
-
-# Tail the log (watch in real-time)
-Get-Content "$env:ProgramData\SecureBootWatcher\install.log" -Wait -Tail 20
-```
-
-**Common log entries**:
-- `Starting SecureBootWatcher installation` - Installation started
-- `Certificate imported successfully` - Certificate import OK
-- `Copied: <filename>` - File successfully copied
-- `Scheduled task created successfully` - Task created
-- `Installation completed successfully` - Installation OK
-- `ERROR: Installation failed` - Installation failed
-
 ### Manual Installation Testing
 
 Before deploying via Intune, test the installation manually:
@@ -461,18 +348,19 @@ Before deploying via Intune, test the installation manually:
 ```powershell
 # 1. Prepare test directory
 New-Item -ItemType Directory -Path "C:\Temp\TestInstall" -Force
-Expand-Archive -Path ".\client-package\SecureBootWatcher-Client.zip" `
-    -DestinationPath "C:\Temp\TestInstall" -Force
 
-# 2. Copy scripts
+# 2. Copy the client ZIP package (IMPORTANT - don't extract it!)
+Copy-Item ".\client-package\SecureBootWatcher-Client.zip" -Destination "C:\Temp\TestInstall\" -Force
+
+# 3. Copy scripts
 Copy-Item ".\scripts\Install-Client-Intune.ps1" -Destination "C:\Temp\TestInstall\" -Force
 Copy-Item ".\scripts\Uninstall-Client-Intune.ps1" -Destination "C:\Temp\TestInstall\" -Force
 Copy-Item ".\scripts\Detect-Client-Intune.ps1" -Destination "C:\Temp\TestInstall\" -Force
 
-# 3. Optional: Copy certificate
+# 4. Optional: Copy certificate
 Copy-Item "C:\Path\To\SecureBootWatcher.pfx" -Destination "C:\Temp\TestInstall\" -Force
 
-# 4. Run installation
+# 5. Run installation (simulates Intune behavior)
 cd C:\Temp\TestInstall
 .\Install-Client-Intune.ps1 `
     -ApiBaseUrl "https://test-api.contoso.com" `
@@ -482,19 +370,19 @@ cd C:\Temp\TestInstall
     -TaskTime "09:00AM" `
     -RandomDelayMinutes 60
 
-# 5. Verify installation
+# 6. Verify installation
 Get-ChildItem "C:\Program Files\SecureBootWatcher"
 Get-ScheduledTask -TaskName "SecureBootWatcher"
 Get-Content "$env:ProgramData\SecureBootWatcher\install.log"
 
-# 6. Test detection
+# 7. Test detection
 .\Detect-Client-Intune.ps1
 echo $LASTEXITCODE  # Should be 0 if installed
 
-# 7. Clean up
+# 8. Test the client runs
+cd "C:\Program Files\SecureBootWatcher"
+.\SecureBootWatcher.Client.exe
+
+# 9. Clean up
+cd C:\Temp\TestInstall
 .\Uninstall-Client-Intune.ps1
-```
-
----
-
-## Additional Resources

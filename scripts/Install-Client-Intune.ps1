@@ -129,84 +129,85 @@ try {
         New-Item -ItemType Directory -Path $installPath -Force | Out-Null
     }
 
-    # Step 3: Copy files from script directory to installation directory
-    Write-InstallLog "Copying client files"
+    # Step 3: Extract client package and copy files
+    Write-InstallLog "Extracting and copying client files"
     
-    # Files are already extracted by Intune to $scriptDir
-    # List all files in script directory for diagnostics
-    $allFiles = Get-ChildItem -Path $scriptDir -File
-    Write-InstallLog "Found $($allFiles.Count) total files in package directory"
+    # Look for the client package ZIP file
+    $packageZipName = "SecureBootWatcher-Client.zip"
+    $packageZipPath = Join-Path $scriptDir $packageZipName
     
-    if ($allFiles.Count -eq 0) {
-        Write-InstallLog "ERROR: No files found in package directory: $scriptDir"
-        Write-InstallLog "This usually means the package was not extracted correctly by Intune"
-        throw "Package directory is empty. Cannot proceed with installation."
-    }
-    
-    # Copy everything except scripts and certificate
-    $filesToCopy = $allFiles | 
-        Where-Object { 
-            $_.Name -notlike "Install-*.ps1" -and 
-            $_.Name -notlike "Uninstall-*.ps1" -and 
-            $_.Name -notlike "Detect-*.ps1" -and
-            $_.Name -notlike "*.pfx"  # Don't copy certificate to install directory
+    if (-not (Test-Path $packageZipPath)) {
+        Write-InstallLog "ERROR: Client package not found: $packageZipPath"
+        Write-InstallLog "Expected file: $packageZipName"
+        Write-InstallLog "Files in package directory:"
+        Get-ChildItem -Path $scriptDir -File | ForEach-Object {
+            Write-InstallLog "  - $($_.Name)"
         }
-    
-    Write-InstallLog "Files to copy: $($filesToCopy.Count)"
-    
-    if ($filesToCopy.Count -eq 0) {
-        Write-InstallLog "WARNING: No client files found to copy (only scripts/certificates present)"
-        Write-InstallLog "Expected files: SecureBootWatcher.Client.exe, *.dll, appsettings.json"
+        throw "Client package ZIP file not found in package directory"
     }
     
-    $copiedCount = 0
-    foreach ($file in $filesToCopy) {
-        try {
-            Copy-Item -Path $file.FullName -Destination $installPath -Force
-            Write-InstallLog "  Copied: $($file.Name) ($([math]::Round($file.Length / 1KB, 2)) KB)"
-            $copiedCount++
+    Write-InstallLog "Found client package: $packageZipName ($([math]::Round((Get-Item $packageZipPath).Length / 1MB, 2)) MB)"
+    
+    # Extract ZIP to a temporary directory
+    $tempExtractPath = Join-Path $env:TEMP "SecureBootWatcher-Install-$(Get-Date -Format 'yyyyMMddHHmmss')"
+    
+    try {
+        Write-InstallLog "Extracting package to temporary directory: $tempExtractPath"
+        New-Item -ItemType Directory -Path $tempExtractPath -Force | Out-Null
+        Expand-Archive -Path $packageZipPath -DestinationPath $tempExtractPath -Force
+        
+        # List extracted files for diagnostics
+        $extractedFiles = Get-ChildItem -Path $tempExtractPath -File
+        Write-InstallLog "Extracted $($extractedFiles.Count) files from package"
+        
+        if ($extractedFiles.Count -eq 0) {
+            throw "ZIP extraction resulted in no files"
         }
-        catch {
-            Write-InstallLog "  ERROR copying $($file.Name): $_"
-            throw
-        }
-    }
-    
-    Write-InstallLog "Successfully copied $copiedCount files"
-    
-    # Verify critical files exist in install directory
-    $criticalFiles = @(
-        "SecureBootWatcher.Client.exe",
-        "appsettings.json"
-    )
-    
-    $missingFiles = @()
-    foreach ($file in $criticalFiles) {
-        $filePath = Join-Path $installPath $file
-        if (-not (Test-Path $filePath)) {
-            $missingFiles += $file
-            Write-InstallLog "  ERROR: Critical file missing: $file"
-        } else {
-            Write-InstallLog "  Verified: $file"
-        }
-    }
-    
-    if ($missingFiles.Count -gt 0) {
-        Write-InstallLog "ERROR: Installation incomplete - missing critical files:"
-        $missingFiles | ForEach-Object { Write-InstallLog "  - $_" }
-        throw "Critical files missing from installation directory"
-    }
-
-    # Copy directories (e.g., logs folder structure if present)
-    $dirsToCheck = @("logs")
-    foreach ($dir in $dirsToCheck) {
-        $sourceDir = Join-Path $scriptDir $dir
-        if (Test-Path $sourceDir) {
-            $destDir = Join-Path $installPath $dir
-            if (-not (Test-Path $destDir)) {
-                New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+        
+        # Copy all files from temp directory to installation directory
+        $copiedCount = 0
+        foreach ($file in $extractedFiles) {
+            try {
+                Copy-Item -Path $file.FullName -Destination $installPath -Force
+                Write-InstallLog "  Copied: $($file.Name) ($([math]::Round($file.Length / 1KB, 2)) KB)"
+                $copiedCount++
             }
-            Write-InstallLog "Created directory: $dir"
+            catch {
+                Write-InstallLog "  ERROR copying $($file.Name): $_"
+                throw
+            }
+        }
+        
+        Write-InstallLog "Successfully copied $copiedCount files"
+        
+        # Verify critical files exist in install directory
+        $criticalFiles = @(
+            "SecureBootWatcher.Client.exe",
+            "appsettings.json"
+        )
+        
+        $missingFiles = @()
+        foreach ($file in $criticalFiles) {
+            $filePath = Join-Path $installPath $file
+            if (-not (Test-Path $filePath)) {
+                $missingFiles += $file
+                Write-InstallLog "  ERROR: Critical file missing: $file"
+            } else {
+                Write-InstallLog "  Verified: $file"
+            }
+        }
+        
+        if ($missingFiles.Count -gt 0) {
+            Write-InstallLog "ERROR: Installation incomplete - missing critical files:"
+            $missingFiles | ForEach-Object { Write-InstallLog "  - $_" }
+            throw "Critical files missing from installation directory"
+        }
+    }
+    finally {
+        # Clean up temporary extraction directory
+        if (Test-Path $tempExtractPath) {
+            Write-InstallLog "Cleaning up temporary extraction directory"
+            Remove-Item -Path $tempExtractPath -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
 
