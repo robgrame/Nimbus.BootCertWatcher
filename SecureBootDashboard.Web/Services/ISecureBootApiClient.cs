@@ -1,4 +1,5 @@
 using SecureBootWatcher.Shared.Storage;
+using SecureBootWatcher.Shared.Models;
 
 namespace SecureBootDashboard.Web.Services;
 
@@ -6,6 +7,12 @@ public interface ISecureBootApiClient
 {
     Task<IReadOnlyList<ReportSummary>> GetRecentReportsAsync(int limit = 50, CancellationToken cancellationToken = default);
     Task<ReportDetail?> GetReportDetailAsync(Guid id, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Gets a complete report with deserialized certificate data
+    /// </summary>
+    Task<SecureBootStatusReport?> GetReportAsync(Guid id, CancellationToken cancellationToken = default);
+    
     Task<bool> IsHealthyAsync(CancellationToken cancellationToken = default);
     
     // New methods for device management

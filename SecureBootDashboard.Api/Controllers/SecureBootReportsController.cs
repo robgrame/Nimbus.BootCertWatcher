@@ -110,7 +110,17 @@ namespace SecureBootDashboard.Api.Controllers
             }
         }
 
-        public sealed record ReportDetailResponse(Guid Id, DeviceDetail Device, DateTimeOffset CreatedAtUtc, string RegistryStateJson, string? AlertsJson, string? DeploymentState, string? ClientVersion, string? CorrelationId, IReadOnlyCollection<EventDetail> Events)
+        public sealed record ReportDetailResponse(
+            Guid Id, 
+            DeviceDetail Device, 
+            DateTimeOffset CreatedAtUtc, 
+            string RegistryStateJson, 
+            string? CertificatesJson,  // ADDED
+            string? AlertsJson, 
+            string? DeploymentState, 
+            string? ClientVersion, 
+            string? CorrelationId, 
+            IReadOnlyCollection<EventDetail> Events)
         {
             public ReportDetailResponse(ReportDetail detail)
                 : this(
@@ -118,6 +128,7 @@ namespace SecureBootDashboard.Api.Controllers
                     new DeviceDetail(detail.Device),
                     detail.CreatedAtUtc,
                     detail.RegistryStateJson,
+                    detail.CertificatesJson, // ADDED
                     detail.AlertsJson,
                     detail.DeploymentState,
                     detail.ClientVersion,

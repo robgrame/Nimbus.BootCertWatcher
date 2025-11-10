@@ -1,0 +1,177 @@
+@model SecureBootWatcher.Shared.Models.SecureBootCertificate
+
+<div class="card mb-3 @(Model.IsExpired ? "border-danger" : (Model.DaysUntilExpiration.HasValue && Model.DaysUntilExpiration.Value <= 90 ? "border-warning" : ""))">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8">
+                <!-- Certificate Subject -->
+                <h6 class="card-title mb-2">
+                    @if (Model.IsMicrosoftCertificate)
+                    {
+                        <i class="fab fa-microsoft text-primary" data-bs-toggle="tooltip" title="Microsoft Certificate"></i>
+                    }
+                    else
+                    {
+                        <i class="fas fa-certificate text-muted" data-bs-toggle="tooltip" title="Third-party Certificate"></i>
+                    }
+                    <strong>@(Model.Subject ?? "Unknown Subject")</strong>
+                </h6>
+
+                <!-- Issuer -->
+                <p class="text-muted small mb-2">
+                    <i class="fas fa-stamp"></i> <strong>Issuer:</strong> @(Model.Issuer ?? "Unknown")
+                </p>
+
+                <!-- Thumbprint -->
+                <p class="small mb-2">
+                    <i class="fas fa-fingerprint"></i> <strong>Thumbprint:</strong>
+                    <code class="text-muted">@Model.Thumbprint</code>
+                    <button class="btn btn-sm btn-outline-secondary border-0" onclick="copyToClipboard('@Model.Thumbprint', this)" data-bs-toggle="tooltip" title="Copy to clipboard">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </p>
+
+                <!-- Algorithm Info -->
+                <div class="small text-muted">
+                    @if (!string.IsNullOrEmpty(Model.SignatureAlgorithm))
+                    {
+                        <span class="badge bg-secondary me-1">@Model.SignatureAlgorithm</span>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.PublicKeyAlgorithm))
+                    {
+                        <span class="badge bg-secondary me-1">@Model.PublicKeyAlgorithm</span>
+                    }
+                    @if (Model.KeySize.HasValue)
+                    {
+                        <span class="badge bg-secondary">@Model.KeySize-bit</span>
+                    }
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <!-- Validity Period -->
+                <div class="text-end">
+                    @if (Model.NotBefore.HasValue && Model.NotAfter.HasValue)
+                    {
+                        <small class="text-muted d-block mb-2">
+                            <i class="fas fa-calendar-alt"></i> Valid Period
+                        </small>
+                        <small class="d-block text-muted">
+                            <strong>From:</strong> @Model.NotBefore.Value.ToString("yyyy-MM-dd")
+                        </small>
+                        <small class="d-block text-muted mb-2">
+                            <strong>To:</strong> @Model.NotAfter.Value.ToString("yyyy-MM-dd")
+                        </small>
+
+                        <!-- Expiration Status -->
+                        @if (Model.IsExpired)
+                        {
+                            <span class="badge bg-danger">
+                                <i class="fas fa-exclamation-circle"></i> Expired
+                                (@Math.Abs(Model.DaysUntilExpiration ?? 0) days ago)
+                            </span>
+                        }
+                        else if (Model.DaysUntilExpiration.HasValue)
+                        {
+                            if (Model.DaysUntilExpiration.Value <= 30)
+                            {
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-clock"></i> Expires in @Model.DaysUntilExpiration days
+                                </span>
+                            }
+                            else if (Model.DaysUntilExpiration.Value <= 90)
+                            {
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-clock"></i> Expires in @Model.DaysUntilExpiration days
+                                </span>
+                            }
+                            else if (Model.DaysUntilExpiration.Value <= 365)
+                            {
+                                <span class="badge bg-info">
+                                    <i class="fas fa-check"></i> Expires in @Model.DaysUntilExpiration days
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle"></i> Valid (@(Model.DaysUntilExpiration / 365) years)
+                                </span>
+                            }
+                        }
+                    }
+                    else
+                    {
+                        <small class="text-muted">Validity dates not available</small>
+                    }
+                </div>
+
+                <!-- Serial Number -->
+                @if (!string.IsNullOrEmpty(Model.SerialNumber))
+                {
+                    <div class="mt-3 text-end">
+                        <small class="text-muted d-block">Serial Number</small>
+                        <code class="small">@Model.SerialNumber</code>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Expandable Details -->
+        <div class="mt-3">
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#cert-details-@Model.Thumbprint?.Replace(":", "")" aria-expanded="false">
+                <i class="fas fa-info-circle"></i> More Details
+            </button>
+
+            <div class="collapse mt-2" id="cert-details-@Model.Thumbprint?.Replace(":", "")">
+                <div class="card card-body bg-light">
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-3">Version</dt>
+                        <dd class="col-sm-9">@(Model.Version?.ToString() ?? "N/A")</dd>
+
+                        @if (!string.IsNullOrEmpty(Model.PublicKeyAlgorithm))
+                        {
+                            <dt class="col-sm-3">Public Key Algorithm</dt>
+                            <dd class="col-sm-9">@Model.PublicKeyAlgorithm (@(Model.KeySize ?? 0) bits)</dd>
+                        }
+
+                        @if (!string.IsNullOrEmpty(Model.SignatureAlgorithm))
+                        {
+                            <dt class="col-sm-3">Signature Algorithm</dt>
+                            <dd class="col-sm-9">@Model.SignatureAlgorithm</dd>
+                        }
+
+                        <dt class="col-sm-3">Database</dt>
+                        <dd class="col-sm-9">
+                            <code>@Model.Database</code>
+                        </dd>
+
+                        <dt class="col-sm-3">Microsoft Certificate</dt>
+                        <dd class="col-sm-9">
+                            @if (Model.IsMicrosoftCertificate)
+                            {
+                                <span class="badge bg-primary"><i class="fab fa-microsoft"></i> Yes</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">No</span>
+                            }
+                        </dd>
+
+                        @if (!string.IsNullOrEmpty(Model.RawData))
+                        {
+                            <dt class="col-sm-3">Raw Data</dt>
+                            <dd class="col-sm-9">
+                                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#raw-data-@Model.Thumbprint?.Replace(":", "")">
+                                    <i class="fas fa-file-code"></i> View Base64
+                                </button>
+                                <div class="collapse mt-2" id="raw-data-@Model.Thumbprint?.Replace(":", "")">
+                                    <textarea class="form-control font-monospace" rows="5" readonly>@Model.RawData</textarea>
+                                </div>
+                            </dd>
+                        }
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

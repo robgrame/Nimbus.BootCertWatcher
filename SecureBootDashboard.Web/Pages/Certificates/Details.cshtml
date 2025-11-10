@@ -1,0 +1,265 @@
+@page "/certificates/{reportId}"
+@model SecureBootDashboard.Web.Pages.Certificates.DetailsModel
+@{
+    ViewData["Title"] = $"Certificate Details - {Model.DeviceName}";
+}
+
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-page="/Index">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a asp-page="/Devices/List">Devices</a></li>
+                    <li class="breadcrumb-item"><a asp-page="/Devices/Details" asp-route-id="@Model.DeviceId">@Model.DeviceName</a></li>
+                    <li class="breadcrumb-item active">Certificates</li>
+                </ol>
+            </nav>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-certificate text-primary"></i> Secure Boot Certificates</h2>
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-desktop"></i> @Model.DeviceName
+                        <span class="ms-3"><i class="fas fa-clock"></i> Collected: @Model.CollectedAt?.ToString("yyyy-MM-dd HH:mm:ss UTC")</span>
+                    </p>
+                </div>
+                <div>
+                    <a asp-page="/Reports/Details" asp-route-id="@Model.ReportId" class="btn btn-outline-primary">
+                        <i class="fas fa-file-alt"></i> View Full Report
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Certificates == null)
+    {
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>No Certificate Data</strong>
+            <p class="mb-0 mt-2">Certificate enumeration data is not available for this report. This may occur if:</p>
+            <ul class="mb-0 mt-2">
+                <li>The device uses legacy BIOS (non-UEFI)</li>
+                <li>Certificate enumeration failed during collection</li>
+                <li>This is an older report collected before certificate enumeration was implemented</li>
+            </ul>
+        </div>
+    }
+    else
+    {
+        <!-- Overview Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card border-primary">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            <i class="fas fa-shield-alt"></i> Secure Boot Status
+                        </h6>
+                        <h3 class="card-title mb-0">
+                            @if (Model.Certificates.SecureBootEnabled == true)
+                            {
+                                <span class="badge bg-success fs-6">
+                                    <i class="fas fa-check-circle"></i> Enabled
+                                </span>
+                            }
+                            else if (Model.Certificates.SecureBootEnabled == false)
+                            {
+                                <span class="badge bg-danger fs-6">
+                                    <i class="fas fa-times-circle"></i> Disabled
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary fs-6">
+                                    <i class="fas fa-question-circle"></i> Unknown
+                                </span>
+                            }
+                        </h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card border-info">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            <i class="fas fa-list-ol"></i> Total Certificates
+                        </h6>
+                        <h3 class="card-title mb-0">
+                            <span class="text-info">@Model.Certificates.TotalCertificateCount</span>
+                        </h3>
+                        <small class="text-muted">Across all databases</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card border-danger">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            <i class="fas fa-exclamation-triangle"></i> Expired
+                        </h6>
+                        <h3 class="card-title mb-0">
+                            <span class="text-danger">@Model.Certificates.ExpiredCertificateCount</span>
+                        </h3>
+                        <small class="text-muted">Require attention</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="card border-warning">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            <i class="fas fa-clock"></i> Expiring Soon
+                        </h6>
+                        <h3 class="card-title mb-0">
+                            <span class="text-warning">@Model.Certificates.ExpiringCertificateCount</span>
+                        </h3>
+                        <small class="text-muted">Within 90 days</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Certificate Databases -->
+        <div class="row">
+            <!-- Signature Database (db) -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-check-circle"></i> Signature Database (db)
+                            <span class="badge bg-light text-dark float-end">@Model.Certificates.SignatureDatabase.Count</span>
+                        </h5>
+                        <small>Certificates authorized to boot</small>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.Certificates.SignatureDatabase.Any())
+                        {
+                            @foreach (var cert in Model.Certificates.SignatureDatabase)
+                            {
+                                <partial name="_CertificateCard" model="cert" />
+                            }
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center py-4">
+                                <i class="fas fa-inbox"></i> No certificates in this database
+                            </p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Forbidden Database (dbx) -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-ban"></i> Forbidden Database (dbx)
+                            <span class="badge bg-light text-dark float-end">@Model.Certificates.ForbiddenDatabase.Count</span>
+                        </h5>
+                        <small>Certificates blocked from booting</small>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.Certificates.ForbiddenDatabase.Any())
+                        {
+                            @foreach (var cert in Model.Certificates.ForbiddenDatabase)
+                            {
+                                <partial name="_CertificateCard" model="cert" />
+                            }
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center py-4">
+                                <i class="fas fa-inbox"></i> No certificates in this database
+                            </p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Exchange Keys (KEK) -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-key"></i> Key Exchange Keys (KEK)
+                            <span class="badge bg-light text-dark float-end">@Model.Certificates.KeyExchangeKeys.Count</span>
+                        </h5>
+                        <small>Authorized to update db/dbx</small>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.Certificates.KeyExchangeKeys.Any())
+                        {
+                            @foreach (var cert in Model.Certificates.KeyExchangeKeys)
+                            {
+                                <partial name="_CertificateCard" model="cert" />
+                            }
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center py-4">
+                                <i class="fas fa-inbox"></i> No certificates in this database
+                            </p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Platform Keys (PK) -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <i class="fas fa-crown"></i> Platform Key (PK)
+                            <span class="badge bg-dark float-end">@Model.Certificates.PlatformKeys.Count</span>
+                        </h5>
+                        <small>Platform owner key</small>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.Certificates.PlatformKeys.Any())
+                        {
+                            @foreach (var cert in Model.Certificates.PlatformKeys)
+                            {
+                                <partial name="_CertificateCard" model="cert" />
+                            }
+                        }
+                        else
+                        {
+                            <p class="text-muted text-center py-4">
+                                <i class="fas fa-inbox"></i> No certificates in this database
+                            </p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        // Tooltip initialization
+        $(document).ready(function () {
+            $('[data-bs-toggle="tooltip"]').tooltip();
+        });
+
+        // Copy thumbprint to clipboard
+        function copyToClipboard(text, button) {
+            navigator.clipboard.writeText(text).then(function () {
+                // Change button icon temporarily
+                const icon = button.querySelector('i');
+                const originalClass = icon.className;
+                icon.className = 'fas fa-check text-success';
+                
+                setTimeout(function () {
+                    icon.className = originalClass;
+                }, 2000);
+            });
+        }
+    </script>
+}

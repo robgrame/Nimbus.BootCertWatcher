@@ -1,6 +1,8 @@
 using System.Net.Http.Json;
 using Microsoft.Extensions.Options;
 using SecureBootWatcher.Shared.Storage;
+using SecureBootWatcher.Shared.Models;
+using System.Text.Json;
 
 namespace SecureBootDashboard.Web.Services;
 
@@ -68,6 +70,85 @@ public sealed class SecureBootApiClient : ISecureBootApiClient
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Failed to fetch report detail for ID: {ReportId}", id);
+            return null;
+        }
+    }
+
+    public async Task<SecureBootStatusReport?> GetReportAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching complete report for ID: {ReportId}", id);
+            
+            var reportDetail = await GetReportDetailAsync(id, cancellationToken);
+            
+            if (reportDetail == null)
+            {
+                return null;
+            }
+
+            // Deserialize registry state
+            var registry = JsonSerializer.Deserialize<SecureBootRegistrySnapshot>(reportDetail.RegistryStateJson);
+            
+            // Deserialize certificates if present
+            SecureBootCertificateCollection? certificates = null;
+            if (!string.IsNullOrEmpty(reportDetail.CertificatesJson))
+            {
+                try
+                {
+                    certificates = JsonSerializer.Deserialize<SecureBootCertificateCollection>(reportDetail.CertificatesJson);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to deserialize certificates for report {ReportId}", id);
+                }
+            }
+
+            // Deserialize alerts
+            List<string>? alerts = null;
+            if (!string.IsNullOrEmpty(reportDetail.AlertsJson))
+            {
+                try
+                {
+                    alerts = JsonSerializer.Deserialize<List<string>>(reportDetail.AlertsJson);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to deserialize alerts for report {ReportId}", id);
+                }
+            }
+
+            // Build SecureBootStatusReport
+            var report = new SecureBootStatusReport
+            {
+                Device = new DeviceIdentity
+                {
+                    MachineName = reportDetail.Device.MachineName,
+                    DomainName = reportDetail.Device.DomainName,
+                    UserPrincipalName = reportDetail.Device.UserPrincipalName,
+                    Manufacturer = reportDetail.Device.Manufacturer,
+                    Model = reportDetail.Device.Model,
+                    FirmwareVersion = reportDetail.Device.FirmwareVersion
+                },
+                Registry = registry ?? new SecureBootRegistrySnapshot(),
+                Certificates = certificates,
+                CreatedAtUtc = reportDetail.CreatedAtUtc,
+                Alerts = alerts ?? new List<string>(),
+                ClientVersion = reportDetail.ClientVersion,
+                CorrelationId = reportDetail.CorrelationId
+            };
+
+            // Add FleetId to tags if available
+            if (!string.IsNullOrEmpty(reportDetail.Device.FleetId))
+            {
+                report.Device.Tags["FleetId"] = reportDetail.Device.FleetId;
+            }
+
+            return report;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch complete report for ID: {ReportId}", id);
             return null;
         }
     }
