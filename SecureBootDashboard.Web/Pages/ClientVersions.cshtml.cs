@@ -1,23 +1,22 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Configuration;
 using SecureBootDashboard.Web.Models;
+using SecureBootDashboard.Web.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace SecureBootDashboard.Web.Pages
 {
     public class ClientVersionsModel : PageModel
     {
-        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ISecureBootApiClient _apiClient;
         private readonly IConfiguration _configuration;
 
-        public ClientVersionsModel(IHttpClientFactory httpClientFactory, IConfiguration configuration)
+        public ClientVersionsModel(ISecureBootApiClient apiClient, IConfiguration configuration)
         {
-            _httpClientFactory = httpClientFactory;
+            _apiClient = apiClient;
             _configuration = configuration;
         }
 
@@ -42,38 +41,27 @@ namespace SecureBootDashboard.Web.Pages
                 var latestVer = Version.Parse(LatestVersion);
                 var minimumVer = Version.Parse(MinimumVersion);
 
-                // Get API base URL
-                var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "https://localhost:5001";
+                // Fetch devices from API using the existing API client
+                var devices = await _apiClient.GetDevicesAsync(HttpContext.RequestAborted);
 
-                // Create HTTP client
-                var client = _httpClientFactory.CreateClient();
-                client.BaseAddress = new Uri(apiBaseUrl);
-
-                // Fetch devices from API
-                var response = await client.GetAsync("/api/Devices");
-
-                if (!response.IsSuccessStatusCode)
+                // Calculate days since last seen and map to DeviceVersionSummary
+                var deviceVersionList = devices.Select(d => new DeviceVersionSummary
                 {
-                    ErrorMessage = $"Failed to fetch devices from API: {response.StatusCode}";
-                    return;
-                }
+                    Id = d.Id,
+                    MachineName = d.MachineName,
+                    DomainName = d.DomainName,
+                    FleetId = d.FleetId,
+                    Manufacturer = d.Manufacturer,
+                    Model = d.Model,
+                    ClientVersion = d.ClientVersion,
+                    LastSeenUtc = d.LastSeenUtc,
+                    DaysSinceLastSeen = (int)(DateTimeOffset.UtcNow - d.LastSeenUtc).TotalDays
+                }).ToList();
 
-                var json = await response.Content.ReadAsStringAsync();
-                var devices = JsonSerializer.Deserialize<List<DeviceVersionSummary>>(json, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                }) ?? new List<DeviceVersionSummary>();
-
-                // Calculate days since last seen
-                foreach (var device in devices)
-                {
-                    device.DaysSinceLastSeen = (int)(DateTimeOffset.UtcNow - device.LastSeenUtc).TotalDays;
-                }
-
-                TotalDevices = devices.Count;
+                TotalDevices = deviceVersionList.Count;
 
                 // Group devices by version
-                var versionGroups = devices
+                var versionGroups = deviceVersionList
                     .GroupBy(d => d.ClientVersion ?? "Unknown")
                     .Select(g => new ClientVersionInfo
                     {

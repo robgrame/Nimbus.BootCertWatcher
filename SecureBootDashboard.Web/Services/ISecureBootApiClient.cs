@@ -27,7 +27,8 @@ public sealed record DeviceSummary(
     int ReportCount,
     string? LatestDeploymentState,
     DateTimeOffset? LatestReportDate,
-    bool? UEFISecureBootEnabled);
+    bool? UEFISecureBootEnabled,
+    string? ClientVersion);
 
 public sealed record DeviceDetail(
     Guid Id,

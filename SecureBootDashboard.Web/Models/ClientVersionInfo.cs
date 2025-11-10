@@ -20,7 +20,7 @@ namespace SecureBootDashboard.Web.Models
     /// </summary>
     public sealed class DeviceVersionSummary
     {
-        public Guid DeviceId { get; set; }
+        public Guid Id { get; set; }
         public string MachineName { get; set; } = string.Empty;
         public string? DomainName { get; set; }
         public string? ClientVersion { get; set; }
