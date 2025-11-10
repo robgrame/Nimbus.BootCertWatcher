@@ -13,11 +13,21 @@ This guide explains how to deploy SecureBootWatcher client as a Win32 app throug
    - Used to convert package to `.intunewin` format
 
 2. **SecureBootWatcher Client Package**
-   - Built using: `.\scripts\Deploy-Client.ps1`
-   - Location: `.\client-package\SecureBootWatcher-Client.zip`
+   - **Must be built first** using: `.\scripts\Deploy-Client.ps1`
+   - This creates: `.\client-package\SecureBootWatcher-Client.zip`
+   - Verify the ZIP exists before proceeding:
+     ```powershell
+     Test-Path ".\client-package\SecureBootWatcher-Client.zip"
+     ```
 
 3. **Intune Administrator Access**
    - Permission to create and deploy Win32 apps
+   - Access to Microsoft Endpoint Manager admin center
+
+4. **Optional: PFX Certificate**
+   - Required only if using Azure Queue sink for authentication
+   - Must be exported with private key
+   - See [Certificate Management Guide](CERTIFICATE_MANAGEMENT_INTUNE.md) for details
 
 ---
 
@@ -47,15 +57,49 @@ This guide explains how to deploy SecureBootWatcher client as a Win32 app throug
 
 ### Step 1: Prepare the Package
 
-Prepare the Intune package directory with the required files:
+Prepare the Intune package directory with the required files.
+
+#### Option A: Using the Automated Script (Recommended)
+
+```powershell
+# Prepare the package automatically
+.\scripts\Prepare-IntunePackage.ps1
+
+# Or with custom output path
+.\scripts\Prepare-IntunePackage.ps1 -OutputPath "C:\Custom\Path"
+
+# Or including a certificate
+.\scripts\Prepare-IntunePackage.ps1 -CertificatePath "C:\Path\To\SecureBootWatcher.pfx"
+
+# Or overwrite existing directory
+.\scripts\Prepare-IntunePackage.ps1 -Force
+```
+
+This script will:
+- ? Verify the client package ZIP exists in `.\client-package\`
+- ? Create the staging directory
+- ? Copy all required files
+- ? Verify package structure
+- ? Provide next steps for conversion
+
+#### Option B: Manual Preparation
+
+If you prefer to prepare the package manually:
 
 ```powershell
 # Create working directory
 New-Item -ItemType Directory -Path "C:\Temp\SecureBootWatcher-Intune" -Force
 
-# Copy the pre-built client ZIP package (do NOT extract it!)
+# Copy the pre-built client ZIP package from client-package folder (do NOT extract it!)
+# The ZIP file is located in .\client-package\ directory of the repository
 Copy-Item ".\client-package\SecureBootWatcher-Client.zip" `
     -Destination "C:\Temp\SecureBootWatcher-Intune\" -Force
+
+# Verify the ZIP file was copied
+if (-not (Test-Path "C:\Temp\SecureBootWatcher-Intune\SecureBootWatcher-Client.zip")) {
+    Write-Error "Failed to copy SecureBootWatcher-Client.zip"
+    exit 1
+}
 
 # Copy Intune scripts to the package directory
 Copy-Item ".\scripts\Install-Client-Intune.ps1" `
@@ -67,45 +111,31 @@ Copy-Item ".\scripts\Uninstall-Client-Intune.ps1" `
 Copy-Item ".\scripts\Detect-Client-Intune.ps1" `
     -Destination "C:\Temp\SecureBootWatcher-Intune\" -Force
 
-# **IMPORTANT**: Copy the PFX certificate to the package directory (optional)
+# **OPTIONAL**: Copy the PFX certificate to the package directory
 # This certificate is used for Azure Queue authentication
-Copy-Item "C:\Path\To\Your\SecureBootWatcher.pfx" `
-    -Destination "C:\Temp\SecureBootWatcher-Intune\" -Force
+# Copy-Item "C:\Path\To\Your\SecureBootWatcher.pfx" `
+#     -Destination "C:\Temp\SecureBootWatcher-Intune\" -Force
+
+# Verify package structure
+Write-Host "`nPackage contents:" -ForegroundColor Cyan
+Get-ChildItem "C:\Temp\SecureBootWatcher-Intune" | Format-Table Name, Length, LastWriteTime
 ```
 
-**Package Contents Should Include**:
+**Expected package structure:**
 ```
 C:\Temp\SecureBootWatcher-Intune\
 ??? Install-Client-Intune.ps1          (Install script)
 ??? Uninstall-Client-Intune.ps1        (Uninstall script)
 ??? Detect-Client-Intune.ps1           (Detection script)
-??? SecureBootWatcher.pfx              (Certificate for Azure Queue auth) – OPTIONAL
-??? SecureBootWatcher-Client.zip       (Client binaries package) – REQUIRED
+??? SecureBootWatcher.pfx              (Certificate - OPTIONAL)
+??? SecureBootWatcher-Client.zip       (Client binaries - REQUIRED)
 ```
 
-**What's inside `SecureBootWatcher-Client.zip`**:
+**Note**: The `SecureBootWatcher-Client.zip` file must be created first by running:
+```powershell
+.\scripts\Deploy-Client.ps1
 ```
-SecureBootWatcher-Client.zip\
-??? SecureBootWatcher.Client.exe       (Main executable)
-??? SecureBootWatcher.Shared.dll       (Shared library)
-??? appsettings.json                   (Configuration)
-??? [Other DLLs and dependencies]
-??? logs\                              (Log directory structure)
-    ??? README.md
-```
-
-**Important**: The install script will automatically extract `SecureBootWatcher-Client.zip` during installation.
-
-**Certificate Requirements**:
-- File name must be: `SecureBootWatcher.pfx`
-- Must include private key
-- Should match the thumbprint in `appsettings.json`
-- Certificate password (if any) will be provided via install command parameters
-
-**Security Note**: The certificate will be:
-1. Imported to `LocalMachine\My` certificate store during installation
-2. Private key permissions granted to SYSTEM account
-3. PFX file will NOT be copied to the installation directory (only to cert store)
+This creates the ZIP file in `.\client-package\SecureBootWatcher-Client.zip`.
 
 ---
 
@@ -296,7 +326,21 @@ ERROR: Client package ZIP file not found in package directory
 
 **Solution**:
 
-1. **Verify package contents before converting to `.intunewin`**:
+1. **Build the client package first** (if not already done):
+   ```powershell
+   # From the repository root
+   .\scripts\Deploy-Client.ps1
+   
+   # Verify the ZIP was created
+   Test-Path ".\client-package\SecureBootWatcher-Client.zip"
+   # Should return: True
+   
+   # Check the ZIP file size
+   (Get-Item ".\client-package\SecureBootWatcher-Client.zip").Length / 1MB
+   # Should be several MB
+   ```
+
+2. **Verify package contents before converting to `.intunewin`**:
    ```powershell
    # List files in the staging directory
    Get-ChildItem -Path "C:\Temp\SecureBootWatcher-Intune"
@@ -306,12 +350,12 @@ ERROR: Client package ZIP file not found in package directory
    # - Uninstall-Client-Intune.ps1
    # - Detect-Client-Intune.ps1
    # - SecureBootWatcher.pfx (optional)
-   # - SecureBootWatcher-Client.zip (REQUIRED - contains all binaries)
+   # - SecureBootWatcher-Client.zip (REQUIRED - from .\client-package\ folder)
    ```
 
-2. **Verify the ZIP file exists and contains binaries**:
+3. **Verify the ZIP file exists and contains binaries**:
    ```powershell
-   # Check ZIP file
+   # Check ZIP file in staging directory
    Test-Path "C:\Temp\SecureBootWatcher-Intune\SecureBootWatcher-Client.zip"
    
    # List contents
@@ -320,15 +364,18 @@ ERROR: Client package ZIP file not found in package directory
    
    Get-ChildItem "C:\Temp\VerifyZip"
    # Should show: SecureBootWatcher.Client.exe, *.dll, appsettings.json, etc.
+   
+   # Clean up
+   Remove-Item "C:\Temp\VerifyZip" -Recurse -Force
    ```
 
-3. **Re-prepare the package**:
+4. **Re-prepare the package**:
    ```powershell
    # Clean and recreate
    Remove-Item "C:\Temp\SecureBootWatcher-Intune" -Recurse -Force -ErrorAction SilentlyContinue
    New-Item -ItemType Directory -Path "C:\Temp\SecureBootWatcher-Intune" -Force
    
-   # Copy the pre-built client ZIP (IMPORTANT - don't extract it!)
+   # Copy the pre-built client ZIP from client-package folder (IMPORTANT - don't extract it!)
    Copy-Item ".\client-package\SecureBootWatcher-Client.zip" `
        -Destination "C:\Temp\SecureBootWatcher-Intune\" -Force
    
@@ -338,7 +385,7 @@ ERROR: Client package ZIP file not found in package directory
    Copy-Item ".\scripts\Detect-Client-Intune.ps1" -Destination "C:\Temp\SecureBootWatcher-Intune\" -Force
    
    # Optional: Copy certificate
-   Copy-Item "C:\Path\To\SecureBootWatcher.pfx" -Destination "C:\Temp\SecureBootWatcher-Intune\" -Force
+   # Copy-Item "C:\Path\To\SecureBootWatcher.pfx" -Destination "C:\Temp\SecureBootWatcher-Intune\" -Force
    ```
 
 ### Manual Installation Testing
