@@ -133,8 +133,18 @@ try {
     Write-InstallLog "Copying client files"
     
     # Files are already extracted by Intune to $scriptDir
+    # List all files in script directory for diagnostics
+    $allFiles = Get-ChildItem -Path $scriptDir -File
+    Write-InstallLog "Found $($allFiles.Count) total files in package directory"
+    
+    if ($allFiles.Count -eq 0) {
+        Write-InstallLog "ERROR: No files found in package directory: $scriptDir"
+        Write-InstallLog "This usually means the package was not extracted correctly by Intune"
+        throw "Package directory is empty. Cannot proceed with installation."
+    }
+    
     # Copy everything except scripts and certificate
-    $filesToCopy = Get-ChildItem -Path $scriptDir -File | 
+    $filesToCopy = $allFiles | 
         Where-Object { 
             $_.Name -notlike "Install-*.ps1" -and 
             $_.Name -notlike "Uninstall-*.ps1" -and 
@@ -142,9 +152,49 @@ try {
             $_.Name -notlike "*.pfx"  # Don't copy certificate to install directory
         }
     
+    Write-InstallLog "Files to copy: $($filesToCopy.Count)"
+    
+    if ($filesToCopy.Count -eq 0) {
+        Write-InstallLog "WARNING: No client files found to copy (only scripts/certificates present)"
+        Write-InstallLog "Expected files: SecureBootWatcher.Client.exe, *.dll, appsettings.json"
+    }
+    
+    $copiedCount = 0
     foreach ($file in $filesToCopy) {
-        Copy-Item -Path $file.FullName -Destination $installPath -Force
-        Write-InstallLog "Copied: $($file.Name)"
+        try {
+            Copy-Item -Path $file.FullName -Destination $installPath -Force
+            Write-InstallLog "  Copied: $($file.Name) ($([math]::Round($file.Length / 1KB, 2)) KB)"
+            $copiedCount++
+        }
+        catch {
+            Write-InstallLog "  ERROR copying $($file.Name): $_"
+            throw
+        }
+    }
+    
+    Write-InstallLog "Successfully copied $copiedCount files"
+    
+    # Verify critical files exist in install directory
+    $criticalFiles = @(
+        "SecureBootWatcher.Client.exe",
+        "appsettings.json"
+    )
+    
+    $missingFiles = @()
+    foreach ($file in $criticalFiles) {
+        $filePath = Join-Path $installPath $file
+        if (-not (Test-Path $filePath)) {
+            $missingFiles += $file
+            Write-InstallLog "  ERROR: Critical file missing: $file"
+        } else {
+            Write-InstallLog "  Verified: $file"
+        }
+    }
+    
+    if ($missingFiles.Count -gt 0) {
+        Write-InstallLog "ERROR: Installation incomplete - missing critical files:"
+        $missingFiles | ForEach-Object { Write-InstallLog "  - $_" }
+        throw "Critical files missing from installation directory"
     }
 
     # Copy directories (e.g., logs folder structure if present)
