@@ -30,14 +30,14 @@
                 <p class="text-muted">Report ID: @Model.Report.Id</p>
             </div>
             <div class="col-auto">
-                <a asp-page="/Index" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+                <a asp-page="/Index" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Torna alla Dashboard</a>
             </div>
         </div>
 
         <!-- Device Information -->
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Device Information</h5>
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Informazioni Dispositivo</h5>
             </div>
             <div class="card-body">
                 <div class="row">
@@ -78,7 +78,7 @@
         <!-- Report Information -->
         <div class="card mb-4">
             <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="fas fa-file-alt"></i> Report Information</h5>
+                <h5 class="mb-0"><i class="fas fa-file-alt"></i> Informazioni Report</h5>
             </div>
             <div class="card-body">
                 <dl class="row">

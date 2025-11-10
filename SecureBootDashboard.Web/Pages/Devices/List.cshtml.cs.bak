@@ -97,8 +97,8 @@ public class ListModel : PageModel
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error nel caricamento della lista dispositivi");
-            ErrorMessage = "Error nel caricamento dei dati.";
+            _logger.LogError(ex, "Errore nel caricamento della lista dispositivi");
+            ErrorMessage = "Errore nel caricamento dei dati.";
         }
     }
 }

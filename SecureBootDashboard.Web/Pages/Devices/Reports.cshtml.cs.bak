@@ -49,7 +49,7 @@ public class ReportsModel : PageModel
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error loading report history for device {DeviceId}", id);
-            ErrorMessage = "Error nel caricamento dello storico report.";
+            ErrorMessage = "Errore nel caricamento dello storico report.";
             return Page();
         }
     }

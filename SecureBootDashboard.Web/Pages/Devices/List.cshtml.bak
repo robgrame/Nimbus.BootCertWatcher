@@ -1,7 +1,7 @@
 @page
 @model ListModel
 @{
-    ViewData["Title"] = "Monitored Devices";
+    ViewData["Title"] = "Dispositivi Monitorati";
 }
 
 <div class="container-fluid mt-4">
@@ -9,13 +9,13 @@
     <div class="row mb-4">
         <div class="col">
             <h1 class="display-5">
-                <i class="fas fa-laptop"></i> Monitored Devices
+                <i class="fas fa-laptop"></i> Dispositivi Monitorati
             </h1>
-            <p class="lead text-muted">Complete list of Windows devices with Secure Boot certificates</p>
+            <p class="lead text-muted">Lista completa dei dispositivi Windows con certificati Secure Boot</p>
         </div>
         <div class="col-auto">
             <a asp-page="/Index" class="btn btn-outline-primary">
-                <i class="fas fa-chart-line"></i> Back to Dashboard
+                <i class="fas fa-chart-line"></i> Torna alla Dashboard
             </a>
         </div>
     </div>
@@ -35,7 +35,7 @@
             <div class="col-md-2">
                 <div class="card text-center border-primary">
                     <div class="card-body py-2">
-                        <small class="text-muted d-block">Total</small>
+                        <small class="text-muted d-block">Totale</small>
                         <h4 class="mb-0">@Model.TotalDevices</h4>
                     </div>
                 </div>
@@ -88,7 +88,7 @@
                 <form method="get" class="row g-3">
                     <div class="col-md-4">
                         <label for="search" class="form-label">
-                            <i class="fas fa-search"></i> Search
+                            <i class="fas fa-search"></i> Cerca
                         </label>
                         <input type="text" class="form-control" id="search" name="search" 
                                placeholder="Nome macchina, dominio, produttore..." 
@@ -96,10 +96,10 @@
                     </div>
                     <div class="col-md-3">
                         <label for="state" class="form-label">
-                            <i class="fas fa-filter"></i> Status
+                            <i class="fas fa-filter"></i> Stato
                         </label>
                         <select class="form-select" id="state" name="state">
-                            <option value="">All</option>
+                            <option value="">Tutti</option>
                             <option value="Deployed" selected="@(Model.FilterState == "Deployed")">Deployed</option>
                             <option value="Pending" selected="@(Model.FilterState == "Pending")">Pending</option>
                             <option value="Error" selected="@(Model.FilterState == "Error")">Error</option>
@@ -110,7 +110,7 @@
                             <i class="fas fa-layer-group"></i> Fleet
                         </label>
                         <select class="form-select" id="fleet" name="fleet">
-                            <option value="">All</option>
+                            <option value="">Tutte</option>
                             @foreach (var fleetId in Model.AvailableFleets)
                             {
                                 <option value="@fleetId" selected="@(Model.FilterFleet == fleetId)">@fleetId</option>
@@ -119,7 +119,7 @@
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary me-2">
-                            <i class="fas fa-filter"></i> Apply
+                            <i class="fas fa-filter"></i> Applica
                         </button>
                         <a asp-page="/Devices/List" class="btn btn-outline-secondary">
                             <i class="fas fa-times"></i> Reset
@@ -137,7 +137,7 @@
                     @Model.FilteredDevices.Count dispositivi
                     @if (!string.IsNullOrEmpty(Model.SearchTerm) || !string.IsNullOrEmpty(Model.FilterState) || !string.IsNullOrEmpty(Model.FilterFleet))
                     {
-                        <span class="badge bg-light text-dark ms-2">Filtered</span>
+                        <span class="badge bg-light text-dark ms-2">Filtrato</span>
                     }
                 </h5>
             </div>
@@ -288,16 +288,16 @@
     else if (Model.ApiHealthy)
     {
         <div class="alert alert-info">
-            <h4 class="alert-heading"><i class="fas fa-info-circle"></i> No Registered Devices</h4>
+            <h4 class="alert-heading"><i class="fas fa-info-circle"></i> Nessun Dispositivo Registrato</h4>
             <p>Non ci sono dispositivi da visualizzare. I client devono ancora inviare i dati all'API.</p>
             <hr>
             <p class="mb-0">
-                <strong>Next steps:</strong>
+                <strong>Prossimi passi:</strong>
             </p>
             <ol class="mb-0">
-                <li>Configure the SecureBootWatcher client on Windows devices</li>
-                <li>Verify that clients can reach the API</li>
-                <li>Wait for clients to send the first report</li>
+                <li>Configura il client SecureBootWatcher sui dispositivi Windows</li>
+                <li>Verifica che i client possano raggiungere l'API</li>
+                <li>Attendi che i client inviino il primo report</li>
             </ol>
         </div>
     }

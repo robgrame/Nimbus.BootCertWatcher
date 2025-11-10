@@ -37,8 +37,8 @@ public class DetailsModel : PageModel
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error nel caricamento del report {ReportId}", id);
-            ErrorMessage = "Error nel caricamento del report.";
+            _logger.LogError(ex, "Errore nel caricamento del report {ReportId}", id);
+            ErrorMessage = "Errore nel caricamento del report.";
             return Page();
         }
     }

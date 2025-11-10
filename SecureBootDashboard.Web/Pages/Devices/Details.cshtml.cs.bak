@@ -39,7 +39,7 @@ public class DetailsModel : PageModel
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error loading device details for {DeviceId}", id);
-            ErrorMessage = "Error nel caricamento dei dettagli del dispositivo.";
+            ErrorMessage = "Errore nel caricamento dei dettagli del dispositivo.";
             return Page();
         }
     }

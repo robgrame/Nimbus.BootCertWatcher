@@ -1,4 +1,4 @@
-@page
+﻿@page
 @model IndexModel
 @{
     ViewData["Title"] = "Secure Boot Dashboard";
@@ -19,7 +19,7 @@
             <h1 class="display-4 d-md-none">
                 <i class="fas fa-shield-alt text-primary"></i> Secure Boot Dashboard
             </h1>
-            <p class="lead text-muted d-none d-md-block">Secure Boot certificate monitoring on Windows devices</p>
+            <p class="lead text-muted d-none d-md-block">Monitoraggio certificati Secure Boot su dispositivi Windows</p>
         </div>
         <div class="col-auto">
             @if (Model.ApiHealthy)
@@ -53,11 +53,11 @@
                 <a asp-page="/Devices/List" class="card-link">
                     <div class="card text-center bg-primary text-white stat-card">
                         <div class="card-body">
-                            <h5 class="card-title"><i class="fas fa-desktop"></i> Total Devices</h5>
+                            <h5 class="card-title"><i class="fas fa-desktop"></i> Totale Dispositivi</h5>
                             <p class="display-4">@Model.TotalDevices</p>
                         </div>
                         <div class="card-footer bg-transparent border-0">
-                            <small><i class="fas fa-arrow-right"></i> View All</small>
+                            <small><i class="fas fa-arrow-right"></i> Vedi tutti</small>
                         </div>
                     </div>
                 </a>
@@ -70,7 +70,7 @@
                             <p class="display-4">@Model.ActiveDevices</p>
                         </div>
                         <div class="card-footer bg-transparent border-0">
-                            <small><i class="fas fa-arrow-right"></i> View Active</small>
+                            <small><i class="fas fa-arrow-right"></i> Vedi attivi</small>
                         </div>
                     </div>
                 </a>
@@ -83,7 +83,7 @@
                             <p class="display-4">@Model.InactiveDevices</p>
                         </div>
                         <div class="card-footer bg-transparent border-0">
-                            <small><i class="fas fa-arrow-right"></i> View Inactive</small>
+                            <small><i class="fas fa-arrow-right"></i> Vedi inattivi</small>
                         </div>
                     </div>
                 </a>
@@ -96,7 +96,7 @@
                             <p class="display-4">@Model.DeployedDevices</p>
                         </div>
                         <div class="card-footer bg-transparent border-0">
-                            <small><i class="fas fa-arrow-right"></i> View Deployed</small>
+                            <small><i class="fas fa-arrow-right"></i> Vedi deployed</small>
                         </div>
                     </div>
                 </a>
@@ -109,7 +109,7 @@
                             <p class="display-4">@Model.PendingDevices</p>
                         </div>
                         <div class="card-footer bg-transparent border-0">
-                            <small><i class="fas fa-arrow-right"></i> View Pending</small>
+                            <small><i class="fas fa-arrow-right"></i> Vedi pending</small>
                         </div>
                     </div>
                 </a>
@@ -122,7 +122,7 @@
                             <p class="display-4">@Model.ErrorDevices</p>
                         </div>
                         <div class="card-footer bg-transparent border-0">
-                            <small><i class="fas fa-arrow-right"></i> View Errors</small>
+                            <small><i class="fas fa-arrow-right"></i> Vedi errori</small>
                         </div>
                     </div>
                 </a>
@@ -144,12 +144,12 @@
                             <canvas id="complianceChart"></canvas>
                             <div class="text-center mt-3">
                                 <h4 class="text-primary">@Model.CompliancePercentage.ToString("F1")%</h4>
-                                <p class="text-muted mb-0">Compliant Devices</p>
+                                <p class="text-muted mb-0">Dispositivi Compliant</p>
                             </div>
                         </div>
                         <div class="card-footer bg-light text-center">
                             <small class="text-muted">
-                                <i class="fas fa-arrow-right"></i> Click for details
+                                <i class="fas fa-arrow-right"></i> Clicca per dettagli
                             </small>
                         </div>
                     </div>
@@ -174,7 +174,7 @@
                         </div>
                         <div class="card-footer bg-light text-center">
                             <small class="text-muted">
-                                <i class="fas fa-arrow-right"></i> Click for details
+                                <i class="fas fa-arrow-right"></i> Clicca per dettagli
                             </small>
                         </div>
                     </div>
@@ -193,12 +193,12 @@
                         <div class="card-body">
                             <canvas id="deploymentStateChart"></canvas>
                             <div class="text-center mt-3">
-                                <p class="text-muted mb-0">State Distribution</p>
+                                <p class="text-muted mb-0">Distribuzione Stati</p>
                             </div>
                         </div>
                         <div class="card-footer bg-light text-center">
                             <small class="text-muted">
-                                <i class="fas fa-arrow-right"></i> Click for details
+                                <i class="fas fa-arrow-right"></i> Clicca per dettagli
                             </small>
                         </div>
                     </div>
@@ -211,18 +211,18 @@
                     <div class="card h-100 shadow-sm chart-card">
                         <div class="card-header bg-warning text-dark">
                             <h5 class="mb-0">
-                                <i class="fas fa-chart-line"></i> Compliance Trend (7 days)
+                                <i class="fas fa-chart-line"></i> Compliance Trend (7 giorni)
                             </h5>
                         </div>
                         <div class="card-body">
                             <canvas id="complianceTrendChart"></canvas>
                             <div class="text-center mt-3">
-                                <p class="text-muted mb-0">Compliant Devices Growth</p>
+                                <p class="text-muted mb-0">Crescita Dispositivi Compliant</p>
                             </div>
                         </div>
                         <div class="card-footer bg-light text-center">
                             <small class="text-muted">
-                                <i class="fas fa-arrow-right"></i> Click for details
+                                <i class="fas fa-arrow-right"></i> Clicca per dettagli
                             </small>
                         </div>
                     </div>
@@ -236,17 +236,17 @@
                 <div class="card">
                     <div class="card-body text-center">
                         <h5 class="card-title">
-                            <i class="fas fa-rocket"></i> Quick Actions
+                            <i class="fas fa-rocket"></i> Azioni Rapide
                         </h5>
                         <div class="d-flex justify-content-center gap-3 mt-3">
                             <a asp-page="/Devices/List" class="btn btn-primary btn-lg">
-                                <i class="fas fa-list"></i> View All i Dispositivi
+                                <i class="fas fa-list"></i> Vedi Tutti i Dispositivi
                             </a>
                             <a asp-page="/Devices/List" asp-route-state="Error" class="btn btn-danger btn-lg">
-                                <i class="fas fa-exclamation-triangle"></i> Manage Errors
+                                <i class="fas fa-exclamation-triangle"></i> Gestisci Errori
                             </a>
                             <a asp-page="/Devices/List" asp-route-state="Pending" class="btn btn-warning btn-lg">
-                                <i class="fas fa-clock"></i> Monitor Pending
+                                <i class="fas fa-clock"></i> Monitora Pending
                             </a>
                         </div>
                     </div>
@@ -257,16 +257,16 @@
     else if (Model.ApiHealthy)
     {
         <div class="alert alert-info">
-            <h4 class="alert-heading"><i class="fas fa-info-circle"></i> No Registered Devices</h4>
+            <h4 class="alert-heading"><i class="fas fa-info-circle"></i> Nessun Dispositivo Registrato</h4>
             <p>Non ci sono dispositivi da visualizzare. I client devono ancora inviare i dati all'API.</p>
             <hr>
             <p class="mb-0">
-                <strong>Next steps:</strong>
+                <strong>Prossimi passi:</strong>
             </p>
             <ol class="mb-0">
-                <li>Configure the SecureBootWatcher client on Windows devices</li>
-                <li>Verify that clients can reach the API</li>
-                <li>Wait for clients to send the first report</li>
+                <li>Configura il client SecureBootWatcher sui dispositivi Windows</li>
+                <li>Verifica che i client possano raggiungere l'API</li>
+                <li>Attendi che i client inviino il primo report</li>
             </ol>
         </div>
     }
@@ -550,7 +550,7 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Compliant Devices',
+                        label: 'Dispositivi Compliant',
                         data: data,
                         borderColor: chartColors.trend,
                         backgroundColor: 'rgba(23, 162, 184, 0.1)',

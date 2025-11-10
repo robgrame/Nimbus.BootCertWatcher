@@ -74,8 +74,8 @@ public class IndexModel : PageModel
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error nel caricamento della dashboard");
-            ErrorMessage = "Error nel caricamento dei dati.";
+            _logger.LogError(ex, "Errore nel caricamento della dashboard");
+            ErrorMessage = "Errore nel caricamento dei dati.";
         }
     }
 

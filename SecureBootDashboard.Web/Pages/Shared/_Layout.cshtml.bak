@@ -1,4 +1,4 @@
-@using Microsoft.Extensions.Options
+﻿@using Microsoft.Extensions.Options
 @inject IOptions<SecureBootDashboard.Web.Services.ApiSettings> ApiSettings
 <!DOCTYPE html>
 <html lang="it">
@@ -85,7 +85,7 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link text-light" asp-area="" asp-page="/ClientVersions">
-                                <i class="fas fa-download"></i> Client Versions
+                                <i class="fas fa-download"></i> Versioni Client
                             </a>
                         </li>
                         <li class="nav-item">

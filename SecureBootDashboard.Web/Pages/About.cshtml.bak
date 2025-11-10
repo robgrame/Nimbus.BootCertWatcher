@@ -23,7 +23,7 @@
                 </div>
                 <div class="card-body">
                     <p class="lead">
-                        <strong>Secure Boot Certificate Watcher</strong> ï¿½ una soluzione completa per il monitoraggio 
+                        <strong>Secure Boot Certificate Watcher</strong> è una soluzione completa per il monitoraggio 
                         e la gestione dei certificati Secure Boot su dispositivi Windows enterprise.
                     </p>
                     <p>
@@ -97,7 +97,7 @@
             <!-- Features Card -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-success text-white">
-                    <h4 class="mb-0"><i class="fas fa-star"></i> Funzionalitï¿½ Principali</h4>
+                    <h4 class="mb-0"><i class="fas fa-star"></i> Funzionalità Principali</h4>
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -105,7 +105,7 @@
                             <h5><i class="fas fa-chart-pie text-primary"></i> Dashboard Analytics</h5>
                             <ul>
                                 <li>Grafici compliance status (pie/doughnut)</li>
-                                <li>Trend temporale (ultimi 7 days)</li>
+                                <li>Trend temporale (ultimi 7 giorni)</li>
                                 <li>Deployment state distribution</li>
                                 <li>Card statistiche cliccabili</li>
                             </ul>
@@ -304,7 +304,7 @@
             <!-- Back to Dashboard -->
             <div class="text-center mb-5">
                 <a asp-page="/Index" class="btn btn-primary btn-lg">
-                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    <i class="fas fa-arrow-left"></i> Torna alla Dashboard
                 </a>
             </div>
 
