@@ -35,6 +35,7 @@ $ErrorActionPreference = "Stop"
 $installPath = "C:\Program Files\SecureBootWatcher"
 $taskName = "SecureBootWatcher"
 $logPath = Join-Path $env:ProgramData "SecureBootWatcher\install.log"
+$secureBootWatcherPackage = ".\client-package"
 $certificateFileName = "SecureBootWatcher.pfx"  # Expected certificate file name in package
 
 # Get script directory (where the package content is extracted by Intune)
@@ -134,9 +135,9 @@ try {
     
     # Look for the client package ZIP file
     $packageZipName = "SecureBootWatcher-Client.zip"
-    $packageZipPath = Join-Path $scriptDir $packageZipName
+    $packageZipPath = Join-Path $scriptDir (Join-Path $secureBootWatcherPackage $packageZipName)
     
-    if (-not (Test-Path $packageZipPath)) {
+    if (-not (Test-Path $secureBootWatcherPackage)) {
         Write-InstallLog "ERROR: Client package not found: $packageZipPath"
         Write-InstallLog "Expected file: $packageZipName"
         Write-InstallLog "Files in package directory:"

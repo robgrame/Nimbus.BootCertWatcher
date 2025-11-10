@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SecureBootWatcher.Client.Configuration;
+using SecureBootWatcher.Client.Logging;
 using SecureBootWatcher.Client.Services;
 using SecureBootWatcher.Client.Sinks;
 using SecureBootWatcher.Client.Storage;
@@ -22,20 +23,112 @@ namespace SecureBootWatcher.Client
 	{
 		private static async Task<int> Main(string[] args)
 		{
-			// Configure Serilog before anything else
-			var logPath = Path.Combine(AppContext.BaseDirectory, "logs", "client-.log");
-			Log.Logger = new LoggerConfiguration()
-				.MinimumLevel.Information()
-				.MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-				.MinimumLevel.Override("System", LogEventLevel.Warning)
+			// Build configuration first to read logging settings
+			var configuration = new ConfigurationBuilder()
+				.SetBasePath(AppContext.BaseDirectory)
+				.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+				.AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: true)
+				.AddEnvironmentVariables(prefix: "SECUREBOOT_")
+				.AddCommandLine(args)
+				.Build();
+
+			// Configure Serilog from configuration
+			var logPath = configuration.GetValue<string>("Logging:File:Path") ?? Path.Combine(AppContext.BaseDirectory, "logs", "client-.log");
+			var rollingIntervalString = configuration.GetValue<string>("Logging:File:RollingInterval") ?? "Day";
+			var retainedFileCountLimit = configuration.GetValue<int?>("Logging:File:RetainedFileCountLimit") ?? 30;
+			var fileSizeLimitBytes = configuration.GetValue<long?>("Logging:File:FileSizeLimitBytes");
+			var rollOnFileSizeLimit = configuration.GetValue<bool>("Logging:File:RollOnFileSizeLimit");
+			var logFormat = configuration.GetValue<string>("Logging:File:Format") ?? "CMTrace";
+			var consoleEnabled = configuration.GetValue<bool?>("Logging:Console:Enabled") ?? true;
+			
+			// Parse RollingInterval enum (.NET Framework 4.8 compatible)
+			RollingInterval rollingInterval;
+			if (!Enum.TryParse(rollingIntervalString, true, out rollingInterval))
+			{
+				rollingInterval = RollingInterval.Day;
+			}
+			
+			// Resolve log path relative to base directory if not absolute
+			if (!Path.IsPathRooted(logPath))
+			{
+				logPath = Path.Combine(AppContext.BaseDirectory, logPath);
+			}
+			
+			// Choose output template based on format setting
+			string fileOutputTemplate;
+			Serilog.Formatting.ITextFormatter textFormatter = null;
+		
+			if (logFormat.Equals("CMTrace", StringComparison.OrdinalIgnoreCase))
+			{
+				// Use custom CMTrace formatter for proper compatibility
+				textFormatter = new CMTraceFormatter();
+				fileOutputTemplate = null; // Not used with custom formatter
+			}
+			else
+			{
+				// Standard text format
+				fileOutputTemplate = "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}";
+			}
+		
+			var loggerConfig = new LoggerConfiguration()
+				.ReadFrom.Configuration(configuration)
 				.Enrich.FromLogContext()
-				.WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
-				.WriteTo.File(
-					path: logPath,
-					rollingInterval: RollingInterval.Day,
-					retainedFileCountLimit: 30,
-					outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
-				.CreateLogger();
+				.Enrich.WithThreadId();
+		
+			// Add console sink if enabled
+			if (consoleEnabled)
+			{
+				loggerConfig.WriteTo.Console(
+					outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}");
+			}
+		
+			// Add file sink with configuration
+			if (textFormatter != null)
+			{
+				// Use custom formatter (CMTrace)
+				if (fileSizeLimitBytes.HasValue && fileSizeLimitBytes.Value > 0)
+				{
+					loggerConfig.WriteTo.File(
+						textFormatter,
+						path: logPath,
+						rollingInterval: rollingInterval,
+						retainedFileCountLimit: retainedFileCountLimit,
+						fileSizeLimitBytes: fileSizeLimitBytes.Value,
+						rollOnFileSizeLimit: rollOnFileSizeLimit);
+				}
+				else
+				{
+					loggerConfig.WriteTo.File(
+						textFormatter,
+						path: logPath,
+						rollingInterval: rollingInterval,
+						retainedFileCountLimit: retainedFileCountLimit);
+				}
+			}
+			else
+			{
+				// Use output template (Standard format)
+				if (fileSizeLimitBytes.HasValue && fileSizeLimitBytes.Value > 0)
+				{
+					loggerConfig.WriteTo.File(
+						path: logPath,
+						rollingInterval: rollingInterval,
+						retainedFileCountLimit: retainedFileCountLimit,
+						fileSizeLimitBytes: fileSizeLimitBytes.Value,
+						rollOnFileSizeLimit: rollOnFileSizeLimit,
+						outputTemplate: fileOutputTemplate);
+				}
+				else
+				{
+					loggerConfig.WriteTo.File(
+						path: logPath,
+						rollingInterval: rollingInterval,
+						retainedFileCountLimit: retainedFileCountLimit,
+						outputTemplate: fileOutputTemplate);
+				}
+			}
+			
+			Log.Logger = loggerConfig.CreateLogger();
 
 			using var cancellationSource = new CancellationTokenSource();
 			
@@ -54,6 +147,15 @@ namespace SecureBootWatcher.Client
 				Log.Information("Version: {Version}", version);
 				Log.Information("Base Directory: {BaseDirectory}", AppContext.BaseDirectory);
 				Log.Information("Log File Path: {LogPath}", Path.GetFullPath(logPath));
+				Log.Information("Log Format: {Format}", logFormat);
+				Log.Information("Rolling Interval: {Interval}", rollingInterval);
+				Log.Information("Retained File Count: {Count}", retainedFileCountLimit);
+				if (fileSizeLimitBytes.HasValue)
+				{
+					Log.Information("File Size Limit: {Size} bytes ({SizeMB} MB)", fileSizeLimitBytes.Value, fileSizeLimitBytes.Value / 1024.0 / 1024.0);
+					Log.Information("Roll On File Size Limit: {RollOnSize}", rollOnFileSizeLimit);
+				}
+				Log.Information("Console Enabled: {ConsoleEnabled}", consoleEnabled);
 				Log.Information("Current Directory: {CurrentDirectory}", Environment.CurrentDirectory);
 				Log.Information("Machine Name: {MachineName}", Environment.MachineName);
 				Log.Information("Domain: {Domain}", Environment.UserDomainName);
@@ -68,7 +170,7 @@ namespace SecureBootWatcher.Client
 					cancellationSource.Cancel();
 				};
 
-				var configuration = BuildConfiguration(args);
+				// Configuration already built above
 				
 				// Log configuration file locations
 				var appsettingsPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
@@ -110,15 +212,6 @@ namespace SecureBootWatcher.Client
 			}
 		}
 
-		private static IConfiguration BuildConfiguration(string[] args) =>
-			new ConfigurationBuilder()
-				.SetBasePath(AppContext.BaseDirectory)
-				.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-				.AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: true)
-				.AddEnvironmentVariables(prefix: "SECUREBOOT_")
-				.AddCommandLine(args)
-				.Build();
-
 		private static ServiceProvider BuildServices(IConfiguration configuration)
 		{
 			var services = new ServiceCollection();
@@ -139,9 +232,8 @@ namespace SecureBootWatcher.Client
 			services.AddSingleton<IEventCheckpointStore, FileEventCheckpointStore>();
 			services.AddSingleton<ISecureBootCertificateEnumerator, PowerShellSecureBootCertificateEnumerator>();
 			
-			// Register Client Update Service
+			// Register Client Update Service (needs IHttpClientFactory, so register after AddHttpClient)
 			services.AddSingleton<IClientUpdateService, ClientUpdateService>();
-			services.AddHttpClient<IClientUpdateService, ClientUpdateService>();
 			
 			services.AddSingleton<IReportBuilder, ReportBuilder>();
 			services.AddSingleton<SecureBootWatcherService>();

@@ -30,7 +30,12 @@ class DashboardRealtimeClient {
             
             // Create connection
             this.connection = new signalR.HubConnectionBuilder()
-                .withUrl(this.hubUrl)
+                .withUrl(this.hubUrl, {
+                    // Transport options
+                    skipNegotiation: false,
+                    // Timeout configuration matching server settings
+                    timeout: 120000, // 2 minutes (matches server ClientTimeoutInterval)
+                })
                 .withAutomaticReconnect({
                     nextRetryDelayInMilliseconds: (retryContext) => {
                         // Exponential backoff: 0s, 2s, 10s, 30s, 60s...
@@ -43,6 +48,10 @@ class DashboardRealtimeClient {
                     }
                 })
                 .configureLogging(signalR.LogLevel.Information)
+                // Server timeout configuration (how long to wait for server response)
+                .withServerTimeout(120000) // 2 minutes (matches server ClientTimeoutInterval)
+                // Keep-alive interval (client pings server if no activity)
+                .withKeepAliveInterval(10000) // 10 seconds (matches server KeepAliveInterval)
                 .build();
 
             // Register event handlers

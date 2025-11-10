@@ -87,8 +87,16 @@ try
     builder.Services.AddSignalR(options =>
     {
         options.EnableDetailedErrors = builder.Environment.IsDevelopment();
-        options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-        options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+        // Increase timeouts to prevent premature disconnections
+        // KeepAlive: How often server sends ping to client (default: 15s)
+        options.KeepAliveInterval = TimeSpan.FromSeconds(10);
+        // ClientTimeout: How long server waits before considering client disconnected (default: 30s)
+        // Should be at least 2x KeepAliveInterval
+        options.ClientTimeoutInterval = TimeSpan.FromMinutes(2);
+        // HandshakeTimeout: Timeout for initial connection handshake (default: 15s)
+        options.HandshakeTimeout = TimeSpan.FromSeconds(30);
+        // MaximumReceiveMessageSize: Maximum message size (null = unlimited)
+        options.MaximumReceiveMessageSize = null;
     });
     Log.Information("SignalR configured successfully");
 

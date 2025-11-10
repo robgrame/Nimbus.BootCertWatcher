@@ -9,6 +9,8 @@ namespace SecureBootDashboard.Api.Hubs;
 public class DashboardHub : Hub
 {
     private readonly ILogger<DashboardHub> _logger;
+    private static readonly object _lockObj = new object();
+    private static int _totalConnections = 0;
 
     public DashboardHub(ILogger<DashboardHub> logger)
     {
@@ -20,7 +22,21 @@ public class DashboardHub : Hub
     /// </summary>
     public override async Task OnConnectedAsync()
     {
-        _logger.LogInformation("Client connected: {ConnectionId}", Context.ConnectionId);
+        lock (_lockObj)
+        {
+            _totalConnections++;
+        }
+        
+        var userAgent = Context.GetHttpContext()?.Request.Headers["User-Agent"].ToString() ?? "Unknown";
+        var remoteIp = Context.GetHttpContext()?.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+        
+        _logger.LogInformation(
+            "Client connected: {ConnectionId} | Total: {TotalConnections} | IP: {RemoteIp} | UserAgent: {UserAgent}",
+            Context.ConnectionId,
+            _totalConnections,
+            remoteIp,
+            userAgent);
+        
         await base.OnConnectedAsync();
     }
 
@@ -29,13 +45,30 @@ public class DashboardHub : Hub
     /// </summary>
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
+        lock (_lockObj)
+        {
+            _totalConnections--;
+        }
+        
+        var disconnectReason = exception?.Message ?? "Normal closure";
+        var duration = DateTimeOffset.UtcNow; // Would need to track connection time for actual duration
+        
         if (exception != null)
         {
-            _logger.LogWarning(exception, "Client disconnected with error: {ConnectionId}", Context.ConnectionId);
+            _logger.LogWarning(
+                "Client disconnected with error: {ConnectionId} | Total: {TotalConnections} | Reason: {Reason} | Exception: {ExceptionType}",
+                Context.ConnectionId,
+                _totalConnections,
+                disconnectReason,
+                exception.GetType().Name);
         }
         else
         {
-            _logger.LogInformation("Client disconnected: {ConnectionId}", Context.ConnectionId);
+            _logger.LogInformation(
+                "Client disconnected: {ConnectionId} | Total: {TotalConnections} | Reason: {Reason}",
+                Context.ConnectionId,
+                _totalConnections,
+                disconnectReason);
         }
 
         await base.OnDisconnectedAsync(exception);
