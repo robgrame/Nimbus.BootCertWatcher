@@ -78,7 +78,8 @@ namespace SecureBootDashboard.Api.Storage
                 RegistryStateJson = Serialize(report.Registry),
                 CertificatesJson = report.Certificates != null ? Serialize(report.Certificates) : null,
                 AlertsJson = Serialize(report.Alerts ?? Array.Empty<string>()),
-                DeploymentState = report.Registry?.UefiCa2023Status.ToString(), // Changed from DeploymentState
+                // Use InferredDeploymentState for smarter state detection based on AvailableUpdates
+                DeploymentState = report.Registry?.InferredDeploymentState.ToString(),
                 ClientVersion = report.ClientVersion,
                 CorrelationId = report.CorrelationId,
                 CreatedAtUtc = report.CreatedAtUtc == default ? utcNow : report.CreatedAtUtc

@@ -153,7 +153,8 @@ namespace SecureBootDashboard.Api.Storage
                     JsonSerializer.Serialize(report.Registry, SerializerOptions),
                     report.Certificates != null ? JsonSerializer.Serialize(report.Certificates, SerializerOptions) : null,
                     JsonSerializer.Serialize(report.Alerts ?? Array.Empty<string>(), SerializerOptions),
-                    report.Registry?.UefiCa2023Status.ToString(), // Changed from DeploymentState
+                    // Use InferredDeploymentState for smarter state detection based on AvailableUpdates
+                    report.Registry?.InferredDeploymentState.ToString(),
                     report.ClientVersion,
                     report.CorrelationId,
                     createdAt,
