@@ -113,7 +113,7 @@ The `Install-Client-Intune.ps1` script supports the following parameters:
 | `ScheduleType` | string | "Daily" | Task frequency: Once, Daily, Hourly, Custom |
 | `TaskTime` | string | "09:00AM" | Start time for scheduled task |
 | `RepeatEveryHours` | int | 4 | Repeat interval for Custom schedule (1-24) |
-| `RandomDelayMinutes` | int | 60 | Random delay range (0-1440 minutes) |
+| `RandomDelayMinutes` | int | 60 | **Maximum** random delay in minutes (0-1440). Task Scheduler will apply a random delay between 0 and this value. **Note**: Only supported for `Once` and `Daily` schedules. Not supported for `Hourly` and `Custom` schedules due to Task Scheduler limitations. |
 
 ### Basic Install Commands
 
@@ -163,6 +163,10 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File "Install-Client-Intune.p
 ```powershell
 powershell.exe -ExecutionPolicy Bypass -NoProfile -File "Install-Client-Intune.ps1" -ScheduleType "Once" -TaskTime "10:00AM" -RandomDelayMinutes 0
 ```
+
+**Note**: For `Hourly` and `Custom` schedules, the task will repeat for a maximum of 31 days, which is the Windows Task Scheduler limit. The task will automatically renew after this period.
+
+**Important Limitation**: The `RandomDelayMinutes` parameter only works with `Once` and `Daily` schedules. For `Hourly` and `Custom` schedules, random delay is not supported by Windows Task Scheduler when using repetition intervals. If you need to distribute the load across devices for hourly or custom schedules, consider using different `TaskTime` values for different device groups instead of relying on random delay.
 
 ### Complete Example (Production)
 

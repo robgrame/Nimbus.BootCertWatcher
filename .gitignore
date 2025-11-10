@@ -30,3 +30,10 @@ logs/
 # OS artifacts
 Thumbs.db
 .DS_Store
+
+# Security - Certificate files (never commit these!)
+*.pfx
+*.p12
+*.cer
+*.crt
+*.key

@@ -207,12 +207,16 @@ try {
         $taskDateTime = [DateTime]::Parse("09:00AM")
     }
 
-    # Create random delay
-    $randomDelayTimeSpan = New-TimeSpan -Minutes (Get-Random -Minimum 0 -Maximum $RandomDelayMinutes)
+    # Create random delay TimeSpan (this is the MAXIMUM delay, not a specific random value)
+    # Task Scheduler will apply a random delay between 0 and this value automatically
+    $randomDelayTimeSpan = New-TimeSpan -Minutes $RandomDelayMinutes
     
     # Create task trigger based on schedule type
     $trigger = $null
     $scheduleDescription = ""
+    
+    # Task Scheduler maximum duration is 31 days (P31D)
+    $maxRepetitionDuration = New-TimeSpan -Days 31
     
     switch ($ScheduleType) {
         "Once" {
@@ -225,15 +229,17 @@ try {
         }
         "Hourly" {
             # Create a trigger that repeats every hour
-            $trigger = New-ScheduledTaskTrigger -Once -At $taskDateTime -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration ([TimeSpan]::MaxValue)
-            $trigger.RandomDelay = $randomDelayTimeSpan
-            $scheduleDescription = "Every hour starting at $TaskTime (±$RandomDelayMinutes min)"
+            # NOTE: RandomDelay is not supported with RepetitionInterval, so we omit it
+            $trigger = New-ScheduledTaskTrigger -Once -At $taskDateTime -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration $maxRepetitionDuration
+            $scheduleDescription = "Every hour starting at $TaskTime"
+            Write-InstallLog "  Note: RandomDelay not supported for Hourly schedule"
         }
         "Custom" {
             # Create a trigger that repeats every N hours
-            $trigger = New-ScheduledTaskTrigger -Once -At $taskDateTime -RepetitionInterval (New-TimeSpan -Hours $RepeatEveryHours) -RepetitionDuration ([TimeSpan]::MaxValue)
-            $trigger.RandomDelay = $randomDelayTimeSpan
-            $scheduleDescription = "Every $RepeatEveryHours hours starting at $TaskTime (±$RandomDelayMinutes min)"
+            # NOTE: RandomDelay is not supported with RepetitionInterval, so we omit it
+            $trigger = New-ScheduledTaskTrigger -Once -At $taskDateTime -RepetitionInterval (New-TimeSpan -Hours $RepeatEveryHours) -RepetitionDuration $maxRepetitionDuration
+            $scheduleDescription = "Every $RepeatEveryHours hours starting at $TaskTime"
+            Write-InstallLog "  Note: RandomDelay not supported for Custom schedule with repetition"
         }
     }
 
