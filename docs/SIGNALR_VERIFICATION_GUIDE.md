@@ -77,7 +77,7 @@ Time: (pending)
 
 ### Metodo 4: ?? Test Real-time (5 minuti)
 
-Questo è il test definitivo per verificare che SignalR funzioni end-to-end.
+Questo ï¿½ il test definitivo per verificare che SignalR funzioni end-to-end.
 
 **Passo 1**: Apri la dashboard nel browser
 
@@ -140,7 +140,9 @@ Test-Path "SecureBootDashboard.Web/wwwroot/css/signalr.css"
 **Cerca queste righe**:
 ```html
 <!-- SignalR CDN -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js" 
+        integrity="sha512-P2X0sbc4zKJMoBK42bCLBLbltkGehjd+GQVsG7EEmVike6caqXWve+EWV+Tgmzx4qQ5YXQNpOJQKsXQy9Vthvg=="
+        crossorigin="anonymous"></script>
 
 <!-- SignalR CSS -->
 <link rel="stylesheet" href="~/css/signalr.css" asp-append-version="true" />
@@ -152,7 +154,7 @@ Test-Path "SecureBootDashboard.Web/wwwroot/css/signalr.css"
 <div id="signalr-status-indicator" class="signalr-status-indicator"></div>
 ```
 
-**Se mancano** ? SignalR non è attivo
+**Se mancano** ? SignalR non ï¿½ attivo
 
 #### D. Hub nel Backend
 
@@ -224,7 +226,7 @@ https://localhost:5001/dashboardHub
 
 **? SignalR ATTIVO**:
 - Status: `405 Method Not Allowed` oppure
-- Risposta JSON con errore (normale, perché il browser non può connettersi direttamente)
+- Risposta JSON con errore (normale, perchï¿½ il browser non puï¿½ connettersi direttamente)
 
 **? SignalR NON ATTIVO**:
 - Status: `404 Not Found`
@@ -247,7 +249,7 @@ Usa questa checklist per una verifica completa:
 - [ ] **Ping test** restituisce "pong"
 - [ ] **Toast notification** appare quando arriva un report
 
-**Se tutti i punti sono ? ? SignalR è PIENAMENTE FUNZIONANTE!**
+**Se tutti i punti sono ? ? SignalR ï¿½ PIENAMENTE FUNZIONANTE!**
 
 ---
 
@@ -344,4 +346,4 @@ window.dashboardClient?.isConnected
 
 ---
 
-**Fatto! Ora sai esattamente come verificare se SignalR è utilizzato! ??**
+**Fatto! Ora sai esattamente come verificare se SignalR ï¿½ utilizzato! ??**
