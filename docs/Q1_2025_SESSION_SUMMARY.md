@@ -137,7 +137,9 @@ The SignalR backend is complete and functional. To enable real-time updates in t
 ```html
 <head>
     <!-- Add SignalR CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js" 
+            integrity="sha512-wz4iWDLESxkM1hYN5VKmoYf51wf5pp2qhfWvCUF9r/Ghzxy6PM5oJMv28194exXlzLH7f0Bfb6nQl/Vp6M9Uq0g=="
+            crossorigin="anonymous"></script>
     
     <!-- Add SignalR CSS -->
     <link rel="stylesheet" href="~/css/signalr.css" asp-append-version="true" />

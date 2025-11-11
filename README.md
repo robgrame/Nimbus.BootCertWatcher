@@ -450,7 +450,7 @@ dotnet publish SecureBootDashboard.Web -c Release -o ./publish/web
 - **ASP.NET Core 8** - Razor Pages
 - **Bootstrap 5** - Responsive UI framework
 - **Chart.js 4.4** - Interactive analytics charts
-- **SignalR Client 7.0** - Real-time WebSocket client *(NEW)*
+- **SignalR Client 8.0** - Real-time WebSocket client *(NEW)*
 - **Font Awesome 6.5** - Icon library
 - **jQuery 3.x** - DOM manipulation
 
