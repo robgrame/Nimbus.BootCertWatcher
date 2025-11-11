@@ -60,4 +60,8 @@
     <Copyright>Copyright © 2025</Copyright>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="SecureBootWatcher.Client.Tests" />
+  </ItemGroup>
+
 </Project>

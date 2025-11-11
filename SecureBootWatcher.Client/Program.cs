@@ -273,6 +273,7 @@ namespace SecureBootWatcher.Client
 				Log.Information("Fleet ID: {FleetId}", options.FleetId);
 			}
 			
+			Log.Information("Run Mode: {RunMode}", options.RunMode);
 			Log.Information("Registry Poll Interval: {Interval}", options.RegistryPollInterval);
 			Log.Information("Event Query Interval: {Interval}", options.EventQueryInterval);
 			Log.Information("Event Lookback Period: {Period}", options.EventLookbackPeriod);

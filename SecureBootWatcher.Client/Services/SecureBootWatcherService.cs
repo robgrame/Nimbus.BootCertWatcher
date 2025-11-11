@@ -31,9 +31,19 @@ namespace SecureBootWatcher.Client.Services
 
         public async Task RunAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Secure Boot watcher started.");
+            var options = _options.CurrentValue;
+            var runOnce = options.RunMode.Equals("Once", StringComparison.OrdinalIgnoreCase);
 
-            while (!cancellationToken.IsCancellationRequested)
+            if (runOnce)
+            {
+                _logger.LogInformation("Secure Boot watcher started in single-shot mode (will exit after one cycle).");
+            }
+            else
+            {
+                _logger.LogInformation("Secure Boot watcher started in continuous mode.");
+            }
+
+            do
             {
                 try
                 {
@@ -56,6 +66,12 @@ namespace SecureBootWatcher.Client.Services
                     _logger.LogError(ex, "Unexpected error while executing Secure Boot watcher cycle.");
                 }
 
+                // Exit loop if running in single-shot mode
+                if (runOnce)
+                {
+                    break;
+                }
+
                 var delay = CalculateDelay();
                 _logger.LogDebug("Secure Boot watcher sleeping for {Delay}.", delay);
 
@@ -68,6 +84,7 @@ namespace SecureBootWatcher.Client.Services
                     break;
                 }
             }
+            while (!cancellationToken.IsCancellationRequested);
 
             _logger.LogInformation("Secure Boot watcher stopped.");
         }

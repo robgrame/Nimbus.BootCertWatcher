@@ -6,6 +6,13 @@ namespace SecureBootWatcher.Shared.Configuration
     {
         public string? FleetId { get; set; }
 
+        /// <summary>
+        /// Run mode: "Once" or "Continuous".
+        /// - "Once": Execute a single report generation cycle and exit (for scheduled tasks).
+        /// - "Continuous": Run indefinitely with periodic polling (default, for services).
+        /// </summary>
+        public string RunMode { get; set; } = "Once";
+
         public TimeSpan RegistryPollInterval { get; set; } = TimeSpan.FromMinutes(30);
 
         public TimeSpan EventQueryInterval { get; set; } = TimeSpan.FromMinutes(30);
