@@ -147,6 +147,9 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
 
 ### 1. **SecureBootWatcher.Client** (.NET Framework 4.8)
 - Runs on managed Windows devices (desktops, servers, VMs)
+- Supports two execution modes:
+  - **Once**: Single-shot execution for scheduled tasks (default)
+  - **Continuous**: Long-running service mode with periodic polling
 - Captures Secure Boot servicing registry keys and relevant Windows event logs
 - Enumerates UEFI firmware certificates (db, dbx, KEK, PK databases)
 - Supports three reporting sinks:
@@ -398,6 +401,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 - **[Host Aborted Issues](docs/HOSTABORTED_TROUBLESHOOTING.md)** - Fix cancellation errors
 
 ### Client Deployment
+- **[Client Run Mode Configuration](docs/CLIENT_RUNMODE_CONFIGURATION.md)** - Single-shot vs continuous execution modes
 - **[Client Deployment Scripts](docs/CLIENT_DEPLOYMENT_SCRIPTS.md)** - PowerShell automation
 - **[Startup Logging](docs/STARTUP_LOGGING.md)** - Client initialization diagnostics
 - **[Precompiled Package Deployment](docs/PRECOMPILED_PACKAGE_DEPLOYMENT.md)** - Package deployment
