@@ -62,61 +62,6 @@ namespace SecureBootWatcher.Client
 				minimumLevel = LogEventLevel.Information;
 			}
 			
-			// Write to console immediately to debug (DETAILED DIAGNOSTICS)
-			Console.WriteLine("========================================");
-			Console.WriteLine("LOGGING CONFIGURATION DIAGNOSTICS");
-			Console.WriteLine("========================================");
-			Console.WriteLine($"Base Directory: {AppContext.BaseDirectory}");
-			Console.WriteLine($"Configuration read from 'Logging:LogLevel:Default': '{minimumLevelString}'");
-			Console.WriteLine($"Parsed as LogEventLevel: {minimumLevel}");
-			Console.WriteLine();
-			
-			// Check if appsettings.json exists
-			var diagnosticAppsettingsPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
-			Console.WriteLine($"Checking appsettings.json at: {diagnosticAppsettingsPath}");
-			Console.WriteLine($"File exists: {File.Exists(diagnosticAppsettingsPath)}");
-			
-			if (File.Exists(diagnosticAppsettingsPath))
-			{
-				Console.WriteLine();
-				Console.WriteLine("First 1000 characters of appsettings.json:");
-				Console.WriteLine("-------------------------------------------");
-				try
-				{
-					var content = File.ReadAllText(diagnosticAppsettingsPath);
-					Console.WriteLine(content.Substring(0, Math.Min(1000, content.Length)));
-					Console.WriteLine("-------------------------------------------");
-					
-					// Check if it contains "Trace"
-					if (content.Contains("\"Default\": \"Trace\"", StringComparison.OrdinalIgnoreCase))
-					{
-						Console.ForegroundColor = ConsoleColor.Green;
-						Console.WriteLine("✓ appsettings.json CONTAINS 'Default': 'Trace'");
-						Console.ResetColor();
-					}
-					else if (content.Contains("\"Default\": \"Information\"", StringComparison.OrdinalIgnoreCase))
-					{
-						Console.ForegroundColor = ConsoleColor.Red;
-						Console.WriteLine("✗ appsettings.json contains 'Default': 'Information'");
-						Console.ResetColor();
-					}
-					else
-					{
-						Console.ForegroundColor = ConsoleColor.Yellow;
-						Console.WriteLine("? Could not find 'Default' log level setting in file");
-						Console.ResetColor();
-					}
-				}
-				catch (Exception ex)
-				{
-					Console.ForegroundColor = ConsoleColor.Red;
-					Console.WriteLine($"Error reading file: {ex.Message}");
-					Console.ResetColor();
-				}
-			}
-			Console.WriteLine("========================================");
-			Console.WriteLine();
-			
 			// Resolve log path relative to base directory if not absolute
 			if (!Path.IsPathRooted(logPath))
 			{

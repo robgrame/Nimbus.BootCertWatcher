@@ -34,6 +34,30 @@ namespace SecureBootWatcher.Client.Services
             var options = _options.CurrentValue;
             var runOnce = options.RunMode.Equals("Once", StringComparison.OrdinalIgnoreCase);
 
+            IClientUpdateService? updateService = null;
+            UpdateCheckResult? updateCheck = null;
+            bool autoInstallEnabled = false;
+
+            // Try to resolve update service from report builder if available
+            if (_reportBuilder is ReportBuilder rb)
+            {
+                var field = typeof(ReportBuilder).GetField("_updateService", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                updateService = field?.GetValue(rb) as IClientUpdateService;
+            }
+
+            if (updateService != null && options.ClientUpdate.CheckForUpdates)
+            {
+                try
+                {
+                    updateCheck = await updateService.CheckForUpdateAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to check for client updates at startup");
+                }
+            }
+            autoInstallEnabled = options.ClientUpdate.AutoInstallEnabled;
+
             if (runOnce)
             {
                 _logger.LogInformation("Secure Boot watcher started in single-shot mode (will exit after one cycle).");
@@ -85,6 +109,36 @@ namespace SecureBootWatcher.Client.Services
                 }
             }
             while (!cancellationToken.IsCancellationRequested);
+
+            // After main process completes, schedule upgrade if needed
+            if (updateService != null && updateCheck?.UpdateAvailable == true && autoInstallEnabled && !string.IsNullOrWhiteSpace(updateCheck.DownloadUrl))
+            {
+                try
+                {
+                    _logger.LogInformation("Scheduling client upgrade after main process completes...");
+                    var downloadResult = await updateService.DownloadUpdateAsync(updateCheck.DownloadUrl!, cancellationToken);
+                    if (downloadResult.Success && !string.IsNullOrWhiteSpace(downloadResult.LocalPath))
+                    {
+                        var scheduled = await updateService.ScheduleUpdateAsync(downloadResult.LocalPath!, cancellationToken);
+                        if (scheduled)
+                        {
+                            _logger.LogInformation("Client upgrade scheduled successfully.");
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Failed to schedule client upgrade.");
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Failed to download update package for upgrade: {Error}", downloadResult.ErrorMessage);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error scheduling client upgrade after main process.");
+                }
+            }
 
             _logger.LogInformation("Secure Boot watcher stopped.");
         }

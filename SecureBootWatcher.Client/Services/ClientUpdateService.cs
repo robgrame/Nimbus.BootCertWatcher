@@ -94,9 +94,22 @@ namespace SecureBootWatcher.Client.Services
 
                 return result;
             }
+            catch (HttpRequestException ex)
+            {
+                // Network errors (DNS resolution, connection refused, etc.) are expected when update service is unreachable
+                _logger.LogWarning("Unable to contact update service: {Message}. Skipping update check.", ex.Message);
+                return new UpdateCheckResult { UpdateAvailable = false };
+            }
+            catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                // Timeout occurred (not user-initiated cancellation)
+                _logger.LogWarning("Update check timed out: {Message}. Skipping update check.", ex.Message);
+                return new UpdateCheckResult { UpdateAvailable = false };
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error checking for updates");
+                // Unexpected errors should still be logged as errors
+                _logger.LogError(ex, "Unexpected error checking for updates");
                 return new UpdateCheckResult { UpdateAvailable = false };
             }
         }
