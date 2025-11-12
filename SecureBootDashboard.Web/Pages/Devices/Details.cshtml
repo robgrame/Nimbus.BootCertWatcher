@@ -297,71 +297,300 @@
             <!-- Certificates Card -->
             <div class="card mb-4">
                 <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="fas fa-certificate"></i> Secure Boot Certificates</h5>
+                    <h5 class="mb-0"><i class="fas fa-certificate"></i> Certificati Secure Boot</h5>
                 </div>
                 <div class="card-body">
+                    <!-- Summary Statistics -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3 class="text-primary mb-0">@certificates.TotalCertificateCount</h3>
+                                    <small class="text-muted">Totale Certificati</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3 class="text-danger mb-0">@certificates.ExpiredCertificateCount</h3>
+                                    <small class="text-muted">Scaduti</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3 class="text-warning mb-0">@certificates.ExpiringCertificateCount</h3>
+                                    <small class="text-muted">In Scadenza (90gg)</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3 class="@(certificates.SecureBootEnabled == true ? "text-success" : "text-danger") mb-0">
+                                        <i class="fas fa-shield-alt"></i>
+                                    </h3>
+                                    <small class="text-muted">
+                                        @(certificates.SecureBootEnabled == true ? "Abilitato" : 
+                                          certificates.SecureBootEnabled == false ? "Disabilitato" : "Sconosciuto")
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Helper method to render certificate table *@
+                    @{
+                        void RenderCertificateTable(IList<SecureBootWatcher.Shared.Models.SecureBootCertificate> certs, string accordionId)
+                        {
+                            if (certs?.Any() == true)
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width: 30px;">#</th>
+                                                <th>Nome Certificato (Subject)</th>
+                                                <th>Emesso Da (Issuer)</th>
+                                                <th>Inizio Validità</th>
+                                                <th>Fine Validità</th>
+                                                <th>Giorni Rimanenti</th>
+                                                <th>Stato</th>
+                                                <th>Dettagli</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @for (int i = 0; i < certs.Count; i++)
+                                            {
+                                                var cert = certs[i];
+                                                var isExpired = cert.NotAfter.HasValue && cert.NotAfter.Value < DateTimeOffset.UtcNow;
+                                                var isExpiringSoon = !isExpired && cert.NotAfter.HasValue && cert.NotAfter.Value < DateTimeOffset.UtcNow.AddDays(90);
+                                                var daysRemaining = cert.DaysUntilExpiration ?? 0;
+                                                
+                                                <tr class="@(isExpired ? "table-danger" : isExpiringSoon ? "table-warning" : "")">
+                                                    <td>@(i + 1)</td>
+                                                    <td>
+                                                        <div>
+                                                            <strong>@(cert.Subject ?? "N/A")</strong>
+                                                            @if (cert.IsMicrosoftCertificate)
+                                                            {
+                                                                <span class="badge bg-primary ms-1">
+                                                                    <i class="fab fa-microsoft"></i> Microsoft
+                                                                </span>
+                                                            }
+                                                        </div>
+                                                        @if (!string.IsNullOrEmpty(cert.SerialNumber))
+                                                        {
+                                                            <small class="text-muted">S/N: @cert.SerialNumber</small>
+                                                        }
+                                                    </td>
+                                                    <td><small>@(cert.Issuer ?? "N/A")</small></td>
+                                                    <td>
+                                                        @if (cert.NotBefore.HasValue)
+                                                        {
+                                                            <text>@cert.NotBefore.Value.ToString("dd/MM/yyyy")</text>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">N/A</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (cert.NotAfter.HasValue)
+                                                        {
+                                                            <text>@cert.NotAfter.Value.ToString("dd/MM/yyyy")</text>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">N/A</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (daysRemaining > 0)
+                                                        {
+                                                            <span class="text-success">+@daysRemaining giorni</span>
+                                                        }
+                                                        else if (daysRemaining < 0)
+                                                        {
+                                                            <span class="text-danger">@daysRemaining giorni</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">-</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (isExpired)
+                                                        {
+                                                            <span class="badge bg-danger">
+                                                                <i class="fas fa-times-circle"></i> Scaduto
+                                                            </span>
+                                                        }
+                                                        else if (isExpiringSoon)
+                                                        {
+                                                            <span class="badge bg-warning text-dark">
+                                                                <i class="fas fa-exclamation-triangle"></i> In Scadenza
+                                                            </span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-success">
+                                                                <i class="fas fa-check-circle"></i> Valido
+                                                            </span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        <button class="btn btn-sm btn-outline-info" type="button" 
+                                                                data-bs-toggle="collapse" 
+                                                                data-bs-target="#cert-@accordionId-@i" 
+                                                                aria-expanded="false">
+                                                            <i class="fas fa-info-circle"></i> Info
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                <tr class="collapse" id="cert-@accordionId-@i">
+                                                    <td colspan="8" class="bg-light">
+                                                        <div class="p-3">
+                                                            <h6><i class="fas fa-file-certificate"></i> Dettagli Certificato</h6>
+                                                            <div class="row">
+                                                                <div class="col-md-6">
+                                                                    <dl class="row mb-0">
+                                                                        <dt class="col-sm-5">Thumbprint:</dt>
+                                                                        <dd class="col-sm-7"><code class="small">@(cert.Thumbprint ?? "N/A")</code></dd>
+                                                                        
+                                                                        <dt class="col-sm-5">Versione:</dt>
+                                                                        <dd class="col-sm-7">@(cert.Version?.ToString() ?? "N/A")</dd>
+                                                                        
+                                                                        <dt class="col-sm-5">Database UEFI:</dt>
+                                                                        <dd class="col-sm-7"><span class="badge bg-secondary">@cert.Database</span></dd>
+                                                                    </dl>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <dl class="row mb-0">
+                                                                        <dt class="col-sm-6">Algoritmo Firma:</dt>
+                                                                        <dd class="col-sm-6">@(cert.SignatureAlgorithm ?? "N/A")</dd>
+                                                                        
+                                                                        <dt class="col-sm-6">Algoritmo Chiave:</dt>
+                                                                        <dd class="col-sm-6">@(cert.PublicKeyAlgorithm ?? "N/A")</dd>
+                                                                        
+                                                                        <dt class="col-sm-6">Dimensione Chiave:</dt>
+                                                                        <dd class="col-sm-6">@(cert.KeySize?.ToString() ?? "N/A") bit</dd>
+                                                                    </dl>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-info mb-0">
+                                    <i class="fas fa-info-circle"></i> Nessun certificato presente
+                                </div>
+                            }
+                        }
+                    }
+
+                    <!-- Signature Database (db) -->
                     @if (certificates.SignatureDatabase?.Any() == true)
                     {
-                        <h6><i class="fas fa-database"></i> Signature Database (db) - @certificates.SignatureDatabase.Count certificates</h6>
-                        <div class="table-responsive mb-3">
-                            <table class="table table-sm table-hover">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Subject</th>
-                                        <th>Issuer</th>
-                                        <th>Valid From</th>
-                                        <th>Valid To</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var cert in certificates.SignatureDatabase.Take(10))
-                                    {
-                                        var isExpired = cert.NotAfter.HasValue && cert.NotAfter.Value < DateTimeOffset.UtcNow;
-                                        var isExpiringSoon = !isExpired && cert.NotAfter.HasValue && cert.NotAfter.Value < DateTimeOffset.UtcNow.AddDays(90);
-                                        
-                                        <tr class="@(isExpired ? "table-danger" : isExpiringSoon ? "table-warning" : "")">
-                                            <td><small>@(cert.Subject ?? "N/A")</small></td>
-                                            <td><small>@(cert.Issuer ?? "N/A")</small></td>
-                                            <td><small>@(cert.NotBefore.HasValue ? cert.NotBefore.Value.ToString("yyyy-MM-dd") : "N/A")</small></td>
-                                            <td><small>@(cert.NotAfter.HasValue ? cert.NotAfter.Value.ToString("yyyy-MM-dd") : "N/A")</small></td>
-                                            <td>
-                                                @if (isExpired)
-                                                {
-                                                    <span class="badge bg-danger"><i class="fas fa-times-circle"></i> Expired</span>
-                                                }
-                                                else if (isExpiringSoon)
-                                                {
-                                                    <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> Expiring Soon</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="badge bg-success"><i class="fas fa-check-circle"></i> Valid</span>
-                                                }
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-database text-success"></i> 
+                                    Signature Database (db) - @certificates.SignatureDatabase.Count certificati
+                                </h6>
+                                <button class="btn btn-sm btn-outline-secondary" type="button" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#db-collapse" 
+                                        aria-expanded="true">
+                                    <i class="fas fa-chevron-down"></i> Mostra/Nascondi
+                                </button>
+                            </div>
+                            <div class="collapse show" id="db-collapse">
+                                @{ RenderCertificateTable(certificates.SignatureDatabase, "db"); }
+                            </div>
                         </div>
                     }
 
+                    <!-- Forbidden Database (dbx) -->
                     @if (certificates.ForbiddenDatabase?.Any() == true)
                     {
-                        <h6><i class="fas fa-ban"></i> Forbidden Signature Database (dbx) - @certificates.ForbiddenDatabase.Count entries</h6>
-                        <p class="text-muted">Contains @certificates.ForbiddenDatabase.Count forbidden signatures</p>
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-ban text-danger"></i> 
+                                    Forbidden Signature Database (dbx) - @certificates.ForbiddenDatabase.Count certificati
+                                </h6>
+                                <button class="btn btn-sm btn-outline-secondary" type="button" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#dbx-collapse" 
+                                        aria-expanded="false">
+                                    <i class="fas fa-chevron-down"></i> Mostra/Nascondi
+                                </button>
+                            </div>
+                            <div class="collapse" id="dbx-collapse">
+                                @{ RenderCertificateTable(certificates.ForbiddenDatabase, "dbx"); }
+                            </div>
+                        </div>
                     }
 
+                    <!-- Key Exchange Keys (KEK) -->
                     @if (certificates.KeyExchangeKeys?.Any() == true)
                     {
-                        <h6><i class="fas fa-key"></i> Key Exchange Keys (KEK) - @certificates.KeyExchangeKeys.Count certificates</h6>
-                        <p class="text-muted">@certificates.KeyExchangeKeys.Count key exchange key(s) configured</p>
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-key text-warning"></i> 
+                                    Key Exchange Keys (KEK) - @certificates.KeyExchangeKeys.Count certificati
+                                </h6>
+                                <button class="btn btn-sm btn-outline-secondary" type="button" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#kek-collapse" 
+                                        aria-expanded="false">
+                                    <i class="fas fa-chevron-down"></i> Mostra/Nascondi
+                                </button>
+                            </div>
+                            <div class="collapse" id="kek-collapse">
+                                @{ RenderCertificateTable(certificates.KeyExchangeKeys, "kek"); }
+                            </div>
+                        </div>
                     }
 
+                    <!-- Platform Keys (PK) -->
                     @if (certificates.PlatformKeys?.Any() == true)
                     {
-                        <h6><i class="fas fa-lock"></i> Platform Key (PK) - @certificates.PlatformKeys.Count certificate</h6>
-                        <p class="text-muted">Platform key is configured</p>
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-lock text-primary"></i> 
+                                    Platform Key (PK) - @certificates.PlatformKeys.Count certificato
+                                </h6>
+                                <button class="btn btn-sm btn-outline-secondary" type="button" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#pk-collapse" 
+                                        aria-expanded="false">
+                                    <i class="fas fa-chevron-down"></i> Mostra/Nascondi
+                                </button>
+                            </div>
+                            <div class="collapse" id="pk-collapse">
+                                @{ RenderCertificateTable(certificates.PlatformKeys, "pk"); }
+                            </div>
+                        </div>
+                    }
+
+                    @if (certificates.TotalCertificateCount == 0)
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            Nessun certificato Secure Boot trovato su questo dispositivo.
+                        </div>
                     }
                 </div>
             </div>
