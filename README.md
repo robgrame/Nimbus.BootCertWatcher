@@ -2,7 +2,7 @@
 
 > **Monitor and govern the expiration and deployment of Secure Boot certificates across Windows fleets with real-time analytics.**
 
-**Version 1.3** - Now with real-time SignalR updates and Excel/CSV export capabilities!
+**Version 1.5** - Enhanced certificate details visualization with color-coded status and real-time updates!
 
 This solution monitors Secure Boot certificate status on Windows devices by capturing registry snapshots and Windows event logs, then transmitting reports to a centralized dashboard for compliance tracking, real-time monitoring, and alerting.
 
@@ -29,7 +29,26 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
 
 ## ✨ Key Features
 
-### 🔴 **NEW in v1.3** - Real-time Updates (SignalR)
+### 🔴 **NEW in v1.5** - Enhanced Certificate Visualization
+- **Detailed Certificate Tables**: Comprehensive certificate information display
+  - Subject, Issuer, Validity Periods, Thumbprint
+  - Certificate Version, Signature Algorithm, Key Size
+  - Microsoft Certificate Badge Indicator
+- **Certificate Statistics**: Quick overview of certificate health
+  - Total certificate count per database (db, dbx, KEK, PK)
+  - Expired certificates count
+  - Expiring soon certificates (within 90 days)
+- **Collapsible Sections**: Organized display by UEFI database
+  - Expandable/collapsible panels for each database
+  - Easy navigation through large certificate sets
+- **Color-Coded Status**: Visual indicators for certificate health
+  - Red rows: Expired certificates
+  - Yellow rows: Certificates expiring within 90 days
+  - Green/normal: Valid certificates
+- **Days Until Expiration**: Clear visibility of remaining certificate validity
+- **Italian Localization**: Full Italian language support for labels and messages
+
+### 🔴 **v1.3** - Real-time Updates (SignalR)
 - **Live Dashboard**: Instant notifications when new reports arrive
 - **WebSocket Connection**: Real-time device status updates without page refresh
 - **Connection Indicator**: Visual feedback for connection state (green/yellow/red/gray dot)
@@ -187,16 +206,58 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
 ### 4. **SecureBootDashboard.Web** (ASP.NET Core 8 Razor Pages)
 - Modern, responsive dashboard UI for viewing devices, reports, and compliance
 - **Features**:
-  - **NEW**: Real-time SignalR client with auto-reconnection
-  - **NEW**: Export buttons for Excel/CSV downloads (coming soon)
+  - **NEW in v1.5**: Enhanced certificate details with color-coded status tables
+  - **NEW in v1.5**: Collapsible certificate sections by database (db, dbx, KEK, PK)
+  - **NEW in v1.5**: Certificate statistics dashboard (total, expired, expiring)
+  - Real-time SignalR client with auto-reconnection
+  - Export buttons for Excel/CSV downloads
   - Splash screen with smooth animations
   - Interactive Chart.js analytics (compliance, deployment states, trends)
   - Device list page with advanced filtering and search
-  - Device details with certificate chain visualization
+  - Device details with comprehensive certificate visualization
   - Report history with drill-down capabilities
   - About page with architecture and technology stack
   - Authentication support (Entra ID / Windows Domain)
+  - Italian localization support
 - Consumes API endpoints with resilience policies (Polly)
+
+---
+
+## 🆕 What's New in v1.5
+
+### Enhanced Certificate Visualization
+The device details page now features a comprehensive certificate display system:
+
+**Certificate Overview Statistics**:
+```
+📊 Total Certificates: XX
+⚠️ Expired: X
+⏰ Expiring Soon (90 days): X
+```
+
+**Detailed Certificate Tables**:
+- Full certificate information for each UEFI database (db, dbx, KEK, PK)
+- Collapsible sections for better organization
+- Color-coded status indicators:
+  - 🔴 Red: Expired certificates
+  - 🟡 Yellow: Certificates expiring within 90 days
+  - ✅ Normal: Valid certificates
+
+**Certificate Details Displayed**:
+- Subject and Issuer information
+- Validity period (Not Before / Not After)
+- Days remaining until expiration
+- Thumbprint (SHA-1)
+- Certificate version
+- Signature algorithm
+- Public key algorithm and size
+- Microsoft certificate badge 🏢
+
+**Improved User Experience**:
+- Expandable/collapsible panels per database
+- Quick identification of problematic certificates
+- Italian language support for all labels
+- Responsive design for all screen sizes
 
 ---
 
@@ -487,17 +548,21 @@ dotnet publish SecureBootDashboard.Web -c Release -o ./publish/web
 
 ## 🎯 Roadmap
 
-### ✅ v1.3 - Q1 2025 (Current - 37% Complete)
+### ✅ v1.5 - Current Release
+- [x] **Enhanced certificate visualization** - Complete
+  - Detailed certificate tables with all properties
+  - Color-coded status indicators (expired, expiring, valid)
+  - Collapsible sections by database type
+  - Certificate statistics overview
+  - Italian localization
 - [x] **Real-time dashboard updates (SignalR)** - Complete
 - [x] **Export reports to Excel/CSV** - Backend Complete
 - [ ] Export UI in web dashboard (In Progress)
+
+### v1.6 - Next Release
+- [ ] Complete export UI with download buttons
 - [ ] Dark mode theme support
 - [ ] Custom alert thresholds per fleet
-
-### v1.4 - Q2 2025
-- [ ] Complete export UI with download buttons
-- [ ] Dark mode theme implementation
-- [ ] Fleet-specific alert thresholds
 - [ ] Enhanced compliance policies
 
 ### v2.0 - Q3 2025
@@ -664,7 +729,7 @@ For questions, issues, or support:
 
 **Made with ❤️ for the IT Community**
 
-**Version 1.3** - Real-time monitoring with SignalR and Excel/CSV export
+**Version 1.5** - Enhanced certificate visualization with real-time monitoring
 
 [⬆ Back to Top](#secure-boot-certificate-watcher)
 
