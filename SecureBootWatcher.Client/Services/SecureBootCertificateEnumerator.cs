@@ -173,10 +173,61 @@ namespace SecureBootWatcher.Client.Services
         {
             try
             {
-                // Note: This is a placeholder for WMI-based enumeration
-                // Real implementation would use Win32_BIOS or custom WMI providers
-                // For now, we'll use PowerShell Get-SecureBootUEFI cmdlet approach via process
-                _logger.LogDebug("WMI enumeration not yet implemented for {Database}", databaseName);
+                // WMI doesn't directly expose UEFI Secure Boot databases
+                // But we can read UEFI variables through Win32_BIOS or Win32_ComputerSystemProduct
+                // This is a fallback approach with limited functionality
+                
+                _logger.LogDebug("Attempting WMI enumeration for {Database}", databaseName);
+
+                // Try to get UEFI/BIOS information
+                using var biosSearcher = new System.Management.ManagementObjectSearcher(
+                    "SELECT * FROM Win32_BIOS");
+                
+                using var biosCollection = biosSearcher.Get();
+                
+                foreach (System.Management.ManagementObject bios in biosCollection)
+                {
+                    try
+                    {
+                        // Win32_BIOS provides firmware info but not certificate databases
+                        var biosCharacteristics = bios["BiosCharacteristics"] as UInt16[];
+                        
+                        // BiosCharacteristics bit 27 (0x08000000) indicates UEFI support
+                        // But this doesn't give us access to certificate databases
+                        if (biosCharacteristics != null)
+                        {
+                            _logger.LogDebug("BIOS characteristics available, but certificate data not exposed via WMI");
+                        }
+                        
+                        // Note: Win32_BIOS doesn't expose EFI signature databases (db, dbx, KEK, PK)
+                        // Those are stored in UEFI firmware variables, not accessible through standard WMI
+                    }
+                    finally
+                    {
+                        bios?.Dispose();
+                    }
+                    break; // Only process first BIOS instance
+                }
+
+                // Alternative: Try Win32_Environment for UEFI-related environment variables
+                // But this also won't give us certificate databases
+                
+                _logger.LogDebug("WMI enumeration completed for {Database} - no certificate data available via standard WMI classes", databaseName);
+                
+                // WMI Limitation Note:
+                // UEFI Secure Boot certificate databases (db, dbx, KEK, PK) are firmware variables
+                // stored in non-volatile RAM, not exposed through Win32_BIOS or other standard WMI classes.
+                // 
+                // To access these, you need:
+                // 1. PowerShell Get-SecureBootUEFI cmdlet (recommended - see PowerShellSecureBootCertificateEnumerator)
+                // 2. Direct UEFI Runtime Services API (requires kernel-mode driver)
+                // 3. Registry keys populated by Windows after reading UEFI variables (unreliable)
+                // 
+                // For production use, PowerShellSecureBootCertificateEnumerator is the recommended approach.
+            }
+            catch (System.Management.ManagementException mex)
+            {
+                _logger.LogDebug(mex, "WMI query failed for {Database} - {ErrorCode}", databaseName, mex.ErrorCode);
             }
             catch (Exception ex)
             {

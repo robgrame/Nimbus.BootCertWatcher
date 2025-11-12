@@ -149,6 +149,7 @@
                                 <th><i class="fas fa-desktop"></i> Machine Name</th>
                                 <th><i class="fas fa-network-wired"></i> Domain</th>
                                 <th><i class="fas fa-layer-group"></i> Fleet</th>
+                                <th><i class="fas fa-code-branch"></i> Version</th>
                                 <th><i class="fas fa-industry"></i> Manufacturer / Model</th>
                                 <th><i class="fas fa-shield-alt"></i> Secure Boot</th>
                                 <th><i class="fas fa-file-alt"></i> Reports</th>
@@ -191,6 +192,16 @@
                                             <span class="badge bg-info">
                                                 <i class="fas fa-tag"></i> @device.FleetId
                                             </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(device.ClientVersion))
+                                        {
+                                            <code class="text-muted small">@device.ClientVersion</code>
                                         }
                                         else
                                         {

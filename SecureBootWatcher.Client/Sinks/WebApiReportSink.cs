@@ -45,8 +45,11 @@ namespace SecureBootWatcher.Client.Sinks
             if (!response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                _logger.LogError("Secure Boot report submission failed with status {StatusCode}: {Body}", (int)response.StatusCode, content);
-                return;
+                var errorMessage = $"Secure Boot report submission failed with status {(int)response.StatusCode} ({response.StatusCode}): {content}";
+                _logger.LogError(errorMessage);
+                
+                // Lancia eccezione per permettere al SinkCoordinator di gestire retry e failover
+                throw new HttpRequestException(errorMessage);
             }
 
             _logger.LogInformation("Secure Boot report submitted to API at {Endpoint}.", client.BaseAddress);

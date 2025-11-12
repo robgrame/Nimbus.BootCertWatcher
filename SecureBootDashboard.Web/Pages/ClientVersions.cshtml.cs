@@ -5,6 +5,8 @@ using SecureBootDashboard.Web.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Threading.Tasks;
 
 namespace SecureBootDashboard.Web.Pages
@@ -13,11 +15,16 @@ namespace SecureBootDashboard.Web.Pages
     {
         private readonly ISecureBootApiClient _apiClient;
         private readonly IConfiguration _configuration;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public ClientVersionsModel(ISecureBootApiClient apiClient, IConfiguration configuration)
+        public ClientVersionsModel(
+            ISecureBootApiClient apiClient, 
+            IConfiguration configuration,
+            IHttpClientFactory httpClientFactory)
         {
             _apiClient = apiClient;
             _configuration = configuration;
+            _httpClientFactory = httpClientFactory;
         }
 
         public List<ClientVersionInfo> VersionGroups { get; set; } = new();
@@ -34,9 +41,8 @@ namespace SecureBootDashboard.Web.Pages
         {
             try
             {
-                // Get version configuration from API settings
-                LatestVersion = _configuration["ClientUpdate:LatestVersion"] ?? "1.0.0.0";
-                MinimumVersion = _configuration["ClientUpdate:MinimumVersion"] ?? "1.0.0.0";
+                // Get version configuration from API endpoint
+                await LoadVersionInfoFromApiAsync();
 
                 var latestVer = Version.Parse(LatestVersion);
                 var minimumVer = Version.Parse(MinimumVersion);
@@ -127,5 +133,46 @@ namespace SecureBootDashboard.Web.Pages
                 ErrorMessage = $"Error loading client versions: {ex.Message}";
             }
         }
+
+        private async Task LoadVersionInfoFromApiAsync()
+        {
+            try
+            {
+                var apiBaseUrl = _configuration["ApiSettings:BaseUrl"];
+                if (string.IsNullOrEmpty(apiBaseUrl))
+                {
+                    // Fallback to hardcoded values if API URL not configured
+                    return;
+                }
+
+                var httpClient = _httpClientFactory.CreateClient();
+                var response = await httpClient.GetFromJsonAsync<ClientUpdateVersionInfo>(
+                    $"{apiBaseUrl}/api/ClientUpdate/version",
+                    HttpContext.RequestAborted);
+
+                if (response != null)
+                {
+                    LatestVersion = response.LatestVersion;
+                    MinimumVersion = response.MinimumVersion;
+                }
+            }
+            catch (Exception)
+            {
+                // If API call fails, use fallback values (already set)
+            }
+        }
+    }
+
+    // DTO for API response
+    internal class ClientUpdateVersionInfo
+    {
+        public string LatestVersion { get; set; } = "1.0.0.0";
+        public string MinimumVersion { get; set; } = "1.0.0.0";
+        public DateTime ReleaseDate { get; set; }
+        public string? DownloadUrl { get; set; }
+        public bool IsUpdateRequired { get; set; }
+        public string? ReleaseNotes { get; set; }
+        public string? Checksum { get; set; }
+        public long FileSize { get; set; }
     }
 }

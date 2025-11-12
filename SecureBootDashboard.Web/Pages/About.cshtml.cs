@@ -16,7 +16,14 @@ public class AboutModel : PageModel
         
         if (informationalVersion != null)
         {
-            Version = informationalVersion.InformationalVersion;
+            var fullVersion = informationalVersion.InformationalVersion;
+            
+            // Remove commit hash (everything after '+') if present
+            // Example: "1.1.1.48182+a1b2c3d" -> "1.1.1.48182"
+            var plusIndex = fullVersion.IndexOf('+');
+            Version = plusIndex > 0 
+                ? fullVersion.Substring(0, plusIndex) 
+                : fullVersion;
         }
         else
         {

@@ -101,6 +101,14 @@ namespace SecureBootWatcher.Client.Services
             
             if (!string.IsNullOrWhiteSpace(informationalVersion))
             {
+                // Remove commit hash (everything after '+') if present
+                // Example: "1.1.1.48182+a1b2c3d" -> "1.1.1.48182"
+                var plusIndex = informationalVersion.IndexOf('+');
+                if (plusIndex > 0)
+                {
+                    return informationalVersion.Substring(0, plusIndex);
+                }
+                
                 return informationalVersion;
             }
             

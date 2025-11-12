@@ -201,7 +201,19 @@ namespace SecureBootDashboard.Api.Storage
 
         private static string? TryGetFleet(IDictionary<string, string>? tags)
         {
-            if (tags != null && tags.TryGetValue("fleet", out var fleet) && !string.IsNullOrWhiteSpace(fleet))
+            if (tags == null)
+            {
+                return null;
+            }
+
+            // Try "FleetId" first (PascalCase - used by client)
+            if (tags.TryGetValue("FleetId", out var fleetId) && !string.IsNullOrWhiteSpace(fleetId))
+            {
+                return fleetId;
+            }
+
+            // Fallback to "fleet" (lowercase - for backward compatibility)
+            if (tags.TryGetValue("fleet", out var fleet) && !string.IsNullOrWhiteSpace(fleet))
             {
                 return fleet;
             }

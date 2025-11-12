@@ -9,21 +9,14 @@ namespace SecureBootDashboard.Api.Services;
 /// <summary>
 /// Service for exporting dashboard data to Excel and CSV formats.
 /// </summary>
-public class ExportService : IExportService
+public class ExportService(ILogger<ExportService> logger) : IExportService
 {
-    private readonly ILogger<ExportService> _logger;
-
-    public ExportService(ILogger<ExportService> logger)
-    {
-        _logger = logger;
-    }
-
     /// <summary>
     /// Export devices to Excel format with formatting and styling.
     /// </summary>
     public async Task<byte[]> ExportDevicesToExcelAsync(IEnumerable<ExportDeviceSummary> devices, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Exporting {Count} devices to Excel", devices.Count());
+        logger.LogInformation("Exporting {Count} devices to Excel", devices.Count());
 
         return await Task.Run(() =>
         {
@@ -155,7 +148,7 @@ public class ExportService : IExportService
     /// </summary>
     public async Task<byte[]> ExportDevicesToCsvAsync(IEnumerable<ExportDeviceSummary> devices, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Exporting {Count} devices to CSV", devices.Count());
+        logger.LogInformation("Exporting {Count} devices to CSV", devices.Count());
 
         return await Task.Run(() =>
         {
@@ -195,7 +188,7 @@ public class ExportService : IExportService
     /// </summary>
     public async Task<byte[]> ExportReportsToExcelAsync(IEnumerable<ReportSummary> reports, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Exporting {Count} reports to Excel", reports.Count());
+        logger.LogInformation("Exporting {Count} reports to Excel", reports.Count());
 
         return await Task.Run(() =>
         {
@@ -278,7 +271,7 @@ public class ExportService : IExportService
     /// </summary>
     public async Task<byte[]> ExportReportsToCsvAsync(IEnumerable<ReportSummary> reports, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Exporting {Count} reports to CSV", reports.Count());
+        logger.LogInformation("Exporting {Count} reports to CSV", reports.Count());
 
         return await Task.Run(() =>
         {

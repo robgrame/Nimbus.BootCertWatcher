@@ -48,6 +48,75 @@ namespace SecureBootWatcher.Client
 				rollingInterval = RollingInterval.Day;
 			}
 			
+			// Read minimum log level from configuration
+			var minimumLevelString = configuration.GetValue<string>("Logging:LogLevel:Default") ?? "Information";
+			
+			// Map Microsoft.Extensions.Logging levels to Serilog levels
+			LogEventLevel minimumLevel;
+			if (minimumLevelString.Equals("Trace", StringComparison.OrdinalIgnoreCase))
+			{
+				minimumLevel = LogEventLevel.Verbose; // Trace -> Verbose in Serilog
+			}
+			else if (!Enum.TryParse(minimumLevelString, true, out minimumLevel))
+			{
+				minimumLevel = LogEventLevel.Information;
+			}
+			
+			// Write to console immediately to debug (DETAILED DIAGNOSTICS)
+			Console.WriteLine("========================================");
+			Console.WriteLine("LOGGING CONFIGURATION DIAGNOSTICS");
+			Console.WriteLine("========================================");
+			Console.WriteLine($"Base Directory: {AppContext.BaseDirectory}");
+			Console.WriteLine($"Configuration read from 'Logging:LogLevel:Default': '{minimumLevelString}'");
+			Console.WriteLine($"Parsed as LogEventLevel: {minimumLevel}");
+			Console.WriteLine();
+			
+			// Check if appsettings.json exists
+			var diagnosticAppsettingsPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+			Console.WriteLine($"Checking appsettings.json at: {diagnosticAppsettingsPath}");
+			Console.WriteLine($"File exists: {File.Exists(diagnosticAppsettingsPath)}");
+			
+			if (File.Exists(diagnosticAppsettingsPath))
+			{
+				Console.WriteLine();
+				Console.WriteLine("First 1000 characters of appsettings.json:");
+				Console.WriteLine("-------------------------------------------");
+				try
+				{
+					var content = File.ReadAllText(diagnosticAppsettingsPath);
+					Console.WriteLine(content.Substring(0, Math.Min(1000, content.Length)));
+					Console.WriteLine("-------------------------------------------");
+					
+					// Check if it contains "Trace"
+					if (content.Contains("\"Default\": \"Trace\"", StringComparison.OrdinalIgnoreCase))
+					{
+						Console.ForegroundColor = ConsoleColor.Green;
+						Console.WriteLine("✓ appsettings.json CONTAINS 'Default': 'Trace'");
+						Console.ResetColor();
+					}
+					else if (content.Contains("\"Default\": \"Information\"", StringComparison.OrdinalIgnoreCase))
+					{
+						Console.ForegroundColor = ConsoleColor.Red;
+						Console.WriteLine("✗ appsettings.json contains 'Default': 'Information'");
+						Console.ResetColor();
+					}
+					else
+					{
+						Console.ForegroundColor = ConsoleColor.Yellow;
+						Console.WriteLine("? Could not find 'Default' log level setting in file");
+						Console.ResetColor();
+					}
+				}
+				catch (Exception ex)
+				{
+					Console.ForegroundColor = ConsoleColor.Red;
+					Console.WriteLine($"Error reading file: {ex.Message}");
+					Console.ResetColor();
+				}
+			}
+			Console.WriteLine("========================================");
+			Console.WriteLine();
+			
 			// Resolve log path relative to base directory if not absolute
 			if (!Path.IsPathRooted(logPath))
 			{
@@ -71,7 +140,9 @@ namespace SecureBootWatcher.Client
 			}
 		
 			var loggerConfig = new LoggerConfiguration()
-				.ReadFrom.Configuration(configuration)
+				.MinimumLevel.Is(minimumLevel)  // Set minimum level from configuration
+				.MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+				.MinimumLevel.Override("System", LogEventLevel.Warning)
 				.Enrich.FromLogContext()
 				.Enrich.WithThreadId();
 		
@@ -136,15 +207,29 @@ namespace SecureBootWatcher.Client
 			{
 				// Get version info - prioritize AssemblyInformationalVersion for GitVersioning
 				var assembly = Assembly.GetExecutingAssembly();
-				var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion 
-							  ?? assembly.GetName().Version?.ToString() 
-							  ?? "Unknown";
+				var informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+				
+				string version;
+				if (!string.IsNullOrWhiteSpace(informationalVersion))
+				{
+					// Remove commit hash (everything after '+') if present
+					// Example: "1.1.1.48182+a1b2c3d" -> "1.1.1.48182"
+					var plusIndex = informationalVersion.IndexOf('+');
+					version = plusIndex > 0 
+						? informationalVersion.Substring(0, plusIndex) 
+						: informationalVersion;
+				}
+				else
+				{
+					version = assembly.GetName().Version?.ToString() ?? "Unknown";
+				}
 				
 				// Log startup information
 				Log.Information("========================================");
 				Log.Information("SecureBootWatcher Client Starting");
 				Log.Information("========================================");
 				Log.Information("Version: {Version}", version);
+				Log.Information("Logging Level: {LogLevel}", minimumLevel);
 				Log.Information("Base Directory: {BaseDirectory}", AppContext.BaseDirectory);
 				Log.Information("Log File Path: {LogPath}", Path.GetFullPath(logPath));
 				Log.Information("Log Format: {Format}", logFormat);
@@ -162,6 +247,13 @@ namespace SecureBootWatcher.Client
 				Log.Information("User: {User}", Environment.UserName);
 				Log.Information(".NET Framework: {Framework}", Environment.Version);
 				Log.Information("OS: {OS}", Environment.OSVersion);
+				
+				// Test debug logging
+				if (minimumLevel <= LogEventLevel.Debug)
+				{
+					Log.Debug("Debug logging is ENABLED - you should see this message");
+					Log.Verbose("Verbose logging is ENABLED - you should see this message");
+				}
 
 				Console.CancelKeyPress += (_, eventArgs) =>
 				{
