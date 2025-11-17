@@ -35,7 +35,13 @@ public sealed record DeviceSummary(
     string? LatestDeploymentState,
     DateTimeOffset? LatestReportDate,
     bool? UEFISecureBootEnabled,
-    string? ClientVersion);
+    string? ClientVersion,
+    string? OperatingSystem,
+    string? OSVersion,
+    int? OSProductType,
+    string? ChassisTypesJson,
+    bool? IsVirtualMachine,
+    string? VirtualizationPlatform);
 
 public sealed record DeviceDetail(
     Guid Id,

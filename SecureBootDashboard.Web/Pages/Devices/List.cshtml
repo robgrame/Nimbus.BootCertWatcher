@@ -146,7 +146,7 @@
                     <table class="table table-hover table-striped">
                         <thead class="table-light">
                             <tr>
-                                <th><i class="fas fa-desktop"></i> Machine Name</th>
+                                <th><i class="fas fa-desktop"></i> Device</th>
                                 <th><i class="fas fa-network-wired"></i> Domain</th>
                                 <th><i class="fas fa-layer-group"></i> Fleet</th>
                                 <th><i class="fas fa-code-branch"></i> Version</th>
@@ -173,11 +173,90 @@
 
                                 <tr class="@rowClass">
                                     <td>
+                                        @{
+                                            var osIconClass = "fa-desktop"; // Default to workstation
+                                            var osColorClass = "text-primary";
+                                            var osTitle = "Workstation";
+                                            
+                                            // Check if Virtual Machine first
+                                            if (device.IsVirtualMachine == true)
+                                            {
+                                                osIconClass = "fa-cloud";
+                                                osColorClass = "text-info";
+                                                osTitle = $"Virtual Machine ({device.VirtualizationPlatform ?? "Unknown"})";
+                                            }
+                                            // Determine OS icon based on ProductType
+                                            else if (device.OSProductType.HasValue)
+                                            {
+                                                switch (device.OSProductType.Value)
+                                                {
+                                                    case 1: // Workstation
+                                                        osIconClass = "fa-desktop";
+                                                        osColorClass = "text-primary";
+                                                        osTitle = "Workstation";
+                                                        break;
+                                                    case 2: // Domain Controller
+                                                        osIconClass = "fa-building";
+                                                        osColorClass = "text-warning";
+                                                        osTitle = "Domain Controller";
+                                                        break;
+                                                    case 3: // Server
+                                                        osIconClass = "fa-server";
+                                                        osColorClass = "text-success";
+                                                        osTitle = "Server";
+                                                        break;
+                                                    default:
+                                                        osIconClass = "fa-question-circle";
+                                                        osColorClass = "text-secondary";
+                                                        osTitle = "Unknown";
+                                                        break;
+                                                }
+                                            }
+
+                                            // Determine chassis icon/badge based on ChassisTypes
+                                            var chassisBadge = "";
+                                            var chassisTitle = "";
+                                            if (!string.IsNullOrEmpty(device.ChassisTypesJson))
+                                            {
+                                                try
+                                                {
+                                                    var chassisTypes = System.Text.Json.JsonSerializer.Deserialize<int[]>(device.ChassisTypesJson);
+                                                    if (chassisTypes != null && chassisTypes.Length > 0)
+                                                    {
+                                                        // Check for portable (laptop, notebook, tablet)
+                                                        var portableTypes = new[] { 8, 9, 10, 11, 14, 30, 31, 32 };
+                                                        var isPortable = chassisTypes.Any(ct => portableTypes.Contains(ct));
+                                                        
+                                                        if (isPortable)
+                                                        {
+                                                            chassisBadge = "<i class=\"fas fa-laptop text-info ms-1\" style=\"font-size: 0.8em;\"></i>";
+                                                            chassisTitle = " (Portable)";
+                                                        }
+                                                        else
+                                                        {
+                                                            // Desktop tower types
+                                                            var desktopTypes = new[] { 3, 4, 6, 7, 13, 15 };
+                                                            if (chassisTypes.Any(ct => desktopTypes.Contains(ct)))
+                                                            {
+                                                                chassisBadge = "<i class=\"fas fa-hdd text-secondary ms-1\" style=\"font-size: 0.8em;\"></i>";
+                                                                chassisTitle = " (Desktop)";
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                catch
+                                                {
+                                                    // JSON parsing failed, ignore
+                                                }
+                                            }
+                                        }
+                                        <i class="fas @osIconClass @osColorClass me-2" title="@(osTitle + chassisTitle)" data-bs-toggle="tooltip"></i>
                                         <a asp-page="/Devices/Details" asp-route-id="@device.Id" 
                                            class="text-decoration-none fw-bold machine-name-link" 
                                            title="View device details">
                                             @device.MachineName
                                         </a>
+                                        @Html.Raw(chassisBadge)
                                         @if (isInactive)
                                         {
                                             <span class="badge bg-secondary ms-2" title="Device inactive for more than 7 days">

@@ -57,7 +57,13 @@ namespace SecureBootDashboard.Api.Controllers
                     latestReport?.DeploymentState,
                     latestReport?.CreatedAtUtc,
                     d.UEFISecureBootEnabled,
-                    d.ClientVersion);
+                    d.ClientVersion,
+                    d.OperatingSystem,
+                    d.OSVersion,
+                    d.OSProductType,
+                    d.ChassisTypesJson,
+                    d.IsVirtualMachine,
+                    d.VirtualizationPlatform);
             }).ToArray();
         }
 
@@ -334,7 +340,13 @@ namespace SecureBootDashboard.Api.Controllers
             string? LatestDeploymentState,
             DateTimeOffset? LatestReportDate,
             bool? UEFISecureBootEnabled,
-            string? ClientVersion);
+            string? ClientVersion,
+            string? OperatingSystem,
+            string? OSVersion,
+            int? OSProductType,
+            string? ChassisTypesJson,
+            bool? IsVirtualMachine,
+            string? VirtualizationPlatform);
 
         public sealed record DeviceDetailResponse(
             Guid Id,
