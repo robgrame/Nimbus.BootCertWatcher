@@ -222,13 +222,28 @@ namespace SecureBootWatcher.Client.Services
             {
                 _logger.LogWarning(ex, "Unexpected error querying Win32_BIOS.");
             }
+
+            // Enrich with OS information
+            DeviceIdentityEnricher.EnrichWithOSInfo(identity, _logger);
+
+            // Enrich with Chassis information
+            DeviceIdentityEnricher.EnrichWithChassisInfo(identity, _logger);
+
+            // Detect Virtual Machine
+            DeviceIdentityEnricher.DetectVirtualMachine(identity, _logger);
             
             // Log summary of what was collected
             _logger.LogDebug(
-                "Hardware info collected: Manufacturer={Manufacturer}, Model={Model}, FirmwareVersion={FirmwareVersion}",
+                "Hardware info collected: Manufacturer={Manufacturer}, Model={Model}, FirmwareVersion={FirmwareVersion}, OS={OS}, OSVersion={OSVersion}, OSProductType={OSProductType}, ChassisTypes={ChassisTypes}, IsVM={IsVM}, Platform={Platform}",
                 identity.Manufacturer ?? "N/A",
                 identity.Model ?? "N/A", 
-                identity.FirmwareVersion ?? "N/A");
+                identity.FirmwareVersion ?? "N/A",
+                identity.OperatingSystem ?? "N/A",
+                identity.OSVersion ?? "N/A",
+                identity.OSProductType?.ToString() ?? "N/A",
+                identity.ChassisTypes != null ? string.Join(",", identity.ChassisTypes) : "N/A",
+                identity.IsVirtualMachine?.ToString() ?? "N/A",
+                identity.VirtualizationPlatform ?? "N/A");
         }
 
         private void PopulateAlerts(SecureBootStatusReport report, UpdateCheckResult? updateCheck)
