@@ -84,8 +84,12 @@ public sealed class SecureBootApiClient : ISecureBootApiClient
             
             if (reportDetail == null)
             {
+                _logger.LogWarning("GetReportDetailAsync returned null for report {ReportId}", id);
                 return null;
             }
+
+            _logger.LogDebug("Report detail retrieved for {ReportId}, CertificatesJson length: {Length}", 
+                id, reportDetail.CertificatesJson?.Length ?? 0);
 
             // Deserialize registry state
             var registry = JsonSerializer.Deserialize<SecureBootRegistrySnapshot>(reportDetail.RegistryStateJson);
@@ -96,12 +100,36 @@ public sealed class SecureBootApiClient : ISecureBootApiClient
             {
                 try
                 {
+                    _logger.LogDebug("Attempting to deserialize certificates JSON for report {ReportId}", id);
                     certificates = JsonSerializer.Deserialize<SecureBootCertificateCollection>(reportDetail.CertificatesJson);
+                    
+                    if (certificates != null)
+                    {
+                        _logger.LogInformation(
+                            "Successfully deserialized certificates for report {ReportId}: " +
+                            "Total={Total}, db={Db}, dbx={Dbx}, KEK={Kek}, PK={Pk}",
+                            id,
+                            certificates.TotalCertificateCount,
+                            certificates.SignatureDatabase?.Count ?? 0,
+                            certificates.ForbiddenDatabase?.Count ?? 0,
+                            certificates.KeyExchangeKeys?.Count ?? 0,
+                            certificates.PlatformKeys?.Count ?? 0);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Certificates deserialized to NULL for report {ReportId}", id);
+                    }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to deserialize certificates for report {ReportId}", id);
+                    _logger.LogWarning(ex, "Failed to deserialize certificates for report {ReportId}. JSON sample: {JsonSample}", 
+                        id, 
+                        reportDetail.CertificatesJson.Substring(0, Math.Min(200, reportDetail.CertificatesJson.Length)));
                 }
+            }
+            else
+            {
+                _logger.LogWarning("CertificatesJson is null or empty for report {ReportId}", id);
             }
 
             // Deserialize alerts
@@ -143,6 +171,9 @@ public sealed class SecureBootApiClient : ISecureBootApiClient
             {
                 report.Device.Tags["FleetId"] = reportDetail.Device.FleetId;
             }
+
+            _logger.LogDebug("Returning SecureBootStatusReport for {ReportId}, Certificates is {CertStatus}",
+                id, certificates == null ? "NULL" : "NOT NULL");
 
             return report;
         }

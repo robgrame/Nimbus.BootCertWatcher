@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SecureBootDashboard.Api.Data;
 
@@ -11,9 +12,11 @@ using SecureBootDashboard.Api.Data;
 namespace SecureBootDashboard.Api.Data.Migrations
 {
     [DbContext(typeof(SecureBootDbContext))]
-    partial class SecureBootDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251117112107_AddOperatingSystemInfo")]
+    partial class AddOperatingSystemInfo
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -27,9 +30,6 @@ namespace SecureBootDashboard.Api.Data.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ChassisTypesJson")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ClientVersion")
                         .HasColumnType("nvarchar(max)");
@@ -51,9 +51,6 @@ namespace SecureBootDashboard.Api.Data.Migrations
                     b.Property<string>("FleetId")
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
-
-                    b.Property<bool?>("IsVirtualMachine")
-                        .HasColumnType("bit");
 
                     b.Property<DateTimeOffset>("LastSeenUtc")
                         .HasColumnType("datetimeoffset");
@@ -89,9 +86,6 @@ namespace SecureBootDashboard.Api.Data.Migrations
                     b.Property<string>("UserPrincipalName")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("VirtualizationPlatform")
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 

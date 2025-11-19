@@ -47,8 +47,15 @@ namespace SecureBootDashboard.Api.Storage
                     Manufacturer = report.Device.Manufacturer,
                     Model = report.Device.Model,
                     FirmwareVersion = report.Device.FirmwareVersion,
+                    FirmwareReleaseDate = report.Device.FirmwareReleaseDate,
                     UEFISecureBootEnabled = report.Registry?.UEFISecureBootEnabled,
                     ClientVersion = report.Device.ClientVersion,
+                    OperatingSystem = report.Device.OperatingSystem,
+                    OSVersion = report.Device.OSVersion,
+                    OSProductType = report.Device.OSProductType,
+                    ChassisTypesJson = report.Device.ChassisTypes != null ? Serialize(report.Device.ChassisTypes) : null,
+                    IsVirtualMachine = report.Device.IsVirtualMachine,
+                    VirtualizationPlatform = report.Device.VirtualizationPlatform,
                     FleetId = TryGetFleet(report.Device.Tags),
                     TagsJson = Serialize(report.Device.Tags ?? new Dictionary<string, string>()),
                     CreatedAtUtc = utcNow,
@@ -64,8 +71,15 @@ namespace SecureBootDashboard.Api.Storage
                 device.Manufacturer = report.Device.Manufacturer;
                 device.Model = report.Device.Model;
                 device.FirmwareVersion = report.Device.FirmwareVersion;
+                device.FirmwareReleaseDate = report.Device.FirmwareReleaseDate ?? device.FirmwareReleaseDate;
                 device.UEFISecureBootEnabled = report.Registry?.UEFISecureBootEnabled ?? device.UEFISecureBootEnabled;
                 device.ClientVersion = report.Device.ClientVersion ?? device.ClientVersion;
+                device.OperatingSystem = report.Device.OperatingSystem ?? device.OperatingSystem;
+                device.OSVersion = report.Device.OSVersion ?? device.OSVersion;
+                device.OSProductType = report.Device.OSProductType ?? device.OSProductType;
+                device.ChassisTypesJson = report.Device.ChassisTypes != null ? Serialize(report.Device.ChassisTypes) : device.ChassisTypesJson;
+                device.IsVirtualMachine = report.Device.IsVirtualMachine ?? device.IsVirtualMachine;
+                device.VirtualizationPlatform = report.Device.VirtualizationPlatform ?? device.VirtualizationPlatform;
                 device.FleetId = TryGetFleet(report.Device.Tags) ?? device.FleetId;
                 device.TagsJson = Serialize(report.Device.Tags ?? new Dictionary<string, string>());
                 device.LastSeenUtc = utcNow;
