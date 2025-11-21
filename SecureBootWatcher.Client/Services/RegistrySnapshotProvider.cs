@@ -45,9 +45,6 @@ namespace SecureBootWatcher.Client.Services
                     snapshot.UefiCa2023Status = (SecureBootDeploymentState?)ReadUInt(servicingKey, "UEFICA2023Status") ?? SecureBootDeploymentState.Unknown;
                     snapshot.UefiCa2023Error = ReadUInt(servicingKey, "UefiCa2023Error");
                     snapshot.WindowsUEFICA2023CapableCode = ReadUInt(servicingKey, "WindowsUEFICA2023CapableCode");
-                    
-                    snapshot.UefiCa2024Status = (SecureBootDeploymentState?)ReadUInt(servicingKey, "UEFICA2024Status") ?? SecureBootDeploymentState.Unknown;
-                    snapshot.UefiCa2024Error = ReadUInt(servicingKey, "UEFICA2024Error");
                 }
                 else
                 {

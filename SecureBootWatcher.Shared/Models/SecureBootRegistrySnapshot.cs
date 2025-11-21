@@ -22,10 +22,6 @@ namespace SecureBootWatcher.Shared.Models
         public uint? UefiCa2023Error { get; set; }
         public uint? WindowsUEFICA2023CapableCode { get; set; }
 
-        // Servicing related keys - CA 2024
-        public SecureBootDeploymentState UefiCa2024Status { get; set; } = SecureBootDeploymentState.Unknown;
-        public uint? UefiCa2024Error { get; set; }
-
         // State related keys
         public string? PolicyPublisher { get; set; }
         public uint? PolicyVersion { get; set; }

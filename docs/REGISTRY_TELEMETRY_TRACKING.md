@@ -6,7 +6,7 @@
 
 ## Overview
 
-Aggiunto il tracciamento completo delle chiavi di registro per gli aggiornamenti UEFI CA 2023/2024 e le politiche di telemetria necessarie per determinare l'idoneità al Controlled Feature Rollout (CFR) di Microsoft.
+Aggiunto il tracciamento completo delle chiavi di registro per gli aggiornamenti UEFI CA 2023 e le politiche di telemetria necessarie per determinare l'idoneità al Controlled Feature Rollout (CFR) di Microsoft.
 
 ## Changes Made
 
@@ -19,13 +19,6 @@ Aggiunto il tracciamento completo delle chiavi di registro per gli aggiornamenti
   - 1 = Aggiornamento DB
   - 2 = Aggiornamento Boot Manager
   - Tipo di aggiornamento richiesto
-
-- **`UEFICA2024Status`** (REG_DWORD/REG_SZ)
-  - NotStarted / InProgress / Updated
-  - Stato aggiornamento CA 2024
-
-- **`UEFICA2024Error`** (REG_DWORD)
-  - Codici errore per CA 2024
 
 #### Chiavi Telemetria (`HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection`)
 
@@ -56,10 +49,8 @@ public sealed class TelemetryPolicySnapshot
 
 ### 3. Modifiche al Modello `SecureBootRegistrySnapshot`
 
-Aggiunte proprietà:
+Aggiunta proprietà:
 - `UpdateType` - Tipo di aggiornamento richiesto
-- `UefiCa2024Status` - Stato aggiornamento CA 2024
-- `UefiCa2024Error` - Errori relativi a CA 2024
 
 ### 4. Modifiche al Modello `SecureBootStatusReport`
 
@@ -78,7 +69,7 @@ Task<TelemetryPolicySnapshot> CaptureTelemetryPolicyAsync(CancellationToken canc
 #### `RegistrySnapshotProvider`
 
 - Implementato `CaptureTelemetryPolicyAsync()`
-- Aggiunta lettura di `UpdateType`, `UEFICA2024Status`, `UEFICA2024Error`
+- Aggiunta lettura di `UpdateType`
 
 #### `ReportBuilder`
 
@@ -176,8 +167,6 @@ Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot" -Name
 | UEFICA2023Status | DWORD/SZ | 0-2, NotStarted/InProgress/Updated | Stato aggiornamento CA 2023 |
 | UEFICA2023Error | DWORD | Codici errore | Errori CA 2023 |
 | WindowsUEFICA2023Capable | DWORD | 0, 1, 2 | Compatibilità CA 2023 |
-| UEFICA2024Status | DWORD/SZ | 0-2, NotStarted/InProgress/Updated | Stato aggiornamento CA 2024 |
-| UEFICA2024Error | DWORD | Codici errore | Errori CA 2024 |
 
 ### HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection
 
