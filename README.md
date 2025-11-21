@@ -2,7 +2,7 @@
 
 > **Monitor and govern the expiration and deployment of Secure Boot certificates across Windows fleets with real-time analytics.**
 
-**Version 1.5** - Enhanced certificate details visualization with color-coded status and real-time updates!
+**Version 1.6** - Telemetry and CFR tracking, with enhanced real-time updates!
 
 This solution monitors Secure Boot certificate status on Windows devices by capturing registry snapshots and Windows event logs, then transmitting reports to a centralized dashboard for compliance tracking, real-time monitoring, and alerting.
 
@@ -28,6 +28,17 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
 ---
 
 ## ✨ Key Features
+
+### 🔴 **NEW in v1.6** - Telemetry & CFR Tracking
+- **Telemetry Policy Monitoring**: Track Windows diagnostic data levels (Security/Basic/Enhanced/Full)
+- **CFR Eligibility Detection**: Automatic detection of Controlled Feature Rollout eligibility
+  - Microsoft Update Managed Opt-In status
+  - Telemetry level validation (requires Basic or higher)
+  - Windows UEFI CA 2023 capability tracking
+- **UpdateType Tracking**: Monitor requested update types (DB, Boot Manager)
+- **Dashboard Integration**: New statistics cards and charts for CFR/telemetry metrics
+- **Device List Enhancements**: Additional columns for telemetry and CFR status
+- **Detailed Reporting**: Complete CFR eligibility analysis in device details
 
 ### 🔴 **NEW in v1.5** - Enhanced Certificate Visualization
 - **Detailed Certificate Tables**: Comprehensive certificate information display
@@ -220,6 +231,35 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
   - Authentication support (Entra ID / Windows Domain)
   - Italian localization support
 - Consumes API endpoints with resilience policies (Polly)
+
+---
+
+## 🆕 What's New in v1.6
+
+### Telemetry & CFR Tracking
+The device details page now features new telemetry and CFR (Controlled Feature Rollout) tracking capabilities:
+
+**Telemetry Policy Monitoring**:
+- View current Windows diagnostic data level:
+  - Security
+  - Basic
+  - Enhanced
+  - Full
+- Automatic detection of Controlled Feature Rollout eligibility:
+  - Microsoft Update Managed Opt-In status
+  - Telemetry level validation (requires Basic or higher)
+  - Windows UEFI CA 2023 capability tracking
+- Monitor requested update types (DB, Boot Manager)
+
+**Dashboard Integration**:
+- New statistics cards and charts for CFR/telemetry metrics
+- Additional columns for telemetry and CFR status in device list
+- Complete CFR eligibility analysis in device details
+
+**Improved User Experience**:
+- Enhanced device details page with telemetry and CFR tracking
+- Italian language support for all labels
+- Responsive design for all screen sizes
 
 ---
 
@@ -548,7 +588,13 @@ dotnet publish SecureBootDashboard.Web -c Release -o ./publish/web
 
 ## 🎯 Roadmap
 
-### ✅ v1.5 - Current Release
+### ✅ v1.6 - Current Release
+- [x] **Telemetry & CFR tracking** - Complete
+  - Telemetry policy monitoring
+  - CFR eligibility detection and reporting
+  - UpdateType tracking
+  - Dashboard integration for telemetry metrics
+  - Device list enhancements for telemetry and CFR status
 - [x] **Enhanced certificate visualization** - Complete
   - Detailed certificate tables with all properties
   - Color-coded status indicators (expired, expiring, valid)
@@ -559,11 +605,12 @@ dotnet publish SecureBootDashboard.Web -c Release -o ./publish/web
 - [x] **Export reports to Excel/CSV** - Backend Complete
 - [ ] Export UI in web dashboard (In Progress)
 
-### v1.6 - Next Release
+### v1.7 - Next Release
 - [ ] Complete export UI with download buttons
 - [ ] Dark mode theme support
 - [ ] Custom alert thresholds per fleet
 - [ ] Enhanced compliance policies
+- [ ] Device risk scoring and analytics
 
 ### v2.0 - Q3 2025
 - [ ] Multi-tenant support with RBAC
@@ -729,7 +776,7 @@ For questions, issues, or support:
 
 **Made with ❤️ for the IT Community**
 
-**Version 1.5** - Enhanced certificate visualization with real-time monitoring
+**Version 1.6** - Telemetry & CFR tracking for Controlled Feature Rollout eligibility
 
 [⬆ Back to Top](#secure-boot-certificate-watcher)
 

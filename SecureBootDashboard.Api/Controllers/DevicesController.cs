@@ -44,6 +44,36 @@ namespace SecureBootDashboard.Api.Controllers
             return devices.Select(d =>
             {
                 var latestReport = d.Reports.FirstOrDefault();
+                
+                // Deserialize registry state to extract telemetry and CFR data
+                uint? allowTelemetry = null;
+                bool? microsoftUpdateManagedOptIn = null;
+                uint? windowsUEFICA2023Capable = null;
+                
+                if (latestReport != null && !string.IsNullOrEmpty(latestReport.RegistryStateJson))
+                {
+                    try
+                    {
+                        // Deserialize the full report to get both Registry and TelemetryPolicy
+                        var report = System.Text.Json.JsonSerializer.Deserialize<SecureBootWatcher.Shared.Models.SecureBootStatusReport>(
+                            latestReport.RegistryStateJson);
+                        
+                        if (report != null)
+                        {
+                            // Extract from Registry snapshot
+                            microsoftUpdateManagedOptIn = report.Registry?.MicrosoftUpdateManagedOptIn;
+                            windowsUEFICA2023Capable = report.Registry?.WindowsUEFICA2023CapableCode;
+                            
+                            // Extract from TelemetryPolicy snapshot
+                            allowTelemetry = report.TelemetryPolicy?.AllowTelemetry;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to deserialize registry state for device {DeviceId}", d.Id);
+                    }
+                }
+                
                 return new DeviceSummaryResponse(
                     d.Id,
                     d.MachineName,
@@ -63,7 +93,10 @@ namespace SecureBootDashboard.Api.Controllers
                     d.OSProductType,
                     d.ChassisTypesJson,
                     d.IsVirtualMachine,
-                    d.VirtualizationPlatform);
+                    d.VirtualizationPlatform,
+                    allowTelemetry,
+                    microsoftUpdateManagedOptIn,
+                    windowsUEFICA2023Capable);
             }).ToArray();
         }
 
@@ -346,7 +379,11 @@ namespace SecureBootDashboard.Api.Controllers
             int? OSProductType,
             string? ChassisTypesJson,
             bool? IsVirtualMachine,
-            string? VirtualizationPlatform);
+            string? VirtualizationPlatform,
+            // Telemetry and CFR data
+            uint? AllowTelemetry,
+            bool? MicrosoftUpdateManagedOptIn,
+            uint? WindowsUEFICA2023Capable);
 
         public sealed record DeviceDetailResponse(
             Guid Id,
