@@ -13,17 +13,11 @@ This solution monitors Secure Boot certificate status on Windows devices by capt
 ### Dashboard Homepage
 Modern analytics dashboard with interactive charts, real-time compliance monitoring, and SignalR updates.
 
-*Screenshot placeholder - see [docs/SCREENSHOTS_GUIDE.md](docs/SCREENSHOTS_GUIDE.md) for instructions*
-
 ### Device Management
 Comprehensive device list with advanced filtering, search capabilities, and export to Excel/CSV.
 
-*Screenshot placeholder - see [docs/SCREENSHOTS_GUIDE.md](docs/SCREENSHOTS_GUIDE.md) for instructions*
-
 ### Analytics Charts
 Interactive Chart.js visualizations showing compliance trends and deployment status.
-
-*Screenshot placeholder - see [docs/SCREENSHOTS_GUIDE.md](docs/SCREENSHOTS_GUIDE.md) for instructions*
 
 ---
 
