@@ -12,14 +12,19 @@ namespace SecureBootWatcher.Shared.Models
         public const string RegistryRootPath = "SYSTEM\\CurrentControlSet\\Control\\SecureBoot";
 
         public uint? AvailableUpdates { get; set; }
+        public uint? UpdateType { get; set; }
         public bool? HighConfidenceOptOut { get; set; }
 
         public bool? MicrosoftUpdateManagedOptIn { get; set; } = false;
 
-        // Servicing related keys
+        // Servicing related keys - CA 2023
         public SecureBootDeploymentState UefiCa2023Status { get; set; } = SecureBootDeploymentState.Unknown;
         public uint? UefiCa2023Error { get; set; }
         public uint? WindowsUEFICA2023CapableCode { get; set; }
+
+        // Servicing related keys - CA 2024
+        public SecureBootDeploymentState UefiCa2024Status { get; set; } = SecureBootDeploymentState.Unknown;
+        public uint? UefiCa2024Error { get; set; }
 
         // State related keys
         public string? PolicyPublisher { get; set; }
@@ -122,5 +127,49 @@ namespace SecureBootWatcher.Shared.Models
         public string? StateAttributes { get; set; }
 
         public DateTimeOffset CollectedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>
+    /// Captures telemetry settings that affect eligibility for Microsoft Controlled Feature Rollout (CFR).
+    /// </summary>
+    public sealed class TelemetryPolicySnapshot
+    {
+        // Registry path WITHOUT HKEY_LOCAL_MACHINE prefix (used with Registry.LocalMachine.OpenSubKey)
+        public const string RegistryRootPath = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\DataCollection";
+
+        /// <summary>
+        /// Telemetry level: 0=Security (Enterprise/Education/Server only), 1=Basic, 2=Enhanced, 3=Full.
+        /// Required and Optional diagnostic data participation requires level 1 (Basic) or higher.
+        /// </summary>
+        public uint? AllowTelemetry { get; set; }
+
+        public DateTimeOffset CollectedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+
+        /// <summary>
+        /// Gets a human-readable description of the telemetry level.
+        /// </summary>
+        public string TelemetryLevelDescription
+        {
+            get
+            {
+                if (!AllowTelemetry.HasValue)
+                    return "Unknown";
+
+                return AllowTelemetry.Value switch
+                {
+                    0 => "Security (Enterprise/Education/Server only)",
+                    1 => "Basic",
+                    2 => "Enhanced",
+                    3 => "Full",
+                    _ => $"Unknown ({AllowTelemetry.Value})"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Indicates if the device meets the minimum telemetry requirement for CFR eligibility.
+        /// CFR requires Basic (1) or higher telemetry level.
+        /// </summary>
+        public bool MeetsCfrTelemetryRequirement => AllowTelemetry.HasValue && AllowTelemetry.Value >= 1;
     }
 }

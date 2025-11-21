@@ -41,6 +41,7 @@ namespace SecureBootWatcher.Client.Services
         {
             var registrySnapshot = await _registrySnapshotProvider.CaptureAsync(cancellationToken).ConfigureAwait(false);
             var deviceAttributesSnapshot = await _registrySnapshotProvider.CaptureDeviceAttributesAsync(cancellationToken).ConfigureAwait(false);
+            var telemetryPolicySnapshot = await _registrySnapshotProvider.CaptureTelemetryPolicyAsync(cancellationToken).ConfigureAwait(false);
             var recentEvents = await _eventLogReader.ReadRecentEventsAsync(cancellationToken).ConfigureAwait(false);
 
             // Enumerate certificates
@@ -73,6 +74,7 @@ namespace SecureBootWatcher.Client.Services
                 Device = BuildDeviceIdentity(),
                 Registry = registrySnapshot,
                 DeviceAttributes = deviceAttributesSnapshot,
+                TelemetryPolicy = telemetryPolicySnapshot,
                 Certificates = certificates,
                 Events = recentEvents.ToList(),
                 CreatedAtUtc = DateTimeOffset.UtcNow,
@@ -268,6 +270,19 @@ namespace SecureBootWatcher.Client.Services
             if (report.Registry.MicrosoftUpdateManagedOptIn == true)
             {
                 alerts.Add("Device is opted in to Microsoft managed deployment (CFR).");
+            }
+
+            // Check telemetry requirements for CFR eligibility
+            if (report.TelemetryPolicy != null)
+            {
+                if (!report.TelemetryPolicy.MeetsCfrTelemetryRequirement)
+                {
+                    alerts.Add($"? Telemetry level ({report.TelemetryPolicy.TelemetryLevelDescription}) does not meet CFR requirements. Basic (1) or higher required for Microsoft managed rollout.");
+                }
+                else if (report.Registry.MicrosoftUpdateManagedOptIn == true)
+                {
+                    alerts.Add($"? Telemetry level ({report.TelemetryPolicy.TelemetryLevelDescription}) meets CFR requirements.");
+                }
             }
 
             if (report.Events.Count == 0 && report.Registry.UefiCa2023Status != SecureBootDeploymentState.Updated)

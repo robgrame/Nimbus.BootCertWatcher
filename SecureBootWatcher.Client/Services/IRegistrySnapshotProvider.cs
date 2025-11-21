@@ -8,6 +8,8 @@ namespace SecureBootWatcher.Client.Services
     {
         Task<SecureBootRegistrySnapshot> CaptureAsync(CancellationToken cancellationToken);
 
-        Task<SecureBootDeviceAttributesRegistrySnapshot> CaptureDeviceAttributesAsync(CancellationToken cancellationToken); // Added method
+        Task<SecureBootDeviceAttributesRegistrySnapshot> CaptureDeviceAttributesAsync(CancellationToken cancellationToken);
+
+        Task<TelemetryPolicySnapshot> CaptureTelemetryPolicyAsync(CancellationToken cancellationToken);
     }
 }

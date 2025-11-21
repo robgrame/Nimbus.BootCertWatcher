@@ -35,6 +35,7 @@ namespace SecureBootWatcher.Client.Services
                 }
 
                 snapshot.AvailableUpdates = ReadUInt(baseKey, "AvailableUpdates");
+                snapshot.UpdateType = ReadUInt(baseKey, "UpdateType");
                 snapshot.HighConfidenceOptOut = ReadBool(baseKey, "HighConfidenceOptOut");
                 snapshot.MicrosoftUpdateManagedOptIn = ReadBool(baseKey, "MicrosoftUpdateManagedOptIn");
 
@@ -44,6 +45,9 @@ namespace SecureBootWatcher.Client.Services
                     snapshot.UefiCa2023Status = (SecureBootDeploymentState?)ReadUInt(servicingKey, "UEFICA2023Status") ?? SecureBootDeploymentState.Unknown;
                     snapshot.UefiCa2023Error = ReadUInt(servicingKey, "UefiCa2023Error");
                     snapshot.WindowsUEFICA2023CapableCode = ReadUInt(servicingKey, "WindowsUEFICA2023CapableCode");
+                    
+                    snapshot.UefiCa2024Status = (SecureBootDeploymentState?)ReadUInt(servicingKey, "UEFICA2024Status") ?? SecureBootDeploymentState.Unknown;
+                    snapshot.UefiCa2024Error = ReadUInt(servicingKey, "UEFICA2024Error");
                 }
                 else
                 {
@@ -113,6 +117,40 @@ namespace SecureBootWatcher.Client.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error while reading Device Attributes registry keys.");
+            }
+
+            return Task.FromResult(snapshot);
+        }
+
+        public Task<TelemetryPolicySnapshot> CaptureTelemetryPolicyAsync(CancellationToken cancellationToken)
+        {
+            var snapshot = new TelemetryPolicySnapshot
+            {
+                CollectedAtUtc = DateTimeOffset.UtcNow
+            };
+
+            try
+            {
+                using var baseKey = Registry.LocalMachine.OpenSubKey(TelemetryPolicySnapshot.RegistryRootPath, false);
+                if (baseKey == null)
+                {
+                    _logger.LogDebug("Telemetry policy registry path not found at {Path}. Using default telemetry settings.", TelemetryPolicySnapshot.RegistryRootPath);
+                    return Task.FromResult(snapshot);
+                }
+
+                snapshot.AllowTelemetry = ReadUInt(baseKey, "AllowTelemetry");
+
+                _logger.LogDebug("Telemetry level: {Level} ({Description})", 
+                    snapshot.AllowTelemetry, 
+                    snapshot.TelemetryLevelDescription);
+            }
+            catch (SecurityException ex)
+            {
+                _logger.LogError(ex, "Access denied reading Telemetry policy registry keys. Run as Administrator or check permissions.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while reading Telemetry policy registry keys.");
             }
 
             return Task.FromResult(snapshot);
