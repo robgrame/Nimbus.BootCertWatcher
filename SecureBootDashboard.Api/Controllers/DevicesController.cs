@@ -405,8 +405,8 @@ namespace SecureBootDashboard.Api.Controllers
             /// <summary>
             /// OS is ready if build number indicates November 2024 updates or later.
             /// Build 26100 = Windows 11 24H2 (released late 2024)
-            /// Build 19045.5011+ = Windows 10 22H2 with November 2024 updates
-            /// Build 20348.2762+ = Server 2022 with November 2024 updates
+            /// Build 19046+ = Windows 10 22H2 with later updates
+            /// Build 20349+ = Server 2022 with later updates
             /// Build 26100+ = Windows 11 24H2 or later
             /// </summary>
             public bool IsOSUpdateReady
@@ -420,14 +420,14 @@ namespace SecureBootDashboard.Api.Controllers
                     if (buildNumber >= 26100)
                         return true;
 
-                    // Windows 10 22H2 - check if recent enough
-                    // Build 19045 is Windows 10 22H2, need .5011 or higher for Nov 2024
-                    if (buildNumber >= 19046)
+                    // Windows Server 2022 - Build 20348.x - check if recent enough
+                    // Need build 20349 or higher (since we can't check UBR)
+                    if (buildNumber >= 20349 && buildNumber < 26000)
                         return true;
 
-                    // Windows Server 2022 - check if recent enough
-                    // Build 20348 is Server 2022, need .2762 or higher for Nov 2024
-                    if (buildNumber >= 20349)
+                    // Windows 10 22H2 - Build 19045.x - check if recent enough
+                    // Need build 19046 or higher (since we can't check UBR)
+                    if (buildNumber >= 19046 && buildNumber < 20000)
                         return true;
 
                     // For exact build matching (e.g., 19045.5011), we'd need UBR (Update Build Revision)
