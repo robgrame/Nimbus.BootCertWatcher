@@ -154,6 +154,7 @@
                                 <th><i class="fas fa-shield-alt"></i> Secure Boot</th>
                                 <th><i class="fas fa-file-alt"></i> Reports</th>
                                 <th><i class="fas fa-traffic-light"></i> State</th>
+                                <th><i class="fas fa-check-circle"></i> Ready to Update</th>
                                 <th><i class="fas fa-clock"></i> Last Seen</th>
                                 <th class="text-end"><i class="fas fa-cog"></i> Actions</th>
                             </tr>
@@ -346,6 +347,38 @@
                                                     @(device.LatestDeploymentState ?? "Unknown")
                                                 </span>
                                                 break;
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (device.ReadyToUpdate)
+                                        {
+                                            <span class="badge bg-success" title="Firmware >= 2024 and OS build meets November 2024 requirements">
+                                                <i class="fas fa-check-circle"></i> Ready
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            var tooltipText = "";
+                                            if (!device.IsFirmwareReady && !device.IsOSUpdateReady)
+                                            {
+                                                tooltipText = "Firmware needs update (>= 2024) and OS needs November 2024+ update";
+                                            }
+                                            else if (!device.IsFirmwareReady)
+                                            {
+                                                tooltipText = "Firmware needs update (>= 2024)";
+                                            }
+                                            else if (!device.IsOSUpdateReady)
+                                            {
+                                                tooltipText = "OS needs November 2024+ update";
+                                            }
+                                            else
+                                            {
+                                                tooltipText = "Missing firmware or OS update information";
+                                            }
+                                            
+                                            <span class="badge bg-warning text-dark" title="@tooltipText">
+                                                <i class="fas fa-exclamation-triangle"></i> Not Ready
+                                            </span>
                                         }
                                     </td>
                                     <td>

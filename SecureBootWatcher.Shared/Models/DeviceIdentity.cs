@@ -38,6 +38,11 @@ namespace SecureBootWatcher.Shared.Models
         public string? OSVersion { get; set; }
 
         /// <summary>
+        /// Operating system build number (e.g., "19045" from version "10.0.19045").
+        /// </summary>
+        public string? OSBuildNumber { get; set; }
+
+        /// <summary>
         /// Operating system product type: Workstation (1), Domain Controller (2), Server (3).
         /// </summary>
         public int? OSProductType { get; set; }

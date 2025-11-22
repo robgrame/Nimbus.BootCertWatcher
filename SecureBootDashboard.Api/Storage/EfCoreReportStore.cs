@@ -76,6 +76,7 @@ namespace SecureBootDashboard.Api.Storage
                 device.ClientVersion = report.Device.ClientVersion ?? device.ClientVersion;
                 device.OperatingSystem = report.Device.OperatingSystem ?? device.OperatingSystem;
                 device.OSVersion = report.Device.OSVersion ?? device.OSVersion;
+                device.OSBuildNumber = report.Device.OSBuildNumber ?? device.OSBuildNumber;
                 device.OSProductType = report.Device.OSProductType ?? device.OSProductType;
                 device.ChassisTypesJson = report.Device.ChassisTypes != null ? Serialize(report.Device.ChassisTypes) : device.ChassisTypesJson;
                 device.IsVirtualMachine = report.Device.IsVirtualMachine ?? device.IsVirtualMachine;

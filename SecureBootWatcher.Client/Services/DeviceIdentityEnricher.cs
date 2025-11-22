@@ -18,7 +18,7 @@ namespace SecureBootWatcher.Client.Services
         {
             try
             {
-                using var osSearcher = new ManagementObjectSearcher("SELECT Caption, Version, ProductType FROM Win32_OperatingSystem");
+                using var osSearcher = new ManagementObjectSearcher("SELECT Caption, Version, BuildNumber, ProductType FROM Win32_OperatingSystem");
                 using var osCollection = osSearcher.Get();
                 
                 foreach (ManagementObject os in osCollection)
@@ -27,6 +27,7 @@ namespace SecureBootWatcher.Client.Services
                     {
                         identity.OperatingSystem = os["Caption"]?.ToString();
                         identity.OSVersion = os["Version"]?.ToString();
+                        identity.OSBuildNumber = os["BuildNumber"]?.ToString();
                         
                         var productType = os["ProductType"];
                         if (productType != null)
