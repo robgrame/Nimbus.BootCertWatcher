@@ -2,7 +2,7 @@
 
 > **Monitor and govern the expiration and deployment of Secure Boot certificates across Windows fleets with real-time analytics.**
 
-**Version 1.9** - Complete Command Management Suite with Batch Operations!
+**Version 1.10** - Ready to Update Status Indicator!
 
 This solution monitors Secure Boot certificate status on Windows devices by capturing registry snapshots and Windows event logs, then transmitting reports to a centralized dashboard for compliance tracking, real-time monitoring, and alerting.
 
@@ -22,6 +22,25 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
 ---
 
 ## ✨ Key Features
+
+### 🔴 **NEW in v1.10** - Ready to Update Status Indicator
+- **Visual Readiness Tracking**: Instant identification of devices ready for UEFI CA 2023 update
+  - Color-coded status badges (Ready/Partial/Not Ready/Unknown)
+  - Firmware readiness indicator (release date >= 2024-01-01)
+  - OS build compatibility checker (Windows 10 19045+, Windows 11 22621+, 26100+)
+- **Enhanced Device List**: New "Ready to Update" column with smart indicators
+  - ✅ Green: Both firmware and OS ready for update
+  - ⚠️ Yellow: Partial readiness (firmware OR OS ready)
+  - ❌ Red: Not ready (neither firmware nor OS ready)
+  - ❓ Gray: Unknown status (missing data)
+- **Comprehensive Logic**: Multi-criteria readiness assessment
+  - Firmware release date validation
+  - OS build number parsing and validation
+  - Automatic status calculation per device
+- **Complete Test Coverage**: 26 test cases covering all scenarios
+  - Firmware boundary testing (2024-01-01 cutoff)
+  - Windows 10/11 build validation
+  - Null and invalid data handling
 
 ### 🔴 **NEW in v1.9** - Complete Command Management Suite
 - **Web UI for Command Management**: Full-featured dashboard for sending and managing commands
@@ -284,6 +303,42 @@ The dashboard now includes powerful remote command processing capabilities:
   - Authentication support (Entra ID / Windows Domain)
   - Italian localization support
 - Consumes API endpoints with resilience policies (Polly)
+
+---
+
+## 🆕 What's New in v1.10
+
+### Ready to Update Status Indicator
+The dashboard now includes a powerful status indicator for UEFI CA 2023 readiness:
+
+**Visual Readiness Tracking**:
+- Instant identification of devices ready for update
+- Color-coded status badges:
+  - **Green**: Ready for update
+  - **Yellow**: Partial readiness
+  - **Red**: Not ready
+  - **Gray**: Unknown status
+- Firmware readiness indicator (release date >= 2024-01-01)
+- OS build compatibility checker (Windows 10 19045+, Windows 11 22621+, 26100+)
+
+**Enhanced Device List**:
+- New "Ready to Update" column with smart indicators
+  - ✅ Green: Both firmware and OS ready for update
+  - ⚠️ Yellow: Partial readiness (firmware OR OS ready)
+  - ❌ Red: Not ready (neither firmware nor OS ready)
+  - ❓ Gray: Unknown status (missing data)
+
+**Comprehensive Logic**:
+- Multi-criteria readiness assessment
+- Firmware release date validation
+- OS build number parsing and validation
+- Automatic status calculation per device
+
+**Complete Test Coverage**:
+- 26 test cases covering all scenarios
+- Firmware boundary testing (2024-01-01 cutoff)
+- Windows 10/11 build validation
+- Null and invalid data handling
 
 ---
 
@@ -723,30 +778,23 @@ dotnet publish SecureBootDashboard.Web -c Release -o ./publish/web
 
 ## 🎯 Roadmap
 
-### ✅ v1.9 - Current Release
-- [x] **Batch Command Operations** - Complete
+### ✅ v1.10 - Current Release
+- [x] **Ready to Update Status Indicator** - Complete
+  - Visual readiness tracking in Device List
+  - Firmware release date validation (>= 2024-01-01)
+  - OS build compatibility checking
+  - Color-coded status badges
+  - Comprehensive test suite (26 tests)
+- [x] **Batch Command Operations** - Complete (v1.9)
   - Multi-device selection UI with 5 selection modes
   - Fleet-wide command deployment
-  - Batch result tracking and reporting
-  - Filter-based device selection
-- [x] **Command Details Page** - Complete
+- [x] **Command Details Page** - Complete (v1.9)
   - Comprehensive command information display
   - Execution timeline visualization
-  - Result verification tracking
-  - Device integration with navigation
-- [x] **Dashboard Integration** - Complete
+- [x] **Dashboard Integration** - Complete (v1.9)
   - Command statistics cards on homepage
-  - Quick access to command history
-  - Real-time command status updates
-  - Filterable command views
 - [x] **Complete Command Management UI** - Complete (v1.8)
-  - Web-based command sending interface
-  - Command history viewer with statistics
-  - Advanced filtering and search capabilities
 - [x] **Remote Command Processing** - Complete (v1.7)
-  - Client-side command processor
-  - Registry command execution
-  - Command verification and result reporting
 - [x] **Telemetry & CFR tracking** - Complete (v1.6)
 - [x] **Enhanced certificate visualization** - Complete (v1.5)
 - [x] **Real-time dashboard updates (SignalR)** - Complete (v1.3)
@@ -760,6 +808,7 @@ dotnet publish SecureBootDashboard.Web -c Release -o ./publish/web
 - [ ] Email notifications for command failures
 - [ ] Command approval workflow
 - [ ] Role-based access control (RBAC)
+- [ ] Automated remediation workflows
 
 ### v2.5 - Q3 2025
 
@@ -769,7 +818,7 @@ dotnet publish SecureBootDashboard.Web -c Release -o ./publish/web
 
 **Made with ❤️ for the IT Community**
 
-**Version 1.9** - Complete Command Management Suite with Batch Operations
+**Version 1.10** - Ready to Update Status Indicator
 
 [⬆ Back to Top](#secure-boot-certificate-watcher)
 
