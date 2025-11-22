@@ -1,0 +1,243 @@
+@page
+@model SecureBootDashboard.Web.Pages.Commands.SendModel
+@{
+    ViewData["Title"] = "Send Command";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="display-5">
+                    <i class="fas fa-terminal text-primary"></i> Send Command to Device
+                </h1>
+                <a asp-page="/Commands/History" class="btn btn-outline-secondary">
+                    <i class="fas fa-history"></i> View History
+                </a>
+            </div>
+
+            <!-- Status Message -->
+            @if (!string.IsNullOrEmpty(Model.StatusMessage))
+            {
+                <div class="alert alert-@(Model.IsSuccess ? "success" : "danger") alert-dismissible fade show" role="alert">
+                    <i class="fas fa-@(Model.IsSuccess ? "check-circle" : "exclamation-triangle")"></i>
+                    @Model.StatusMessage
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            <!-- Command Form -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-cog"></i> Command Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        <div asp-validation-summary="All" class="alert alert-danger d-none"></div>
+
+                        <!-- Device Selection -->
+                        <div class="mb-4">
+                            <label asp-for="Input.TargetDeviceId" class="form-label fw-bold">
+                                <i class="fas fa-desktop"></i> Target Device *
+                            </label>
+                            <select asp-for="Input.TargetDeviceId" class="form-select" required>
+                                <option value="">-- Select a device --</option>
+                                @foreach (var device in Model.Devices)
+                                {
+                                    <option value="@device.Id">
+                                        @device.MachineName (@device.DomainName) - @device.Manufacturer @device.Model [@device.DeploymentState]
+                                    </option>
+                                }
+                            </select>
+                            <span asp-validation-for="Input.TargetDeviceId" class="text-danger"></span>
+                            <small class="form-text text-muted">Select the device that will execute this command</small>
+                        </div>
+
+                        <!-- Command Type -->
+                        <div class="mb-4">
+                            <label asp-for="Input.CommandType" class="form-label fw-bold">
+                                <i class="fas fa-list"></i> Command Type *
+                            </label>
+                            <select asp-for="Input.CommandType" class="form-select" id="commandTypeSelect" required>
+                                <option value="CertificateUpdate">Certificate Update</option>
+                                <option value="MicrosoftUpdateOptIn">Microsoft Update Opt-In/Out</option>
+                                <option value="TelemetryConfiguration">Telemetry Configuration</option>
+                            </select>
+                            <span asp-validation-for="Input.CommandType" class="text-danger"></span>
+                        </div>
+
+                        <!-- Certificate Update Options -->
+                        <div id="certUpdateOptions" class="command-options mb-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Certificate Update Settings</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label asp-for="Input.CertUpdateType" class="form-label">Update Type</label>
+                                        <select asp-for="Input.CertUpdateType" class="form-select">
+                                            <option value="0">None (0)</option>
+                                            <option value="1" selected>DB Update (1)</option>
+                                            <option value="2">Boot Manager (2)</option>
+                                        </select>
+                                        <small class="form-text text-muted">
+                                            0 = None, 1 = DB (Signature Database), 2 = Boot Manager
+                                        </small>
+                                    </div>
+                                    <div class="form-check">
+                                        <input asp-for="Input.ForceUpdate" class="form-check-input" type="checkbox">
+                                        <label asp-for="Input.ForceUpdate" class="form-check-label">
+                                            Force Update (ignore capability checks)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Microsoft Update Opt-In Options -->
+                        <div id="msUpdateOptions" class="command-options mb-4" style="display:none;">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Microsoft Update Managed Opt-In</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-check form-switch">
+                                        <input asp-for="Input.OptIn" class="form-check-input" type="checkbox" checked>
+                                        <label asp-for="Input.OptIn" class="form-check-label">
+                                            <strong>Enable</strong> Microsoft Update Managed Opt-In (CFR Eligibility)
+                                        </label>
+                                    </div>
+                                    <small class="form-text text-muted">
+                                        When enabled, device becomes eligible for Controlled Feature Rollout if telemetry requirements are met.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Telemetry Configuration Options -->
+                        <div id="telemetryOptions" class="command-options mb-4" style="display:none;">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Telemetry Configuration</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label asp-for="Input.TelemetryLevel" class="form-label">Required Telemetry Level</label>
+                                        <select asp-for="Input.TelemetryLevel" class="form-select">
+                                            <option value="0">Security (0) - Enterprise Only</option>
+                                            <option value="1" selected>Basic (1) - CFR Eligible ?</option>
+                                            <option value="2">Enhanced (2)</option>
+                                            <option value="3">Full (3)</option>
+                                        </select>
+                                        <small class="form-text text-muted">
+                                            For CFR eligibility, level must be 1 (Basic) or higher
+                                        </small>
+                                    </div>
+                                    <div class="form-check">
+                                        <input asp-for="Input.ValidateOnly" class="form-check-input" type="checkbox">
+                                        <label asp-for="Input.ValidateOnly" class="form-check-label">
+                                            Validate Only (don't change the setting)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Common Options -->
+                        <div class="mb-4">
+                            <label asp-for="Input.Description" class="form-label">
+                                <i class="fas fa-comment"></i> Description
+                            </label>
+                            <textarea asp-for="Input.Description" class="form-control" rows="2" 
+                                      placeholder="Optional description or reason for this command"></textarea>
+                            <span asp-validation-for="Input.Description" class="text-danger"></span>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Input.Priority" class="form-label">
+                                    <i class="fas fa-sort-numeric-up"></i> Priority
+                                </label>
+                                <input asp-for="Input.Priority" type="number" class="form-control" min="0" max="10">
+                                <small class="form-text text-muted">0 = Normal, 10 = Highest priority</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch mt-4">
+                                    <input asp-for="Input.ScheduleExecution" class="form-check-input" type="checkbox" id="scheduleToggle">
+                                    <label class="form-check-label" for="scheduleToggle">
+                                        Schedule for later execution
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="scheduleOptions" class="mb-4" style="display:none;">
+                            <label asp-for="Input.ScheduledFor" class="form-label">
+                                <i class="fas fa-clock"></i> Scheduled Execution Time
+                            </label>
+                            <input asp-for="Input.ScheduledFor" type="datetime-local" class="form-control">
+                            <small class="form-text text-muted">Leave empty for immediate execution</small>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a asp-page="/Devices/List" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-paper-plane"></i> Send Command
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Card -->
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-info-circle"></i> Command Information</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li><strong>Certificate Update:</strong> Triggers UEFI CA 2023 certificate update on the device</li>
+                        <li><strong>Microsoft Update Opt-In:</strong> Enable/disable Controlled Feature Rollout (CFR) eligibility</li>
+                        <li><strong>Telemetry Configuration:</strong> Validate or set Windows diagnostic data level</li>
+                    </ul>
+                    <hr>
+                    <p class="mb-0 text-muted">
+                        <i class="fas fa-shield-alt"></i> <strong>Note:</strong> Commands require the client to run with Administrator privileges. 
+                        Commands are queued and executed on the next client check-in cycle.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Show/hide command-specific options
+        document.getElementById('commandTypeSelect').addEventListener('change', function() {
+            const commandType = this.value;
+            document.querySelectorAll('.command-options').forEach(el => el.style.display = 'none');
+            
+            if (commandType === 'CertificateUpdate') {
+                document.getElementById('certUpdateOptions').style.display = 'block';
+            } else if (commandType === 'MicrosoftUpdateOptIn') {
+                document.getElementById('msUpdateOptions').style.display = 'block';
+            } else if (commandType === 'TelemetryConfiguration') {
+                document.getElementById('telemetryOptions').style.display = 'block';
+            }
+        });
+
+        // Show/hide schedule options
+        document.getElementById('scheduleToggle').addEventListener('change', function() {
+            document.getElementById('scheduleOptions').style.display = this.checked ? 'block' : 'none';
+        });
+
+        // Initialize on load
+        document.getElementById('commandTypeSelect').dispatchEvent(new Event('change'));
+    </script>
+}

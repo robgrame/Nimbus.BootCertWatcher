@@ -15,6 +15,8 @@ namespace SecureBootDashboard.Api.Data
 
         public DbSet<SecureBootEventEntity> Events => Set<SecureBootEventEntity>();
 
+        public DbSet<PendingCommandEntity> PendingCommands => Set<PendingCommandEntity>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -63,6 +65,26 @@ namespace SecureBootDashboard.Api.Data
                 entity.HasOne(e => e.Report)
                     .WithMany(r => r.Events)
                     .HasForeignKey(e => e.ReportId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<PendingCommandEntity>(entity =>
+            {
+                entity.ToTable("PendingCommands");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CommandType).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.CommandJson).HasColumnType("nvarchar(max)").IsRequired();
+                entity.Property(e => e.Status).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.CreatedBy).HasMaxLength(256);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.ResultJson).HasColumnType("nvarchar(max)");
+                entity.HasIndex(e => e.DeviceId);
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.CreatedAtUtc);
+                entity.HasIndex(e => new { e.DeviceId, e.Status });
+                entity.HasOne(e => e.Device)
+                    .WithMany()
+                    .HasForeignKey(e => e.DeviceId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
         }

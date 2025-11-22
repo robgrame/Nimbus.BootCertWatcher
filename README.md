@@ -2,7 +2,7 @@
 
 > **Monitor and govern the expiration and deployment of Secure Boot certificates across Windows fleets with real-time analytics.**
 
-**Version 1.7** - Remote Command Processing for centralized device configuration!
+**Version 1.8** - Complete Command Management UI and Advanced Scheduling!
 
 This solution monitors Secure Boot certificate status on Windows devices by capturing registry snapshots and Windows event logs, then transmitting reports to a centralized dashboard for compliance tracking, real-time monitoring, and alerting.
 
@@ -23,24 +23,45 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
 
 ## ✨ Key Features
 
+### 🔴 **NEW in v1.8** - Complete Command Management Dashboard
+- **Web UI for Command Management**: Full-featured dashboard for sending and managing commands
+- **Command Sending Interface**: Intuitive form to send configuration commands to devices
+  - Certificate Update commands with force update option
+  - Microsoft Update Opt-In/Out configuration
+  - Telemetry Level validation and configuration
+- **Command History & Tracking**: Complete audit trail of all commands
+  - Real-time status updates (Pending, Fetched, Processing, Completed, Failed)
+  - Command statistics dashboard with filterable views
+  - Cancel pending commands before execution
+- **Advanced Scheduling**: Schedule commands for future execution
+  - Priority-based command execution
+  - Configurable execution timing
+  - Retry tracking with fetch count monitoring
+- **Batch Operations**: Send commands to multiple devices simultaneously
+- **Visual Command Status**: Color-coded badges and icons for quick status identification
+
 ### 🔴 **NEW in v1.7** - Remote Command Processing
-- **Centralized Command Control**: Send configuration commands and scripts to devices
-- **Command Templates**: Define reusable command templates with variables
-- **Secure Execution**: Commands executed with SYSTEM privileges, using secure channels
-- **Command History**: Track command execution status and results
-- **Dashboard Integration**: View and manage commands from the dashboard
-- **Real-time Updates**: Instant feedback on command execution status
-- **Centralized Configuration Management**: Send configuration commands from dashboard to remote clients
-- **Registry Command Execution**: Clients can execute registry write operations remotely
-  - Certificate Update commands (UpdateType registry key)
-  - Microsoft Update Opt-In/Opt-Out (MicrosoftUpdateManagedOptIn)
-  - Telemetry Level Configuration (AllowTelemetry)
-- **Command Verification**: Automatic local verification of registry changes after execution
-- **Result Reporting**: Clients report execution results back to API with success/failure status
-- **Flexible Scheduling**: Process commands before or after inventory collection
-- **Resilient Processing**: Configurable retry logic and failure handling
-- **Security Controls**: Commands disabled by default (opt-in feature)
-- **Administrator Required**: Registry write operations require elevated privileges
+The dashboard now includes powerful remote command processing capabilities:
+
+**Centralized Command Control**:
+- Send configuration commands and scripts to one or more devices
+- Define reusable command templates with variables for flexibility
+- Secure execution with SYSTEM privileges, using encrypted channels
+
+**Command Management**:
+- View command execution status in real-time
+- Retry or cancel pending commands
+- Download command output and logs
+
+**Dashboard Integration**:
+- New command status cards and charts
+- Additional columns for command status in device list
+- Detailed command execution history in device details
+
+**Improved User Experience**:
+- Enhanced device details page with command processing features
+- Italian language support for all labels
+- Responsive design for all screen sizes
 
 ### 🔴 **NEW in v1.6** - Telemetry & CFR Tracking
 - **Telemetry Policy Monitoring**: Track Windows diagnostic data levels (Security/Basic/Enhanced/Full)
@@ -244,6 +265,38 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
   - Authentication support (Entra ID / Windows Domain)
   - Italian localization support
 - Consumes API endpoints with resilience policies (Polly)
+
+---
+
+## 🆕 What's New in v1.8
+
+### Complete Command Management Dashboard
+The dashboard now includes a complete command management UI:
+
+**Web UI for Command Management**:
+- Full-featured dashboard for sending and managing commands
+- Intuitive form to send configuration commands to devices
+  - Certificate Update commands with force update option
+  - Microsoft Update Opt-In/Out configuration
+  - Telemetry Level validation and configuration
+
+**Command History & Tracking**:
+- Complete audit trail of all commands
+  - Real-time status updates (Pending, Fetched, Processing, Completed, Failed)
+  - Command statistics dashboard with filterable views
+  - Cancel pending commands before execution
+
+**Advanced Scheduling**:
+- Schedule commands for future execution
+  - Priority-based command execution
+  - Configurable execution timing
+  - Retry tracking with fetch count monitoring
+
+**Batch Operations**:
+- Send commands to multiple devices simultaneously
+
+**Visual Command Status**:
+- Color-coded badges and icons for quick status identification
 
 ---
 
@@ -628,35 +681,40 @@ dotnet publish SecureBootDashboard.Web -c Release -o ./publish/web
 
 ## 🎯 Roadmap
 
-### ✅ v1.7 - Current Release
-- [x] **Remote Command Processing** - Complete
-  - Centralized configuration management from dashboard
-  - Registry command execution (UpdateType, OptIn, Telemetry)
+### ✅ v1.8 - Current Release
+- [x] **Complete Command Management UI** - Complete
+  - Web-based command sending interface
+  - Command history viewer with statistics
+  - Advanced filtering and search capabilities
+  - Real-time command status tracking
+  - Command cancellation support
+- [x] **Command Scheduling & Retry Management** - Complete
+  - Schedule commands for future execution
+  - Priority-based execution ordering
+  - Automatic retry tracking with fetch counts
+  - Configurable command timeouts
+- [x] **Batch Command Operations** - Complete
+  - Send commands to multiple devices
+  - Bulk operation support via API
+  - Fleet-wide configuration management
+- [x] **Remote Command Processing** - Complete (v1.7)
+  - Client-side command processor
+  - Registry command execution
   - Command verification and result reporting
-  - Flexible before/after inventory processing
-  - Security controls and administrator requirements
 - [x] **Telemetry & CFR tracking** - Complete (v1.6)
   - Telemetry policy monitoring
   - CFR eligibility detection and reporting
-  - UpdateType tracking
-  - Dashboard integration for telemetry metrics
-  - Device list enhancements for telemetry and CFR status
 - [x] **Enhanced certificate visualization** - Complete (v1.5)
-  - Detailed certificate tables with all properties
-  - Color-coded status indicators (expired, expiring, valid)
-  - Collapsible sections by database type
-  - Certificate statistics overview
-  - Italian localization
 - [x] **Real-time dashboard updates (SignalR)** - Complete (v1.3)
 - [x] **Export reports to Excel/CSV** - Complete (v1.3)
 
-### v1.8 - Next Release
-- [ ] Complete command UI in web dashboard
-- [ ] Command history and audit trail
-- [ ] Batch command operations for fleets
-- [ ] Command scheduling and retry management
+### v1.9 - Next Release
 - [ ] Dark mode theme support
 - [ ] Custom alert thresholds per fleet
+- [ ] Command templates library
+- [ ] Advanced command analytics
+- [ ] Email notifications for command failures
+- [ ] Command execution reports
 
 ### v2.0 - Q3 2025
 - [ ] Multi-tenant support with RBAC
@@ -822,7 +880,7 @@ For questions, issues, or support:
 
 **Made with ❤️ for the IT Community**
 
-**Version 1.7** - Remote Command Processing for centralized device configuration
+**Version 1.8** - Complete Command Management UI and Advanced Scheduling
 
 [⬆ Back to Top](#secure-boot-certificate-watcher)
 
