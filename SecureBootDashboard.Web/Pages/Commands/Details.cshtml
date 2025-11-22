@@ -1,0 +1,367 @@
+@page
+@model SecureBootDashboard.Web.Pages.Commands.DetailsModel
+@{
+    ViewData["Title"] = "Command Details";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-lg-10 offset-lg-1">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="display-5">
+                    <i class="fas fa-info-circle text-primary"></i> Command Details
+                </h1>
+                <a asp-page="/Commands/History" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to History
+                </a>
+            </div>
+
+            <!-- Error Message -->
+            @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle"></i> @Model.ErrorMessage
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            @if (Model.Command != null)
+            {
+                <!-- Status Overview Card -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-tachometer-alt"></i> Command Overview
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <dl class="row">
+                                    <dt class="col-sm-4">Command ID:</dt>
+                                    <dd class="col-sm-8"><code>@Model.Command.CommandId</code></dd>
+
+                                    <dt class="col-sm-4">Type:</dt>
+                                    <dd class="col-sm-8">
+                                        <span class="badge bg-info">@Model.Command.CommandType</span>
+                                    </dd>
+
+                                    <dt class="col-sm-4">Status:</dt>
+                                    <dd class="col-sm-8">
+                                        @{
+                                            var statusClass = Model.Command.Status switch
+                                            {
+                                                "Pending" => "bg-warning text-dark",
+                                                "Fetched" => "bg-info",
+                                                "Processing" => "bg-primary",
+                                                "Completed" => "bg-success",
+                                                "Failed" => "bg-danger",
+                                                "Cancelled" => "bg-secondary",
+                                                "Expired" => "bg-dark",
+                                                _ => "bg-light text-dark"
+                                            };
+                                        }
+                                        <span class="badge @statusClass">@Model.Command.Status</span>
+                                    </dd>
+
+                                    <dt class="col-sm-4">Priority:</dt>
+                                    <dd class="col-sm-8">
+                                        @if (Model.Command.Priority > 0)
+                                        {
+                                            <span class="badge bg-warning text-dark">@Model.Command.Priority</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Normal (0)</span>
+                                        }
+                                    </dd>
+                                </dl>
+                            </div>
+                            <div class="col-md-6">
+                                <dl class="row">
+                                    <dt class="col-sm-4">Created:</dt>
+                                    <dd class="col-sm-8">@Model.Command.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</dd>
+
+                                    <dt class="col-sm-4">Created By:</dt>
+                                    <dd class="col-sm-8">@(Model.Command.CreatedBy ?? "System")</dd>
+
+                                    <dt class="col-sm-4">Fetch Count:</dt>
+                                    <dd class="col-sm-8">
+                                        <span class="badge bg-secondary">@Model.Command.FetchCount</span>
+                                    </dd>
+
+                                    @if (Model.Command.LastFetchedAtUtc.HasValue)
+                                    {
+                                        <dt class="col-sm-4">Last Fetched:</dt>
+                                        <dd class="col-sm-8">@Model.Command.LastFetchedAtUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</dd>
+                                    }
+
+                                    @if (Model.Command.ProcessedAtUtc.HasValue)
+                                    {
+                                        <dt class="col-sm-4">Processed:</dt>
+                                        <dd class="col-sm-8">@Model.Command.ProcessedAtUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</dd>
+                                    }
+
+                                    @if (Model.Command.ScheduledForUtc.HasValue)
+                                    {
+                                        <dt class="col-sm-4">Scheduled For:</dt>
+                                        <dd class="col-sm-8">
+                                            <i class="fas fa-clock"></i> @Model.Command.ScheduledForUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                                        </dd>
+                                    }
+                                </dl>
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(Model.Command.Description))
+                        {
+                            <hr>
+                            <p class="mb-0">
+                                <strong>Description:</strong><br>
+                                @Model.Command.Description
+                            </p>
+                        }
+
+                        <!-- Actions -->
+                        @if (Model.Command.Status == "Pending" || Model.Command.Status == "Fetched")
+                        {
+                            <hr>
+                            <form method="post" asp-page-handler="Cancel">
+                                <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to cancel this command?')">
+                                    <i class="fas fa-ban"></i> Cancel Command
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </div>
+
+                <!-- Target Device Card -->
+                @if (Model.Device != null)
+                {
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-desktop"></i> Target Device
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row mb-0">
+                                <dt class="col-sm-3">Machine Name:</dt>
+                                <dd class="col-sm-9">
+                                    <a asp-page="/Devices/Details" asp-route-id="@Model.Device.Id">
+                                        @Model.Device.MachineName
+                                    </a>
+                                </dd>
+
+                                <dt class="col-sm-3">Domain:</dt>
+                                <dd class="col-sm-9">@(Model.Device.DomainName ?? "-")</dd>
+
+                                <dt class="col-sm-3">Manufacturer:</dt>
+                                <dd class="col-sm-9">@(Model.Device.Manufacturer ?? "-")</dd>
+
+                                <dt class="col-sm-3">Model:</dt>
+                                <dd class="col-sm-9">@(Model.Device.Model ?? "-")</dd>
+
+                                <dt class="col-sm-3">Deployment State:</dt>
+                                <dd class="col-sm-9">
+                                    <span class="badge bg-info">@Model.Device.DeploymentState</span>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                }
+
+                <!-- Command Parameters Card -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cog"></i> Command Parameters
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <pre class="bg-light p-3 rounded"><code>@Model.Command.CommandJson</code></pre>
+                    </div>
+                </div>
+
+                <!-- Execution Result Card -->
+                @if (Model.Result != null)
+                {
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header @(Model.Result.Success ? "bg-success" : "bg-danger") text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-@(Model.Result.Success ? "check-circle" : "times-circle")"></i>
+                                Execution Result: @(Model.Result.Success ? "Success" : "Failed")
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row">
+                                <dt class="col-sm-3">Executed At:</dt>
+                                <dd class="col-sm-9">@Model.Result.ExecutedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</dd>
+
+                                <dt class="col-sm-3">Success:</dt>
+                                <dd class="col-sm-9">
+                                    @if (Model.Result.Success)
+                                    {
+                                        <span class="badge bg-success"><i class="fas fa-check"></i> Yes</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger"><i class="fas fa-times"></i> No</span>
+                                    }
+                                </dd>
+
+                                @if (!string.IsNullOrEmpty(Model.Result.Message))
+                                {
+                                    <dt class="col-sm-3">Message:</dt>
+                                    <dd class="col-sm-9">@Model.Result.Message</dd>
+                                }
+
+                                @if (!string.IsNullOrEmpty(Model.Result.ErrorDetails))
+                                {
+                                    <dt class="col-sm-3">Error Details:</dt>
+                                    <dd class="col-sm-9">
+                                        <div class="alert alert-danger mb-0">
+                                            @Model.Result.ErrorDetails
+                                        </div>
+                                    </dd>
+                                }
+
+                                <dt class="col-sm-3">Verification:</dt>
+                                <dd class="col-sm-9">
+                                    @if (Model.Result.VerificationSucceeded)
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check-double"></i> Verified
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fas fa-exclamation-triangle"></i> Not Verified
+                                        </span>
+                                    }
+                                </dd>
+
+                                @if (!string.IsNullOrEmpty(Model.Result.VerificationDetails))
+                                {
+                                    <dt class="col-sm-3">Verification Details:</dt>
+                                    <dd class="col-sm-9">@Model.Result.VerificationDetails</dd>
+                                }
+                            </dl>
+                        </div>
+                    </div>
+                }
+                else if (Model.Command.Status == "Completed" || Model.Command.Status == "Failed")
+                {
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i>
+                        Command has been processed but no result details are available.
+                    </div>
+                }
+
+                <!-- Timeline Card -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history"></i> Command Timeline
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="timeline">
+                            <li>
+                                <i class="fas fa-plus-circle text-primary"></i>
+                                <strong>Created</strong>
+                                <br>
+                                <small>@Model.Command.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</small>
+                                <br>
+                                <small class="text-muted">By: @(Model.Command.CreatedBy ?? "System")</small>
+                            </li>
+
+                            @if (Model.Command.LastFetchedAtUtc.HasValue)
+                            {
+                                <li>
+                                    <i class="fas fa-download text-info"></i>
+                                    <strong>Fetched by Client</strong>
+                                    <br>
+                                    <small>@Model.Command.LastFetchedAtUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</small>
+                                    <br>
+                                    <small class="text-muted">Fetch count: @Model.Command.FetchCount</small>
+                                </li>
+                            }
+
+                            @if (Model.Result != null)
+                            {
+                                <li>
+                                    <i class="fas fa-@(Model.Result.Success ? "check-circle text-success" : "times-circle text-danger")"></i>
+                                    <strong>@(Model.Result.Success ? "Executed Successfully" : "Execution Failed")</strong>
+                                    <br>
+                                    <small>@Model.Result.ExecutedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</small>
+                                </li>
+                            }
+
+                            @if (Model.Command.ProcessedAtUtc.HasValue)
+                            {
+                                <li>
+                                    <i class="fas fa-flag-checkered text-success"></i>
+                                    <strong>Completed</strong>
+                                    <br>
+                                    <small>@Model.Command.ProcessedAtUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</small>
+                                    <br>
+                                    <small class="text-muted">Final status: @Model.Command.Status</small>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Command not found.
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .timeline {
+            list-style: none;
+            padding: 0;
+            position: relative;
+        }
+
+        .timeline:before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #dee2e6;
+        }
+
+        .timeline li {
+            margin-bottom: 20px;
+            padding-left: 35px;
+            position: relative;
+        }
+
+        .timeline li i {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+    </style>
+}

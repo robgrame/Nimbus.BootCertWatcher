@@ -129,6 +129,65 @@
             </div>
         </div>
 
+        <!-- Command Statistics Row (NEW) -->
+        @if (Model.CommandStats != null)
+        {
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <a asp-page="/Commands/History" class="card-link">
+                        <div class="card text-center bg-dark text-white stat-card">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-terminal"></i> Total Commands</h5>
+                                <p class="display-4">@Model.CommandStats.TotalCommands</p>
+                            </div>
+                            <div class="card-footer bg-transparent border-0">
+                                <small><i class="fas fa-arrow-right"></i> View All</small>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a asp-page="/Commands/History" asp-route-status="Pending" class="card-link">
+                        <div class="card text-center bg-warning text-dark stat-card">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-clock"></i> Pending Commands</h5>
+                                <p class="display-4">@Model.CommandStats.PendingCount</p>
+                            </div>
+                            <div class="card-footer bg-transparent border-0">
+                                <small><i class="fas fa-arrow-right"></i> View Pending</small>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a asp-page="/Commands/History" asp-route-status="Completed" class="card-link">
+                        <div class="card text-center bg-success text-white stat-card">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-check-circle"></i> Completed</h5>
+                                <p class="display-4">@Model.CommandStats.CompletedCount</p>
+                            </div>
+                            <div class="card-footer bg-transparent border-0">
+                                <small><i class="fas fa-arrow-right"></i> View Completed</small>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a asp-page="/Commands/History" asp-route-status="Failed" class="card-link">
+                        <div class="card text-center bg-danger text-white stat-card">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-times-circle"></i> Failed</h5>
+                                <p class="display-4">@Model.CommandStats.FailedCount</p>
+                            </div>
+                            <div class="card-footer bg-transparent border-0">
+                                <small><i class="fas fa-arrow-right"></i> View Failed</small>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        }
+
         <!-- Charts Section -->
         <div class="row mb-4">
             <!-- Compliance Pie Chart -->

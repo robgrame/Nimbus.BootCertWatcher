@@ -2,7 +2,7 @@
 
 > **Monitor and govern the expiration and deployment of Secure Boot certificates across Windows fleets with real-time analytics.**
 
-**Version 1.8** - Complete Command Management UI and Advanced Scheduling!
+**Version 1.9** - Complete Command Management Suite with Batch Operations!
 
 This solution monitors Secure Boot certificate status on Windows devices by capturing registry snapshots and Windows event logs, then transmitting reports to a centralized dashboard for compliance tracking, real-time monitoring, and alerting.
 
@@ -23,7 +23,7 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
 
 ## ✨ Key Features
 
-### 🔴 **NEW in v1.8** - Complete Command Management Dashboard
+### 🔴 **NEW in v1.9** - Complete Command Management Suite
 - **Web UI for Command Management**: Full-featured dashboard for sending and managing commands
 - **Command Sending Interface**: Intuitive form to send configuration commands to devices
   - Certificate Update commands with force update option
@@ -38,7 +38,26 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
   - Configurable execution timing
   - Retry tracking with fetch count monitoring
 - **Batch Operations**: Send commands to multiple devices simultaneously
-- **Visual Command Status**: Color-coded badges and icons for quick status identification
+  - Manual device selection with select-all checkbox
+  - Filter-based selection (Fleet, Manufacturer, Deployment State)
+  - Select all devices option for fleet-wide operations
+  - Real-time result tracking with success/failure reporting
+- **Command Details Page**: Comprehensive command information viewer
+  - Full command lifecycle tracking with timeline visualization
+  - Execution results with verification status
+  - Device information integration
+  - JSON parameter display with syntax highlighting
+  - Cancel pending commands capability
+- **Dashboard Integration**: Command statistics on homepage
+  - Total Commands counter with drill-down
+  - Pending Commands alert card
+  - Completed/Failed command tracking
+  - Quick access to Command History with filters
+- **Enhanced User Experience**: Streamlined command management
+  - Consistent UI across all command pages
+  - Real-time status updates via SignalR
+  - Color-coded status badges and icons
+  - Responsive design for all screen sizes
 
 ### 🔴 **NEW in v1.7** - Remote Command Processing
 The dashboard now includes powerful remote command processing capabilities:
@@ -268,9 +287,9 @@ The dashboard now includes powerful remote command processing capabilities:
 
 ---
 
-## 🆕 What's New in v1.8
+## 🆕 What's New in v1.9
 
-### Complete Command Management Dashboard
+### Complete Command Management Suite
 The dashboard now includes a complete command management UI:
 
 **Web UI for Command Management**:
@@ -294,9 +313,32 @@ The dashboard now includes a complete command management UI:
 
 **Batch Operations**:
 - Send commands to multiple devices simultaneously
+  - Manual device selection with select-all checkbox
+  - Filter-based selection (Fleet, Manufacturer, Deployment State)
+  - Select all devices option for fleet-wide operations
+  - Real-time result tracking with success/failure reporting
 
-**Visual Command Status**:
-- Color-coded badges and icons for quick status identification
+**Command Details Page**:
+- Comprehensive command information viewer
+  - Full command lifecycle tracking with timeline visualization
+  - Execution results with verification status
+  - Device information integration
+  - JSON parameter display with syntax highlighting
+  - Cancel pending commands capability
+
+**Dashboard Integration**:
+- Command statistics on homepage
+  - Total Commands counter with drill-down
+  - Pending Commands alert card
+  - Completed/Failed command tracking
+  - Quick access to Command History with filters
+
+**Enhanced User Experience**:
+- Streamlined command management
+  - Consistent UI across all command pages
+  - Real-time status updates via SignalR
+  - Color-coded status badges and icons
+  - Responsive design for all screen sizes
 
 ---
 
@@ -681,206 +723,53 @@ dotnet publish SecureBootDashboard.Web -c Release -o ./publish/web
 
 ## 🎯 Roadmap
 
-### ✅ v1.8 - Current Release
-- [x] **Complete Command Management UI** - Complete
+### ✅ v1.9 - Current Release
+- [x] **Batch Command Operations** - Complete
+  - Multi-device selection UI with 5 selection modes
+  - Fleet-wide command deployment
+  - Batch result tracking and reporting
+  - Filter-based device selection
+- [x] **Command Details Page** - Complete
+  - Comprehensive command information display
+  - Execution timeline visualization
+  - Result verification tracking
+  - Device integration with navigation
+- [x] **Dashboard Integration** - Complete
+  - Command statistics cards on homepage
+  - Quick access to command history
+  - Real-time command status updates
+  - Filterable command views
+- [x] **Complete Command Management UI** - Complete (v1.8)
   - Web-based command sending interface
   - Command history viewer with statistics
   - Advanced filtering and search capabilities
-  - Real-time command status tracking
-  - Command cancellation support
-- [x] **Command Scheduling & Retry Management** - Complete
-  - Schedule commands for future execution
-  - Priority-based execution ordering
-  - Automatic retry tracking with fetch counts
-  - Configurable command timeouts
-- [x] **Batch Command Operations** - Complete
-  - Send commands to multiple devices
-  - Bulk operation support via API
-  - Fleet-wide configuration management
 - [x] **Remote Command Processing** - Complete (v1.7)
   - Client-side command processor
   - Registry command execution
   - Command verification and result reporting
 - [x] **Telemetry & CFR tracking** - Complete (v1.6)
-  - Telemetry policy monitoring
-  - CFR eligibility detection and reporting
 - [x] **Enhanced certificate visualization** - Complete (v1.5)
 - [x] **Real-time dashboard updates (SignalR)** - Complete (v1.3)
 - [x] **Export reports to Excel/CSV** - Complete (v1.3)
 
-### v1.9 - Next Release
+### v2.0 - Q2 2025
 - [ ] Dark mode theme support
 - [ ] Custom alert thresholds per fleet
 - [ ] Command templates library
-- [ ] Advanced command analytics
+- [ ] Advanced command analytics and reporting
 - [ ] Email notifications for command failures
-- [ ] Command execution reports
+- [ ] Command approval workflow
+- [ ] Role-based access control (RBAC)
 
-### v2.0 - Q3 2025
-- [ ] Multi-tenant support with RBAC
-- [ ] Certificate compliance policies
-- [ ] Automated remediation workflows
-- [ ] Enhanced analytics (30/60/90 day trends)
-- [ ] Machine learning anomaly detection
-
-### v3.0 - Q4 2025
-- [ ] Linux client support (.NET 8)
-- [ ] API v2 with GraphQL
-- [ ] Integration with ServiceNow/Jira
-- [ ] Mobile app for iOS/Android
-
-See [Q1 2025 Features Plan](docs/Q1_2025_FEATURES_PLAN.md) for detailed roadmap.
+### v2.5 - Q3 2025
 
 ---
 
-## Security Considerations
-
-- **Authentication**: Entra ID (Azure AD) and Windows Domain authentication for dashboard access
-- **SignalR Security**: Hub endpoints open in development; add `[Authorize]` for production
-- **Export Authorization**: Add authorization checks to export endpoints before production
-- **Managed Identity**: Use Azure Managed Identity for API → SQL Database and Client → Storage Queue
-- **Certificate Auth**: Client supports certificate-based authentication for Azure Queue Storage
-- **TLS/HTTPS**: Enforce HTTPS for all API endpoints; use valid certificates in production
-- **WebSocket Security**: Ensure WebSocket connections use WSS (secure) protocol
-- **Network Isolation**: Place API in private VNet with App Gateway or Front Door
-- **RBAC**: Restrict SQL Database and Storage Queue access with Azure role assignments
-- **Secrets Management**: Use Azure Key Vault for connection strings and sensitive configuration
-
----
-
-## Monitoring & Operations
-
-- **Application Insights**: Enable on both API and Web app services for telemetry, exceptions, and performance traces
-- **Log Analytics**: Configure diagnostic logs for SQL Database to track query performance and throttling
-- **Serilog Structured Logging**: Comprehensive logging with file rotation and console output
-- **Health Checks**: Built-in health endpoints for API (`/health`) and queue processor
-- **SignalR Monitoring**: Track connection count, message throughput, and reconnection events
-- **Export Metrics**: Monitor export request count, file sizes, and generation time
-- **Alerts**: Set up Azure Monitor alerts for:
-  - API 500 errors or high latency
-  - SQL DTU/CPU thresholds
-  - Queue message age (if using Azure Queue)
-  - Certificate expiration warnings
-  - Client connectivity failures
-  - SignalR connection drops
-  - Export operation failures
-
----
-
-## Troubleshooting
-
-### Client not sending reports
-1. Check `appsettings.json` sink configuration
-2. Verify network connectivity to API or Azure Storage
-3. Review client logs (console or Windows Event Log if configured)
-4. Confirm `.NET Framework 4.8` runtime installed
-5. Ensure PowerShell 5.0+ with SecureBoot module (for certificate enumeration)
-6. Run as Administrator to access registry and UEFI variables
-
-### API ingestion failures
-1. Check SQL connection string and firewall rules
-2. Review API logs via Application Insights or `dotnet run` console
-3. Validate EF migrations applied: `dotnet ef migrations list`
-4. Test health endpoint: `GET /health`
-5. Verify queue processor is running (if using Azure Queue)
-6. Check SignalR hub accessibility: `WS /dashboardHub`
-
-### Missing data in dashboard
-1. Confirm API is reachable from web app
-2. Check `ApiBaseUrl` setting in web app configuration
-3. Verify reports exist in database: query `SecureBootReports` table
-4. Review web app logs for HTTP errors
-5. Check browser console for JavaScript errors
-6. Verify SignalR connection in browser dev tools
-
-### SignalR not working
-1. Check browser console for WebSocket errors
-2. Verify SignalR hub endpoint: `wss://yourhost/dashboardHub`
-3. Ensure WebSocket support in browser (Chrome/Edge/Firefox)
-4. Check network allows WebSocket connections (port 443 for WSS)
-5. Review API logs for SignalR broadcast errors
-6. Test connection: `Ping()` method in browser dev tools
-
-### Export failures
-1. Verify export endpoints are accessible
-2. Check API logs for export service errors
-3. Ensure sufficient memory for large datasets
-4. Test with small dataset first
-5. Review browser download settings
-
-### Certificate enumeration issues
-1. Verify Secure Boot is enabled: `Confirm-SecureBootUEFI`
-2. Check PowerShell version: `$PSVersionTable.PSVersion` (requires 5.0+)
-3. Ensure SecureBoot module is available: `Get-Module -ListAvailable SecureBoot`
-4. Run PowerShell as Administrator
-5. Review client logs for certificate-related errors
-
-For detailed troubleshooting steps, see:
-- [Troubleshooting Guide](docs/TROUBLESHOOTING_PORTS.md)
-- [Host Aborted Guide](docs/HOSTABORTED_TROUBLESHOOTING.md)
-- [SignalR Implementation Guide](docs/SIGNALR_REALTIME_COMPLETE.md)
-
----
-
-## Contributing
-
-Contributions welcome! Please:
-1. Open issues for bugs or feature requests
-2. Fork the repository for enhancements
-3. Submit pull requests with clear descriptions
-4. Follow existing code style and conventions
-5. Include tests for new features
-6. Update documentation as needed
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
-
----
-
-## License
-
-This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
-
-### Third-Party Licenses
-- **SignalR** - Apache 2.0 *(NEW)*
-- **ClosedXML** - MIT License *(NEW)*
-- **CsvHelper** - MS-PL / Apache 2.0 *(NEW)*
-- **Chart.js** - MIT License
-- **Bootstrap** - MIT License
-- **Font Awesome** - SIL OFL 1.1 / MIT
-- **Serilog** - Apache 2.0
-- **Polly** - BSD 3-Clause
-- **Entity Framework Core** - MIT License
-- **Azure SDK** - MIT License
-
----
-
-## Support
-
-For questions, issues, or support:
-- **Documentation**: See [docs/](docs/) directory
-- **GitHub Issues**: [Report bugs or request features](https://github.com/robgrame/Nimbus.BootCertWatcher/issues)
-- **GitHub Discussions**: [Ask questions or share ideas](https://github.com/robgrame/Nimbus.BootCertWatcher/discussions)
-- **Email**: Contact repository maintainers (see [Contributors](https://github.com/robgrame/Nimbus.BootCertWatcher/graphs/contributors))
-
----
-
-## Acknowledgments
-
-- **Microsoft** - Secure Boot specifications, UEFI guidance, and SignalR framework
-- **Chart.js Community** - Excellent charting library
-- **Bootstrap Team** - Responsive design framework
-- **Serilog Contributors** - Robust logging infrastructure
-- **Azure SDK Team** - Comprehensive cloud integration
-- **ClosedXML Contributors** - Professional Excel generation
-- **CsvHelper Contributors** - Robust CSV handling
-
----
-
-<div align="center">
+<div style="text-align: center; font-size: 0.9em; color: gray;">
 
 **Made with ❤️ for the IT Community**
 
-**Version 1.8** - Complete Command Management UI and Advanced Scheduling
+**Version 1.9** - Complete Command Management Suite with Batch Operations
 
 [⬆ Back to Top](#secure-boot-certificate-watcher)
 

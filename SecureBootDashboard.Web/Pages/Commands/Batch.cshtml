@@ -1,0 +1,374 @@
+@page
+@model SecureBootDashboard.Web.Pages.Commands.BatchModel
+@{
+    ViewData["Title"] = "Batch Command";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-lg-10 offset-lg-1">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="display-5">
+                    <i class="fas fa-layer-group text-primary"></i> Batch Command Operation
+                </h1>
+                <div>
+                    <a asp-page="/Commands/Send" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-desktop"></i> Single Device
+                    </a>
+                    <a asp-page="/Commands/History" class="btn btn-outline-secondary">
+                        <i class="fas fa-history"></i> View History
+                    </a>
+                </div>
+            </div>
+
+            <!-- Status Message -->
+            @if (!string.IsNullOrEmpty(Model.StatusMessage))
+            {
+                <div class="alert alert-@(Model.IsSuccess ? "success" : "danger") alert-dismissible fade show" role="alert">
+                    <i class="fas fa-@(Model.IsSuccess ? "check-circle" : "exclamation-triangle")"></i>
+                    @Model.StatusMessage
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
+                @if (Model.LastResult != null && Model.LastResult.FailedDeviceIds.Any())
+                {
+                    <div class="alert alert-warning">
+                        <strong>Failed Devices:</strong>
+                        <ul class="mb-0">
+                            @foreach (var deviceId in Model.LastResult.FailedDeviceIds)
+                            {
+                                <li><code>@deviceId</code></li>
+                            }
+                        </ul>
+                    </div>
+                }
+            }
+
+            <!-- Batch Command Form -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-cogs"></i> Batch Command Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        <div asp-validation-summary="All" class="alert alert-danger d-none"></div>
+
+                        <!-- Device Selection Mode -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-filter"></i> Device Selection Mode *
+                            </label>
+                            <div class="btn-group w-100" role="group" id="selectionModeGroup">
+                                <input type="radio" asp-for="Input.SelectionMode" value="Manual" class="btn-check" id="modeManual" checked>
+                                <label class="btn btn-outline-primary" for="modeManual">
+                                    <i class="fas fa-hand-pointer"></i> Manual Select
+                                </label>
+
+                                <input type="radio" asp-for="Input.SelectionMode" value="Fleet" class="btn-check" id="modeFleet">
+                                <label class="btn btn-outline-primary" for="modeFleet">
+                                    <i class="fas fa-tags"></i> By Fleet
+                                </label>
+
+                                <input type="radio" asp-for="Input.SelectionMode" value="Manufacturer" class="btn-check" id="modeManufacturer">
+                                <label class="btn btn-outline-primary" for="modeManufacturer">
+                                    <i class="fas fa-building"></i> By Manufacturer
+                                </label>
+
+                                <input type="radio" asp-for="Input.SelectionMode" value="DeploymentState" class="btn-check" id="modeDeploymentState">
+                                <label class="btn btn-outline-primary" for="modeDeploymentState">
+                                    <i class="fas fa-traffic-light"></i> By State
+                                </label>
+
+                                <input type="radio" asp-for="Input.SelectionMode" value="All" class="btn-check" id="modeAll">
+                                <label class="btn btn-outline-danger" for="modeAll">
+                                    <i class="fas fa-globe"></i> All Devices
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Manual Selection -->
+                        <div id="manualSelection" class="selection-panel mb-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Manual Device Selection</h6>
+                                </div>
+                                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="selectAll">
+                                        <label class="form-check-label fw-bold" for="selectAll">
+                                            Select All (@Model.AvailableDevices.Count devices)
+                                        </label>
+                                    </div>
+                                    <hr>
+                                    @foreach (var device in Model.AvailableDevices)
+                                    {
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input device-checkbox" 
+                                                   name="Input.SelectedDeviceIds" value="@device.Id" id="device-@device.Id">
+                                            <label class="form-check-label" for="device-@device.Id">
+                                                <strong>@device.MachineName</strong> (@device.DomainName)
+                                                <br>
+                                                <small class="text-muted">
+                                                    @device.Manufacturer @device.Model - [@device.DeploymentState]
+                                                    @if (!string.IsNullOrEmpty(device.FleetId))
+                                                    {
+                                                        <span class="badge bg-info">@device.FleetId</span>
+                                                    }
+                                                </small>
+                                            </label>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fleet Selection -->
+                        <div id="fleetSelection" class="selection-panel mb-4" style="display:none;">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Fleet Selection</h6>
+                                </div>
+                                <div class="card-body">
+                                    <select asp-for="Input.FleetFilter" class="form-select">
+                                        <option value="">-- Select a fleet --</option>
+                                        @foreach (var fleet in Model.AvailableFleets)
+                                        {
+                                            var count = Model.AvailableDevices.Count(d => d.FleetId == fleet);
+                                            <option value="@fleet">@fleet (@count devices)</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Manufacturer Selection -->
+                        <div id="manufacturerSelection" class="selection-panel mb-4" style="display:none;">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Manufacturer Selection</h6>
+                                </div>
+                                <div class="card-body">
+                                    <select asp-for="Input.ManufacturerFilter" class="form-select">
+                                        <option value="">-- Select a manufacturer --</option>
+                                        @foreach (var manufacturer in Model.AvailableManufacturers)
+                                        {
+                                            var count = Model.AvailableDevices.Count(d => d.Manufacturer == manufacturer);
+                                            <option value="@manufacturer">@manufacturer (@count devices)</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Deployment State Selection -->
+                        <div id="deploymentStateSelection" class="selection-panel mb-4" style="display:none;">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Deployment State Selection</h6>
+                                </div>
+                                <div class="card-body">
+                                    <select asp-for="Input.DeploymentStateFilter" class="form-select">
+                                        <option value="">-- Select a deployment state --</option>
+                                        @foreach (var state in new[] { "Deployed", "Pending", "InProgress", "Error", "NotStarted" })
+                                        {
+                                            var count = Model.AvailableDevices.Count(d => d.DeploymentState == state);
+                                            <option value="@state">@state (@count devices)</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- All Devices Warning -->
+                        <div id="allDevicesWarning" class="selection-panel mb-4" style="display:none;">
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>Warning:</strong> This will send the command to ALL @Model.AvailableDevices.Count devices!
+                                Please confirm this is intentional.
+                            </div>
+                        </div>
+
+                        <!-- Command Configuration (Same as Send page) -->
+                        <div class="mb-4">
+                            <label asp-for="Input.CommandType" class="form-label fw-bold">
+                                <i class="fas fa-list"></i> Command Type *
+                            </label>
+                            <select asp-for="Input.CommandType" class="form-select" id="commandTypeSelect" required>
+                                <option value="CertificateUpdate">Certificate Update</option>
+                                <option value="MicrosoftUpdateOptIn">Microsoft Update Opt-In/Out</option>
+                                <option value="TelemetryConfiguration">Telemetry Configuration</option>
+                            </select>
+                        </div>
+
+                        <!-- Certificate Update Options -->
+                        <div id="certUpdateOptions" class="command-options mb-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Certificate Update Settings</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label asp-for="Input.CertUpdateType" class="form-label">Update Type</label>
+                                        <select asp-for="Input.CertUpdateType" class="form-select">
+                                            <option value="0">None (0)</option>
+                                            <option value="1" selected>DB Update (1)</option>
+                                            <option value="2">Boot Manager (2)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-check">
+                                        <input asp-for="Input.ForceUpdate" class="form-check-input" type="checkbox">
+                                        <label asp-for="Input.ForceUpdate" class="form-check-label">
+                                            Force Update (ignore capability checks)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Microsoft Update Opt-In Options -->
+                        <div id="msUpdateOptions" class="command-options mb-4" style="display:none;">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Microsoft Update Managed Opt-In</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-check form-switch">
+                                        <input asp-for="Input.OptIn" class="form-check-input" type="checkbox" checked>
+                                        <label asp-for="Input.OptIn" class="form-check-label">
+                                            <strong>Enable</strong> Microsoft Update Managed Opt-In (CFR Eligibility)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Telemetry Configuration Options -->
+                        <div id="telemetryOptions" class="command-options mb-4" style="display:none;">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Telemetry Configuration</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label asp-for="Input.TelemetryLevel" class="form-label">Required Telemetry Level</label>
+                                        <select asp-for="Input.TelemetryLevel" class="form-select">
+                                            <option value="0">Security (0) - Enterprise Only</option>
+                                            <option value="1" selected>Basic (1) - CFR Eligible ?</option>
+                                            <option value="2">Enhanced (2)</option>
+                                            <option value="3">Full (3)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-check">
+                                        <input asp-for="Input.ValidateOnly" class="form-check-input" type="checkbox">
+                                        <label asp-for="Input.ValidateOnly" class="form-check-label">
+                                            Validate Only (don't change the setting)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Common Options -->
+                        <div class="mb-4">
+                            <label asp-for="Input.Description" class="form-label">
+                                <i class="fas fa-comment"></i> Description
+                            </label>
+                            <textarea asp-for="Input.Description" class="form-control" rows="2" 
+                                      placeholder="Optional description or reason for this batch operation"></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Input.Priority" class="form-label">
+                                    <i class="fas fa-sort-numeric-up"></i> Priority
+                                </label>
+                                <input asp-for="Input.Priority" type="number" class="form-control" min="0" max="10">
+                                <small class="form-text text-muted">0 = Normal, 10 = Highest priority</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch mt-4">
+                                    <input asp-for="Input.ScheduleExecution" class="form-check-input" type="checkbox" id="scheduleToggle">
+                                    <label class="form-check-label" for="scheduleToggle">
+                                        Schedule for later execution
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="scheduleOptions" class="mb-4" style="display:none;">
+                            <label asp-for="Input.ScheduledFor" class="form-label">
+                                <i class="fas fa-clock"></i> Scheduled Execution Time
+                            </label>
+                            <input asp-for="Input.ScheduledFor" type="datetime-local" class="form-control">
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a asp-page="/Devices/List" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-paper-plane"></i> Send Batch Command
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Selection mode handling
+        document.querySelectorAll('input[name="Input.SelectionMode"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                document.querySelectorAll('.selection-panel').forEach(panel => panel.style.display = 'none');
+                
+                const mode = this.value;
+                if (mode === 'Manual') {
+                    document.getElementById('manualSelection').style.display = 'block';
+                } else if (mode === 'Fleet') {
+                    document.getElementById('fleetSelection').style.display = 'block';
+                } else if (mode === 'Manufacturer') {
+                    document.getElementById('manufacturerSelection').style.display = 'block';
+                } else if (mode === 'DeploymentState') {
+                    document.getElementById('deploymentStateSelection').style.display = 'block';
+                } else if (mode === 'All') {
+                    document.getElementById('allDevicesWarning').style.display = 'block';
+                }
+            });
+        });
+
+        // Select all checkbox
+        document.getElementById('selectAll').addEventListener('change', function() {
+            document.querySelectorAll('.device-checkbox').forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+
+        // Command type options
+        document.getElementById('commandTypeSelect').addEventListener('change', function() {
+            const commandType = this.value;
+            document.querySelectorAll('.command-options').forEach(el => el.style.display = 'none');
+            
+            if (commandType === 'CertificateUpdate') {
+                document.getElementById('certUpdateOptions').style.display = 'block';
+            } else if (commandType === 'MicrosoftUpdateOptIn') {
+                document.getElementById('msUpdateOptions').style.display = 'block';
+            } else if (commandType === 'TelemetryConfiguration') {
+                document.getElementById('telemetryOptions').style.display = 'block';
+            }
+        });
+
+        // Schedule toggle
+        document.getElementById('scheduleToggle').addEventListener('change', function() {
+            document.getElementById('scheduleOptions').style.display = this.checked ? 'block' : 'none';
+        });
+
+        // Initialize
+        document.getElementById('commandTypeSelect').dispatchEvent(new Event('change'));
+    </script>
+}
