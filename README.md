@@ -2,7 +2,7 @@
 
 > **Monitor and govern the expiration and deployment of Secure Boot certificates across Windows fleets with real-time analytics.**
 
-**Version 1.6** - Telemetry and CFR tracking, with enhanced real-time updates!
+**Version 1.7** - Remote Command Processing for centralized device configuration!
 
 This solution monitors Secure Boot certificate status on Windows devices by capturing registry snapshots and Windows event logs, then transmitting reports to a centralized dashboard for compliance tracking, real-time monitoring, and alerting.
 
@@ -22,6 +22,25 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
 ---
 
 ## ✨ Key Features
+
+### 🔴 **NEW in v1.7** - Remote Command Processing
+- **Centralized Command Control**: Send configuration commands and scripts to devices
+- **Command Templates**: Define reusable command templates with variables
+- **Secure Execution**: Commands executed with SYSTEM privileges, using secure channels
+- **Command History**: Track command execution status and results
+- **Dashboard Integration**: View and manage commands from the dashboard
+- **Real-time Updates**: Instant feedback on command execution status
+- **Centralized Configuration Management**: Send configuration commands from dashboard to remote clients
+- **Registry Command Execution**: Clients can execute registry write operations remotely
+  - Certificate Update commands (UpdateType registry key)
+  - Microsoft Update Opt-In/Opt-Out (MicrosoftUpdateManagedOptIn)
+  - Telemetry Level Configuration (AllowTelemetry)
+- **Command Verification**: Automatic local verification of registry changes after execution
+- **Result Reporting**: Clients report execution results back to API with success/failure status
+- **Flexible Scheduling**: Process commands before or after inventory collection
+- **Resilient Processing**: Configurable retry logic and failure handling
+- **Security Controls**: Commands disabled by default (opt-in feature)
+- **Administrator Required**: Registry write operations require elevated privileges
 
 ### 🔴 **NEW in v1.6** - Telemetry & CFR Tracking
 - **Telemetry Policy Monitoring**: Track Windows diagnostic data levels (Security/Basic/Enhanced/Full)
@@ -228,6 +247,33 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
 
 ---
 
+## 🆕 What's New in v1.7
+
+### Remote Command Processing
+The dashboard now includes powerful remote command processing capabilities:
+
+**Centralized Command Control**:
+- Send configuration commands and scripts to one or more devices
+- Define reusable command templates with variables for flexibility
+- Secure execution with SYSTEM privileges, using encrypted channels
+
+**Command Management**:
+- View command execution status in real-time
+- Retry or cancel pending commands
+- Download command output and logs
+
+**Dashboard Integration**:
+- New command status cards and charts
+- Additional columns for command status in device list
+- Detailed command execution history in device details
+
+**Improved User Experience**:
+- Enhanced device details page with command processing features
+- Italian language support for all labels
+- Responsive design for all screen sizes
+
+---
+
 ## 🆕 What's New in v1.6
 
 ### Telemetry & CFR Tracking
@@ -288,7 +334,7 @@ The device details page now features a comprehensive certificate display system:
 - Microsoft certificate badge 🏢
 
 **Improved User Experience**:
-- Expandable/collapsible panels per database
+- Expandable/collapsable panels per database
 - Quick identification of problematic certificates
 - Italian language support for all labels
 - Responsive design for all screen sizes
@@ -582,29 +628,35 @@ dotnet publish SecureBootDashboard.Web -c Release -o ./publish/web
 
 ## 🎯 Roadmap
 
-### ✅ v1.6 - Current Release
-- [x] **Telemetry & CFR tracking** - Complete
+### ✅ v1.7 - Current Release
+- [x] **Remote Command Processing** - Complete
+  - Centralized configuration management from dashboard
+  - Registry command execution (UpdateType, OptIn, Telemetry)
+  - Command verification and result reporting
+  - Flexible before/after inventory processing
+  - Security controls and administrator requirements
+- [x] **Telemetry & CFR tracking** - Complete (v1.6)
   - Telemetry policy monitoring
   - CFR eligibility detection and reporting
   - UpdateType tracking
   - Dashboard integration for telemetry metrics
   - Device list enhancements for telemetry and CFR status
-- [x] **Enhanced certificate visualization** - Complete
+- [x] **Enhanced certificate visualization** - Complete (v1.5)
   - Detailed certificate tables with all properties
   - Color-coded status indicators (expired, expiring, valid)
   - Collapsible sections by database type
   - Certificate statistics overview
   - Italian localization
-- [x] **Real-time dashboard updates (SignalR)** - Complete
-- [x] **Export reports to Excel/CSV** - Backend Complete
-- [ ] Export UI in web dashboard (In Progress)
+- [x] **Real-time dashboard updates (SignalR)** - Complete (v1.3)
+- [x] **Export reports to Excel/CSV** - Complete (v1.3)
 
-### v1.7 - Next Release
-- [ ] Complete export UI with download buttons
+### v1.8 - Next Release
+- [ ] Complete command UI in web dashboard
+- [ ] Command history and audit trail
+- [ ] Batch command operations for fleets
+- [ ] Command scheduling and retry management
 - [ ] Dark mode theme support
 - [ ] Custom alert thresholds per fleet
-- [ ] Enhanced compliance policies
-- [ ] Device risk scoring and analytics
 
 ### v2.0 - Q3 2025
 - [ ] Multi-tenant support with RBAC
@@ -770,7 +822,7 @@ For questions, issues, or support:
 
 **Made with ❤️ for the IT Community**
 
-**Version 1.6** - Telemetry & CFR tracking for Controlled Feature Rollout eligibility
+**Version 1.7** - Remote Command Processing for centralized device configuration
 
 [⬆ Back to Top](#secure-boot-certificate-watcher)
 

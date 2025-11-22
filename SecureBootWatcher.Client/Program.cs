@@ -272,6 +272,9 @@ namespace SecureBootWatcher.Client
 			// Register Client Update Service (needs IHttpClientFactory, so register after AddHttpClient)
 			services.AddSingleton<IClientUpdateService, ClientUpdateService>();
 			
+			// Register Command Processor (optional - only registered if enabled in config)
+			services.AddSingleton<ICommandProcessor, CommandProcessor>();
+			
 			services.AddSingleton<IReportBuilder, ReportBuilder>();
 			services.AddSingleton<SecureBootWatcherService>();
 
@@ -363,6 +366,17 @@ namespace SecureBootWatcher.Client
 				Log.Information("    Base Address: {Address}", options.Sinks.WebApi.BaseAddress?.ToString() ?? "NOT SET");
 				Log.Information("    Ingestion Route: {Route}", options.Sinks.WebApi.IngestionRoute);
 				Log.Information("    HTTP Timeout: {Timeout}", options.Sinks.WebApi.HttpTimeout);
+			}
+			
+			Log.Information("----------------------------------------");
+			Log.Information("Command Processing Configuration:");
+			Log.Information("  Enabled: {Enabled}", options.Commands.EnableCommandProcessing ? "Enabled" : "Disabled");
+			if (options.Commands.EnableCommandProcessing)
+			{
+				Log.Information("    Process Before Inventory: {Before}", options.Commands.ProcessBeforeInventory);
+				Log.Information("    Max Commands Per Cycle: {Max}", options.Commands.MaxCommandsPerCycle);
+				Log.Information("    Command Execution Delay: {Delay}", options.Commands.CommandExecutionDelay);
+				Log.Information("    Continue On Command Failure: {Continue}", options.Commands.ContinueOnCommandFailure);
 			}
 			
 			Log.Information("========================================");

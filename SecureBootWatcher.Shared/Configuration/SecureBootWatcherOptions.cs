@@ -28,6 +28,46 @@ namespace SecureBootWatcher.Shared.Configuration
         public SinkOptions Sinks { get; set; } = new SinkOptions();
 
         public ClientUpdateOptions ClientUpdate { get; set; } = new ClientUpdateOptions();
+
+        public CommandProcessingOptions Commands { get; set; } = new CommandProcessingOptions();
+    }
+
+    public sealed class CommandProcessingOptions
+    {
+        /// <summary>
+        /// Enable processing of configuration commands from the API.
+        /// When enabled, client will fetch pending commands, execute them, verify results, and report back.
+        /// Default: false (opt-in feature)
+        /// </summary>
+        public bool EnableCommandProcessing { get; set; } = false;
+
+        /// <summary>
+        /// Process commands before inventory collection (true) or after (false).
+        /// Recommended: true (apply configuration changes before capturing state)
+        /// Default: true
+        /// </summary>
+        public bool ProcessBeforeInventory { get; set; } = true;
+
+        /// <summary>
+        /// Maximum number of commands to process in a single execution cycle.
+        /// Prevents runaway processing if many commands are queued.
+        /// Default: 10
+        /// </summary>
+        public int MaxCommandsPerCycle { get; set; } = 10;
+
+        /// <summary>
+        /// Delay between command executions to allow registry changes to propagate.
+        /// Default: 2 seconds
+        /// </summary>
+        public TimeSpan CommandExecutionDelay { get; set; } = TimeSpan.FromSeconds(2);
+
+        /// <summary>
+        /// Whether to continue inventory collection if command processing fails.
+        /// true = Always send inventory even if commands fail
+        /// false = Skip inventory if commands fail
+        /// Default: true (resilient mode)
+        /// </summary>
+        public bool ContinueOnCommandFailure { get; set; } = true;
     }
 
     public sealed class ClientUpdateOptions
