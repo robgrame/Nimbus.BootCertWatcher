@@ -404,10 +404,10 @@ namespace SecureBootDashboard.Api.Controllers
 
             /// <summary>
             /// OS is ready if build number indicates November 2024 updates or later.
-            /// Build 26100 = Windows 11 24H2 (released late 2024)
-            /// Build 19046+ = Windows 10 22H2 with later updates
-            /// Build 20349+ = Server 2022 with later updates
-            /// Build 26100+ = Windows 11 24H2 or later
+            /// - Windows 11 24H2+: Build >= 26100 (October 2024 release)
+            /// - Windows Server 2022: Build >= 20349 with recent updates
+            /// - Windows 10 22H2: Build >= 19046 with recent updates
+            /// Note: Without UBR (Update Build Revision), we use major build numbers only.
             /// </summary>
             public bool IsOSUpdateReady
             {
@@ -416,7 +416,7 @@ namespace SecureBootDashboard.Api.Controllers
                     if (string.IsNullOrEmpty(OSBuildNumber) || !int.TryParse(OSBuildNumber, out var buildNumber))
                         return false;
 
-                    // Windows 11 24H2 or later (released October 2024)
+                    // Windows 11 24H2 or later (October 2024 release)
                     if (buildNumber >= 26100)
                         return true;
 
