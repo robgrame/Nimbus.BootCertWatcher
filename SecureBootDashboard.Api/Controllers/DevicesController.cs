@@ -90,10 +90,12 @@ namespace SecureBootDashboard.Api.Controllers
                     d.ClientVersion,
                     d.OperatingSystem,
                     d.OSVersion,
+                    d.OSBuildNumber,
                     d.OSProductType,
                     d.ChassisTypesJson,
                     d.IsVirtualMachine,
                     d.VirtualizationPlatform,
+                    d.FirmwareReleaseDate,
                     allowTelemetry,
                     microsoftUpdateManagedOptIn,
                     windowsUEFICA2023Capable);
@@ -376,14 +378,64 @@ namespace SecureBootDashboard.Api.Controllers
             string? ClientVersion,
             string? OperatingSystem,
             string? OSVersion,
+            string? OSBuildNumber,
             int? OSProductType,
             string? ChassisTypesJson,
             bool? IsVirtualMachine,
             string? VirtualizationPlatform,
+            DateTime? FirmwareReleaseDate,
             // Telemetry and CFR data
             uint? AllowTelemetry,
             bool? MicrosoftUpdateManagedOptIn,
-            uint? WindowsUEFICA2023Capable);
+            uint? WindowsUEFICA2023Capable)
+        {
+            /// <summary>
+            /// Indicates if the device is ready to update based on:
+            /// - Firmware release date newer than 2024 (>= Jan 1, 2024)
+            /// - OS build number indicating updates from November 2024 or later
+            /// </summary>
+            public bool ReadyToUpdate => IsFirmwareReady && IsOSUpdateReady;
+
+            /// <summary>
+            /// Firmware is ready if release date is >= January 1, 2024
+            /// </summary>
+            public bool IsFirmwareReady => FirmwareReleaseDate.HasValue && 
+                                          FirmwareReleaseDate.Value >= new DateTime(2024, 1, 1);
+
+            /// <summary>
+            /// OS is ready if build number indicates November 2024 updates or later.
+            /// - Windows 11 24H2+: Build >= 26100 (October 2024 release)
+            /// - Windows Server 2022: Build >= 20349 with recent updates
+            /// - Windows 10 22H2: Build >= 19046 with recent updates
+            /// Note: Without UBR (Update Build Revision), we use major build numbers only.
+            /// </summary>
+            public bool IsOSUpdateReady
+            {
+                get
+                {
+                    if (string.IsNullOrEmpty(OSBuildNumber) || !int.TryParse(OSBuildNumber, out var buildNumber))
+                        return false;
+
+                    // Windows 11 24H2 or later (October 2024 release)
+                    if (buildNumber >= 26100)
+                        return true;
+
+                    // Windows Server 2022 - Build 20348.x - check if recent enough
+                    // Need build 20349 or higher (since we can't check UBR)
+                    if (buildNumber >= 20349 && buildNumber < 26000)
+                        return true;
+
+                    // Windows 10 22H2 - Build 19045.x - check if recent enough
+                    // Need build 19046 or higher (since we can't check UBR)
+                    if (buildNumber >= 19046 && buildNumber < 20000)
+                        return true;
+
+                    // For exact build matching (e.g., 19045.5011), we'd need UBR (Update Build Revision)
+                    // Since we only have major build number, be conservative
+                    return false;
+                }
+            }
+        }
 
         public sealed record DeviceDetailResponse(
             Guid Id,
