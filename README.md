@@ -774,3 +774,79 @@ dotnet publish SecureBootDashboard.Web -c Release -o ./publish/web
 [⬆ Back to Top](#secure-boot-certificate-watcher)
 
 </div>
+
+---
+
+## Troubleshooting
+
+### Client not sending reports
+1. Check `appsettings.json` sink configuration
+2. Verify network connectivity to API or Azure Storage
+3. Review client logs (console or Windows Event Log if configured)
+4. Confirm `.NET Framework 4.8` runtime installed
+5. Ensure PowerShell 5.0+ with SecureBoot module (for certificate enumeration)
+6. Run as Administrator to access registry and UEFI variables
+
+### API ingestion failures
+1. Check SQL connection string and firewall rules
+2. Review API logs via Application Insights or `dotnet run` console
+3. Validate EF migrations applied: `dotnet ef migrations list`
+4. Test health endpoint: `GET /health`
+5. Verify queue processor is running (if using Azure Queue)
+6. Check SignalR hub accessibility: `WS /dashboardHub`
+
+### Missing data in dashboard
+1. Confirm API is reachable from web app
+2. Check `ApiBaseUrl` setting in web app configuration
+3. Verify reports exist in database: query `SecureBootReports` table
+4. Review web app logs for HTTP errors
+5. Check browser console for JavaScript errors
+6. Verify SignalR connection in browser dev tools
+
+### SignalR not working
+1. Check browser console for WebSocket errors
+2. Verify SignalR hub endpoint: `wss://yourhost/dashboardHub`
+3. Ensure WebSocket support in browser (Chrome/Edge/Firefox)
+4. Check network allows WebSocket connections (port 443 for WSS)
+5. Review API logs for SignalR broadcast errors
+6. Test connection: `Ping()` method in browser dev tools
+
+### Export failures
+1. Verify export endpoints are accessible
+2. Check API logs for export service errors
+3. Ensure sufficient memory for large datasets
+4. Test with small dataset first
+5. Review browser download settings
+
+### Certificate enumeration issues
+1. Verify Secure Boot is enabled: `Confirm-SecureBootUEFI`
+2. Check PowerShell version: `$PSVersionTable.PSVersion` (requires 5.0+)
+3. Ensure SecureBoot module is available: `Get-Module -ListAvailable SecureBoot`
+4. Run PowerShell as Administrator
+5. Review client logs for certificate-related errors
+
+### Command execution issues
+1. Verify commands are enabled in client configuration
+2. Check client has Administrator privileges
+3. Review command execution logs in client output
+4. Verify command status in dashboard Command History
+5. Check registry write permissions
+6. Ensure client is polling for commands regularly
+
+### Batch command failures
+1. Review failed device list in batch result
+2. Check individual device connectivity
+3. Verify all target devices are registered
+4. Review command parameters for errors
+5. Check API logs for batch operation errors
+6. Retry failed devices individually
+
+For detailed troubleshooting steps, see:
+- [Troubleshooting Guide](docs/TROUBLESHOOTING_PORTS.md)
+- [Host Aborted Guide](docs/HOSTABORTED_TROUBLESHOOTING.md)
+- [SignalR Implementation Guide](docs/SIGNALR_REALTIME_COMPLETE.md)
+- [Command Processing Troubleshooting](docs/COMMAND_PROCESSING_TROUBLESHOOTING.md)
+
+---
+
+## Contributing
