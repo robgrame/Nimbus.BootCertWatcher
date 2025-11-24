@@ -17,6 +17,11 @@ namespace SecureBootDashboard.Api.Data
 
         public DbSet<PendingCommandEntity> PendingCommands => Set<PendingCommandEntity>();
 
+        // Windows Version tracking
+        public DbSet<WindowsVersionEntity> WindowsVersions => Set<WindowsVersionEntity>();
+
+        public DbSet<WindowsBuildEntity> WindowsBuilds => Set<WindowsBuildEntity>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -85,6 +90,32 @@ namespace SecureBootDashboard.Api.Data
                 entity.HasOne(e => e.Device)
                     .WithMany()
                     .HasForeignKey(e => e.DeviceId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Windows Version configuration
+            modelBuilder.Entity<WindowsVersionEntity>(entity =>
+            {
+                entity.ToTable("WindowsVersions");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Version).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.Name).HasMaxLength(256).IsRequired();
+                entity.HasIndex(e => e.Version).IsUnique();
+            });
+
+            modelBuilder.Entity<WindowsBuildEntity>(entity =>
+            {
+                entity.ToTable("WindowsBuilds");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.BuildNumber).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.KbArticle).HasMaxLength(50);
+                entity.Property(e => e.SecurityNotes).HasColumnType("nvarchar(max)");
+                entity.HasIndex(e => e.BuildNumber);
+                entity.HasIndex(e => new { e.WindowsVersionId, e.BuildNumber }).IsUnique();
+                entity.HasIndex(e => e.IsLatest);
+                entity.HasOne(e => e.Version)
+                    .WithMany(v => v.Builds)
+                    .HasForeignKey(e => e.WindowsVersionId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
         }

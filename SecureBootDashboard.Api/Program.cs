@@ -155,6 +155,12 @@ try
     Log.Information("Configuring Export Service...");
     builder.Services.AddScoped<IExportService, ExportService>();
 
+    // Configure Windows Version Service
+    Log.Information("Configuring Windows Version Service...");
+    builder.Services.AddHttpClient(); // For WindowsVersionsCore
+    builder.Services.AddScoped<WindowsVersionsCore.Services.IWindowsService, WindowsVersionsCore.Services.WindowsService>();
+    builder.Services.AddScoped<SecureBootDashboard.Api.Services.IWindowsVersionService, SecureBootDashboard.Api.Services.WindowsVersionService>();
+
     // Configure Azure Queue Processor
     Log.Information("Configuring Queue Processor...");
     var queueConfig = builder.Configuration.GetSection("QueueProcessor");

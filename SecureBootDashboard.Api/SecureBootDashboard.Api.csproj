@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SecureBootWatcher.Shared\SecureBootWatcher.Shared.csproj" />
+    <ProjectReference Include="..\external\WindowsVersionsCore\WindowsVersionsCore.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,324 @@
+@page "{version?}"
+@model SecureBootDashboard.Web.Pages.Windows.BuildsModel
+@{
+    ViewData["Title"] = $"Windows {Model.Version} Builds";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-4">
+                <i class="fab fa-windows text-primary"></i> Windows @Model.Version Builds
+            </h1>
+            <p class="lead text-muted">Build history and security status for Windows @Model.Version</p>
+        </div>
+        <div class="col-auto">
+            <a asp-page="/Windows/Versions" class="btn btn-outline-primary btn-lg">
+                <i class="fas fa-arrow-left"></i> Back to Versions
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle"></i> @Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Latest Secure Build Card -->
+    @if (Model.LatestSecureBuild != null)
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-success">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-star"></i> Latest Secure Build
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-4">
+                                <h3 class="text-success mb-0">
+                                    <i class="fas fa-shield-alt"></i> @Model.LatestSecureBuild.BuildNumber
+                                </h3>
+                                @if (!string.IsNullOrEmpty(Model.LatestSecureBuild.KbArticle))
+                                {
+                                    <p class="text-muted mb-0">@Model.LatestSecureBuild.KbArticle</p>
+                                }
+                            </div>
+                            <div class="col-md-4">
+                                @if (Model.LatestSecureBuild.ReleaseDate.HasValue)
+                                {
+                                    <p class="mb-0">
+                                        <i class="fas fa-calendar-alt"></i> 
+                                        Released: @Model.LatestSecureBuild.ReleaseDate.Value.ToString("MMMM dd, yyyy")
+                                    </p>
+                                }
+                                <p class="mb-0">
+                                    <i class="fas fa-sync-alt"></i> 
+                                    Last Synced: @Model.LatestSecureBuild.LastSyncedUtc.ToString("yyyy-MM-dd HH:mm") UTC
+                                </p>
+                            </div>
+                            <div class="col-md-4">
+                                @if (!string.IsNullOrEmpty(Model.LatestSecureBuild.SecurityNotes))
+                                {
+                                    <div class="alert alert-info mb-0">
+                                        <small><i class="fas fa-info-circle"></i> @Model.LatestSecureBuild.SecurityNotes</small>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Builds Table -->
+    @if (Model.Builds.Any())
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list"></i> Build History (@Model.Builds.Count builds)
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th><i class="fas fa-code-branch"></i> Build Number</th>
+                                        <th><i class="fas fa-hashtag"></i> Major</th>
+                                        <th><i class="fas fa-hashtag"></i> Minor</th>
+                                        <th><i class="fas fa-file-alt"></i> KB Article</th>
+                                        <th><i class="fas fa-calendar-alt"></i> Release Date</th>
+                                        <th><i class="fas fa-shield-alt"></i> Security Status</th>
+                                        <th><i class="fas fa-info-circle"></i> Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var build in Model.Builds.OrderByDescending(b => b.ReleaseDate))
+                                    {
+                                        var rowClass = !build.IsSecure ? "table-warning" : (build.IsLatest ? "table-success" : "");
+                                        
+                                        <tr class="@rowClass">
+                                            <td>
+                                                <strong class="text-primary">@build.BuildNumber</strong>
+                                                @if (build.IsLatest)
+                                                {
+                                                    <span class="badge bg-success ms-2">
+                                                        <i class="fas fa-star"></i> Latest
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td><code>@build.MajorBuild</code></td>
+                                            <td>
+                                                @if (build.MinorBuild.HasValue)
+                                                {
+                                                    <code>@build.MinorBuild</code>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">—</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(build.KbArticle))
+                                                {
+                                                    <a href="https://support.microsoft.com/kb/@build.KbArticle.Replace("KB", "")" 
+                                                       target="_blank" 
+                                                       class="badge bg-info text-decoration-none"
+                                                       title="View KB article on Microsoft Support">
+                                                        @build.KbArticle <i class="fas fa-external-link-alt"></i>
+                                                    </a>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">—</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (build.ReleaseDate.HasValue)
+                                                {
+                                                    <span>@build.ReleaseDate.Value.ToString("yyyy-MM-dd")</span>
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        (@((DateTime.UtcNow - build.ReleaseDate.Value).Days) days ago)
+                                                    </small>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">Unknown</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (build.IsSecure)
+                                                {
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-check-circle"></i> Secure
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning text-dark">
+                                                        <i class="fas fa-exclamation-triangle"></i> Outdated
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(build.SecurityNotes))
+                                                {
+                                                    <small class="text-muted">@build.SecurityNotes</small>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">—</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer text-muted">
+                        <small>
+                            <i class="fas fa-info-circle"></i> 
+                            Showing @Model.Builds.Count builds for Windows @Model.Version
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Build Timeline -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-chart-line"></i> Build Release Timeline</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="buildTimelineChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <h4 class="alert-heading"><i class="fas fa-info-circle"></i> No Builds Found</h4>
+            <p>No build information is available for Windows @Model.Version.</p>
+            <hr>
+            <p class="mb-0">
+                <a asp-page="/Windows/Versions" class="btn btn-primary">
+                    <i class="fas fa-sync-alt"></i> Sync Versions
+                </a>
+            </p>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    @if (Model.Builds.Any())
+    {
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+        <script>
+            // Build Timeline Chart
+            const timelineCtx = document.getElementById('buildTimelineChart');
+            if (timelineCtx) {
+                const builds = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                    Model.Builds.Where(b => b.ReleaseDate.HasValue)
+                        .OrderBy(b => b.ReleaseDate)
+                        .Select(b => new { 
+                            buildNumber = b.BuildNumber,
+                            releaseDate = b.ReleaseDate,
+                            isSecure = b.IsSecure,
+                            isLatest = b.IsLatest
+                        })
+                ));
+                
+                const labels = builds.map(b => b.releaseDate.split('T')[0]);
+                const buildNumbers = builds.map(b => parseInt(b.buildNumber.split('.')[1] || '0'));
+                const colors = builds.map(b => b.isSecure ? 'rgba(40, 167, 69, 0.6)' : 'rgba(255, 193, 7, 0.6)');
+                const borderColors = builds.map(b => b.isSecure ? 'rgba(40, 167, 69, 1)' : 'rgba(255, 193, 7, 1)');
+                
+                new Chart(timelineCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Build Number (Minor)',
+                            data: buildNumbers,
+                            backgroundColor: colors,
+                            borderColor: borderColors,
+                            borderWidth: 2,
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            fill: false,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const build = builds[context.dataIndex];
+                                        return `Build: ${build.buildNumber} (${build.isSecure ? 'Secure' : 'Outdated'})`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: 'Minor Build Number'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Release Date'
+                                },
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        </script>
+    }
+}
+
+@section Styles {
+    <style>
+        .table-responsive {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+    </style>
+}

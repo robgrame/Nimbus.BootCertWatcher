@@ -1,0 +1,265 @@
+@page
+@model SecureBootDashboard.Web.Pages.Windows.OutdatedDevicesModel
+@{
+    ViewData["Title"] = "Devices with Outdated Builds";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-4">
+                <i class="fas fa-exclamation-triangle text-warning"></i> Devices with Outdated Builds
+            </h1>
+            <p class="lead text-muted">Devices requiring Windows updates for security compliance</p>
+        </div>
+        <div class="col-auto">
+            <a asp-page="/Windows/Versions" class="btn btn-outline-primary btn-lg">
+                <i class="fas fa-arrow-left"></i> Back to Versions
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle"></i> @Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-center bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-desktop"></i> Total Outdated</h5>
+                    <p class="display-4">@Model.TotalCount</p>
+                    <small>Devices needing updates</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center bg-danger text-white">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-exclamation-circle"></i> Critical</h5>
+                    <p class="display-4">@Model.CriticalCount</p>
+                    <small>Build not found in database</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-clock"></i> Outdated</h5>
+                    <p class="display-4">@Model.OutdatedCount</p>
+                    <small>Newer build available</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Devices Table -->
+    @if (Model.OutdatedDevices.Any())
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list"></i> Devices Requiring Updates (@Model.TotalCount)
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0" id="outdatedDevicesTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th><i class="fas fa-desktop"></i> Machine Name</th>
+                                        <th><i class="fas fa-network-wired"></i> Domain</th>
+                                        <th><i class="fas fa-code-branch"></i> Current Build</th>
+                                        <th><i class="fas fa-shield-alt"></i> Status</th>
+                                        <th><i class="fas fa-info-circle"></i> Security Notes</th>
+                                        <th><i class="fas fa-clock"></i> Last Seen</th>
+                                        <th class="text-center"><i class="fas fa-cogs"></i> Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var device in Model.OutdatedDevices.OrderBy(d => d.MachineName))
+                                    {
+                                        var isCritical = device.SecurityNotes?.Contains("not found", StringComparison.OrdinalIgnoreCase) == true;
+                                        var rowClass = isCritical ? "table-danger" : "table-warning";
+                                        var statusBadge = isCritical ? "danger" : "warning";
+                                        var statusIcon = isCritical ? "exclamation-circle" : "exclamation-triangle";
+                                        var statusText = isCritical ? "Critical" : "Outdated";
+                                        
+                                        <tr class="@rowClass">
+                                            <td>
+                                                <strong>@device.MachineName</strong>
+                                            </td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(device.DomainName))
+                                                {
+                                                    <span>@device.DomainName</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">—</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <code class="text-dark">@device.OSBuildNumber</code>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-@statusBadge">
+                                                    <i class="fas fa-@statusIcon"></i> @statusText
+                                                </span>
+                                            </td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(device.SecurityNotes))
+                                                {
+                                                    <small class="text-muted">@device.SecurityNotes</small>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">—</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (device.LastSeenUtc.HasValue)
+                                                {
+                                                    var timeAgo = DateTime.UtcNow - device.LastSeenUtc.Value;
+                                                    var timeAgoText = timeAgo.TotalDays < 1 
+                                                        ? $"{(int)timeAgo.TotalHours}h ago"
+                                                        : $"{(int)timeAgo.TotalDays}d ago";
+                                                    
+                                                    <span class="text-muted" title="@device.LastSeenUtc.Value.ToString("yyyy-MM-dd HH:mm") UTC">
+                                                        @timeAgoText
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">—</span>
+                                                }
+                                            </td>
+                                            <td class="text-center">
+                                                <a asp-page="/Devices/Details" 
+                                                   asp-route-id="@device.DeviceId" 
+                                                   class="btn btn-sm btn-outline-primary"
+                                                   title="View device details">
+                                                    <i class="fas fa-eye"></i> Details
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer text-muted">
+                        <small>
+                            <i class="fas fa-info-circle"></i> 
+                            Showing @Model.TotalCount devices with outdated Windows builds
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Options -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-download"></i> Export Options</h5>
+                        <p class="text-muted">Export the list of outdated devices for reporting or remediation</p>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-primary" onclick="exportToCSV()">
+                                <i class="fas fa-file-csv"></i> Export to CSV
+                            </button>
+                            <button type="button" class="btn btn-outline-success" onclick="exportToExcel()">
+                                <i class="fas fa-file-excel"></i> Export to Excel
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+                                <i class="fas fa-print"></i> Print
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-success">
+            <h4 class="alert-heading"><i class="fas fa-check-circle"></i> All Devices Up-to-Date!</h4>
+            <p>Great news! All devices have secure and up-to-date Windows builds.</p>
+            <hr>
+            <p class="mb-0">No action required at this time. Continue monitoring for new updates.</p>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function exportToCSV() {
+            const table = document.getElementById('outdatedDevicesTable');
+            if (!table) return;
+            
+            let csv = [];
+            const rows = table.querySelectorAll('tr');
+            
+            for (let row of rows) {
+                const cols = row.querySelectorAll('td, th');
+                const csvRow = [];
+                
+                for (let col of cols) {
+                    // Skip the actions column
+                    if (col.querySelector('.btn')) continue;
+                    
+                    let text = col.textContent.trim();
+                    text = text.replace(/"/g, '""'); // Escape quotes
+                    csvRow.push(`"${text}"`);
+                }
+                
+                csv.push(csvRow.join(','));
+            }
+            
+            const csvContent = csv.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `outdated-devices-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+        
+        function exportToExcel() {
+            // For Excel export, we'd need a library like SheetJS
+            // For now, just export as CSV with .xlsx extension
+            alert('Excel export would require additional libraries. Using CSV export instead.');
+            exportToCSV();
+        }
+    </script>
+}
+
+@section Styles {
+    <style>
+        .table-responsive {
+            max-height: 700px;
+            overflow-y: auto;
+        }
+        
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        @@media print {
+            .btn, .card-footer, nav, .alert {
+                display: none !important;
+            }
+        }
+    </style>
+}

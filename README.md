@@ -2,7 +2,7 @@
 
 > **Monitor and govern the expiration and deployment of Secure Boot certificates across Windows fleets with real-time analytics.**
 
-**Version 1.10** - Ready to Update Status Indicator!
+**Version 1.11** - Windows Version Tracking & Build Security!
 
 This solution monitors Secure Boot certificate status on Windows devices by capturing registry snapshots and Windows event logs, then transmitting reports to a centralized dashboard for compliance tracking, real-time monitoring, and alerting.
 
@@ -22,6 +22,36 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
 ---
 
 ## ✨ Key Features
+
+### 🔴 **NEW in v1.11** - Windows Version Tracking & Build Security
+- **Windows Version Database**: Track Windows 10/11 versions and builds
+  - Integration with [WindowsVersionsCore](https://github.com/robgrame/WindowsVersionsCore)
+  - Automatic sync of version data from Microsoft's official sources
+  - Support lifecycle tracking (release date, end of support)
+- **Build Security Verification**: Identify outdated and insecure builds
+  - `IsSecure` flag for each build in database
+  - `IsLatest` indicator for current builds
+  - Security notes and recommendations
+  - KB article tracking
+- **REST API Endpoints**: Complete API for version management
+  - Sync version data from WindowsVersionsCore
+  - Check build security status
+  - Get version and build information
+  - Fleet-wide statistics
+  - List devices with outdated builds
+- **Dashboard Pages**: Three new pages for version tracking
+  - **Windows Versions** - Overview with sync capability
+  - **Outdated Devices** - Devices needing Windows updates
+  - **Build Details** - Build history and timeline
+- **Dashboard Widget**: Windows Build Security statistics
+  - Total tracked devices
+  - Secure builds percentage
+  - Outdated and unknown builds count
+  - Quick navigation to detail pages
+- **Testing & Documentation**: Comprehensive testing suite
+  - PowerShell API test script
+  - Database verification script
+  - Complete API documentation
 
 ### 🔴 **NEW in v1.10** - Ready to Update Status Indicator
 - **Visual Readiness Tracking**: Instant identification of devices ready for UEFI CA 2023 update
@@ -303,6 +333,70 @@ The dashboard now includes powerful remote command processing capabilities:
   - Authentication support (Entra ID / Windows Domain)
   - Italian localization support
 - Consumes API endpoints with resilience policies (Polly)
+
+---
+
+## 🆕 What's New in v1.11
+
+### Windows Version Tracking & Build Security
+The dashboard now includes comprehensive Windows version tracking and build security verification:
+
+**Database Schema**:
+- New `WindowsVersions` table for tracking Windows 10/11 versions
+- New `WindowsBuilds` table with security status flags (`IsSecure`, `IsLatest`)
+- Automatic synchronization from WindowsVersionsCore
+
+**Service Layer**:
+- `WindowsVersionService` for build security verification
+- Integration with [WindowsVersionsCore](https://github.com/robgrame/WindowsVersionsCore)
+- Automatic marking of secure vs outdated builds
+
+**REST API (7 Endpoints)**:
+- `POST /api/WindowsVersion/sync` - Synchronize version data
+- `GET /api/WindowsVersion/check-build/{buildNumber}` - Verify build security
+- `GET /api/WindowsVersion/versions` - List all Windows versions
+- `GET /api/WindowsVersion/versions/{version}/builds` - Get builds for version
+- `GET /api/WindowsVersion/versions/{version}/latest-secure` - Get latest secure build
+- `GET /api/WindowsVersion/statistics` - Fleet-wide build statistics
+- `GET /api/WindowsVersion/devices/outdated` - List devices with outdated builds
+
+**Dashboard Pages (3 New Pages)**:
+- **Windows Versions** (`/Windows/Versions`)
+  - Overview of all tracked Windows versions
+  - Sync button for manual data refresh
+  - Build distribution chart
+  - Statistics cards (tracked, secure, outdated, unknown)
+- **Outdated Devices** (`/Windows/OutdatedDevices`)
+  - List of devices requiring Windows updates
+  - Export to CSV/Excel functionality
+  - Critical vs outdated classification
+  - Direct link to device details
+- **Build Details** (`/Windows/Builds/{version}`)
+  - Complete build history for a version
+  - Timeline chart of releases
+  - KB article links
+  - Security status for each build
+
+**Dashboard Widget**:
+- Windows Build Security statistics on main dashboard
+- 4 interactive cards:
+  - Tracked Devices
+  - Secure Builds (with percentage)
+  - Outdated Builds
+  - Unknown Builds
+- Click-through navigation to detail pages
+
+**Testing & Documentation**:
+- PowerShell test script (`Test-WindowsVersionApi.ps1`)
+- Database verification script (`Check-WindowsVersionTables.ps1`)
+- Comprehensive API documentation (`WINDOWS_VERSION_API.md`)
+- Complete release notes (`RELEASE_NOTES_V1.11.0.md`)
+
+**Use Cases**:
+- **Compliance Monitoring**: Track which devices have secure Windows builds
+- **Patch Management**: Identify devices needing Windows updates
+- **Security Auditing**: Generate reports of outdated builds
+- **Version Planning**: Plan upgrades based on support lifecycle
 
 ---
 
@@ -672,6 +766,8 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 - **[Configuration Guide](docs/PORT_CONFIGURATION.md)** - Customize ports and settings
 
 ### **NEW** - Q1 2025 Features
+- **[Windows Version Tracking API](docs/WINDOWS_VERSION_API.md)** - Complete API reference *(NEW v1.11)*
+- **[Windows Version Release Notes](docs/RELEASE_NOTES_V1.11.0.md)** - v1.11 feature details *(NEW)*
 - **[SignalR Real-time Guide](docs/SIGNALR_REALTIME_COMPLETE.md)** - Complete SignalR implementation
 - **[Q1 2025 Features Plan](docs/Q1_2025_FEATURES_PLAN.md)** - Feature roadmap and planning
 - **[Export Implementation](docs/PULL_REQUEST_Q1_2025.md)** - Excel/CSV export details
@@ -778,8 +874,15 @@ dotnet publish SecureBootDashboard.Web -c Release -o ./publish/web
 
 ## 🎯 Roadmap
 
-### ✅ v1.10 - Current Release
-- [x] **Ready to Update Status Indicator** - Complete
+### ✅ v1.11 - Current Release
+- [x] **Windows Version Tracking** - Complete
+  - Database schema for versions and builds
+  - Integration with WindowsVersionsCore
+  - 7 REST API endpoints
+  - 3 dashboard pages
+  - Dashboard widget
+  - PowerShell testing scripts
+- [x] **Ready to Update Status Indicator** - Complete (v1.10)
   - Visual readiness tracking in Device List
   - Firmware release date validation (>= 2024-01-01)
   - OS build compatibility checking
@@ -800,6 +903,20 @@ dotnet publish SecureBootDashboard.Web -c Release -o ./publish/web
 - [x] **Real-time dashboard updates (SignalR)** - Complete (v1.3)
 - [x] **Export reports to Excel/CSV** - Complete (v1.3)
 
+### v1.12 - Q2 2025 (Planned)
+- [ ] **Automatic Version Sync** - Background service
+  - Weekly automatic sync scheduler
+  - Configurable sync schedule
+  - Email notifications on completion/failure
+- [ ] **Build Compliance Reports**
+  - Advanced reporting (Excel/CSV/PDF)
+  - Trend analysis over time
+  - Alert system for critical builds
+- [ ] **Client Integration**
+  - Client auto-detection of outdated builds
+  - Windows Update trigger recommendations
+  - WSUS/Windows Update for Business integration
+
 ### v2.0 - Q2 2025
 - [ ] Dark mode theme support
 - [ ] Custom alert thresholds per fleet
@@ -818,7 +935,7 @@ dotnet publish SecureBootDashboard.Web -c Release -o ./publish/web
 
 **Made with ❤️ for the IT Community**
 
-**Version 1.10** - Ready to Update Status Indicator
+**Version 1.11** - Windows Version Tracking & Build Security
 
 [⬆ Back to Top](#secure-boot-certificate-watcher)
 

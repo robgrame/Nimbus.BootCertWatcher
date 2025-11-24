@@ -1,0 +1,325 @@
+@page
+@model SecureBootDashboard.Web.Pages.Windows.VersionsModel
+@{
+    ViewData["Title"] = "Windows Versions";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-4">
+                <i class="fab fa-windows text-primary"></i> Windows Versions
+            </h1>
+            <p class="lead text-muted">Windows version tracking and build security status</p>
+        </div>
+        <div class="col-auto">
+            <form method="post" asp-page-handler="Sync" class="d-inline">
+                <button type="submit" class="btn btn-primary btn-lg" @(Model.IsSyncing ? "disabled" : "")>
+                    @if (Model.IsSyncing)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        <span>Syncing...</span>
+                    }
+                    else
+                    {
+                        <i class="fas fa-sync-alt me-2"></i>
+                        <span>Sync Versions</span>
+                    }
+                </button>
+            </form>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle"></i> @Model.SuccessMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle"></i> @Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (Model.Statistics != null)
+    {
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center bg-primary text-white">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-desktop"></i> Total Devices</h5>
+                        <p class="display-4">@Model.Statistics.TotalDevices</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center bg-success text-white">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-shield-alt"></i> Secure Builds</h5>
+                        <p class="display-4">@Model.Statistics.DevicesWithSecureBuilds</p>
+                        <small>@Model.Statistics.SecureBuildPercentage.ToString("F1")%</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <a asp-page="/Windows/OutdatedDevices" class="text-decoration-none">
+                    <div class="card text-center bg-warning text-dark">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="fas fa-exclamation-triangle"></i> Outdated</h5>
+                            <p class="display-4">@Model.Statistics.DevicesWithOutdatedBuilds</p>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <small><i class="fas fa-arrow-right"></i> View Details</small>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center bg-secondary text-white">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-question-circle"></i> Unknown</h5>
+                        <p class="display-4">@Model.Statistics.DevicesWithUnknownBuilds</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Build Distribution Chart -->
+        @if (Model.Statistics.BuildDistribution.Any())
+        {
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Build Distribution Across Fleet</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="buildDistributionChart" style="max-height: 400px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+
+    <!-- Windows Versions Table -->
+    @if (Model.Versions.Any())
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fab fa-windows"></i> Windows Versions ({Model.Versions.Count})</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th><i class="fas fa-tag"></i> Version</th>
+                                        <th><i class="fas fa-file-signature"></i> Name</th>
+                                        <th><i class="fas fa-calendar-alt"></i> Release Date</th>
+                                        <th><i class="fas fa-calendar-times"></i> End of Support</th>
+                                        <th><i class="fas fa-sync-alt"></i> Last Synced</th>
+                                        <th class="text-center"><i class="fas fa-cogs"></i> Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var version in Model.Versions.OrderByDescending(v => v.ReleaseDate))
+                                    {
+                                        var isSupported = !version.EndOfSupportDate.HasValue || version.EndOfSupportDate.Value > DateTime.UtcNow;
+                                        var rowClass = isSupported ? "" : "table-danger";
+                                        
+                                        <tr class="@rowClass">
+                                            <td>
+                                                <strong class="text-primary">@version.Version</strong>
+                                            </td>
+                                            <td>@version.Name</td>
+                                            <td>
+                                                @if (version.ReleaseDate.HasValue)
+                                                {
+                                                    <span>@version.ReleaseDate.Value.ToString("yyyy-MM-dd")</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">—</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (version.EndOfSupportDate.HasValue)
+                                                {
+                                                    var daysUntilEol = (version.EndOfSupportDate.Value - DateTime.UtcNow).Days;
+                                                    
+                                                    if (daysUntilEol < 0)
+                                                    {
+                                                        <span class="badge bg-danger">
+                                                            <i class="fas fa-times-circle"></i> Unsupported
+                                                        </span>
+                                                    }
+                                                    else if (daysUntilEol < 90)
+                                                    {
+                                                        <span class="badge bg-warning text-dark">
+                                                            <i class="fas fa-exclamation-triangle"></i> @daysUntilEol days left
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>@version.EndOfSupportDate.Value.ToString("yyyy-MM-dd")</span>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-check-circle"></i> Supported
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    @version.LastSyncedUtc.ToString("yyyy-MM-dd HH:mm") UTC
+                                                </small>
+                                            </td>
+                                            <td class="text-center">
+                                                <a asp-page="/Windows/Builds" 
+                                                   asp-route-version="@version.Version" 
+                                                   class="btn btn-sm btn-outline-primary"
+                                                   title="View builds for @version.Name">
+                                                    <i class="fas fa-list"></i> View Builds
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <h4 class="alert-heading"><i class="fas fa-info-circle"></i> No Version Data</h4>
+            <p>No Windows version data is available yet.</p>
+            <hr>
+            <p class="mb-0">Click the <strong>"Sync Versions"</strong> button above to synchronize Windows version data from WindowsVersionsCore.</p>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    @if (Model.Statistics?.BuildDistribution.Any() == true)
+    {
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+        <script>
+            // Build Distribution Bar Chart
+            const buildDistCtx = document.getElementById('buildDistributionChart');
+            if (buildDistCtx) {
+                const buildData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Statistics.BuildDistribution));
+                
+                // Sort by count descending and take top 15
+                const sortedBuilds = Object.entries(buildData)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 15);
+                
+                const labels = sortedBuilds.map(([build, count]) => build);
+                const data = sortedBuilds.map(([build, count]) => count);
+                
+                new Chart(buildDistCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Device Count',
+                            data: data,
+                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            title: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.parsed.y} devices`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Number of Devices'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Build Number'
+                                },
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        </script>
+    }
+}
+
+@section Styles {
+    <style>
+        .card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+        }
+        
+        .card-footer {
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+        
+        .card:hover .card-footer {
+            opacity: 1;
+        }
+        
+        .table-responsive {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+    </style>
+}

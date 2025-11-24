@@ -1,0 +1,6 @@
+@SecureBootDashboard.WindowsVersionApi_HostAddress = http://localhost:5026
+
+GET {{SecureBootDashboard.WindowsVersionApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

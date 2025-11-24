@@ -1,0 +1,65 @@
+
+        <!-- Windows Build Security Statistics Row (NEW) -->
+        @if (Model.WindowsBuildStats != null && Model.WindowsBuildStats.TotalDevices > 0)
+        {
+            <div class="row mb-4">
+                <div class="col-12 mb-3">
+                    <h4 class="text-muted">
+                        <i class="fab fa-windows"></i> Windows Build Security
+                    </h4>
+                </div>
+                <div class="col-md-3">
+                    <a asp-page="/Windows/Versions" class="card-link">
+                        <div class="card text-center bg-primary text-white stat-card">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fab fa-windows"></i> Tracked Devices</h5>
+                                <p class="display-4">@Model.WindowsBuildStats.TotalDevices</p>
+                            </div>
+                            <div class="card-footer bg-transparent border-0">
+                                <small><i class="fas fa-arrow-right"></i> View Versions</small>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a asp-page="/Windows/Versions" class="card-link">
+                        <div class="card text-center bg-success text-white stat-card">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-shield-alt"></i> Secure Builds</h5>
+                                <p class="display-4">@Model.WindowsBuildStats.DevicesWithSecureBuilds</p>
+                                <small>@Model.WindowsBuildStats.SecureBuildPercentage.ToString("F1")%</small>
+                            </div>
+                            <div class="card-footer bg-transparent border-0">
+                                <small><i class="fas fa-arrow-right"></i> View Details</small>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a asp-page="/Windows/OutdatedDevices" class="card-link">
+                        <div class="card text-center bg-warning text-dark stat-card">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-exclamation-triangle"></i> Outdated Builds</h5>
+                                <p class="display-4">@Model.WindowsBuildStats.DevicesWithOutdatedBuilds</p>
+                            </div>
+                            <div class="card-footer bg-transparent border-0">
+                                <small><i class="fas fa-arrow-right"></i> View Outdated</small>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a asp-page="/Windows/Versions" class="card-link">
+                        <div class="card text-center bg-secondary text-white stat-card">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-question-circle"></i> Unknown Builds</h5>
+                                <p class="display-4">@Model.WindowsBuildStats.DevicesWithUnknownBuilds</p>
+                            </div>
+                            <div class="card-footer bg-transparent border-0">
+                                <small><i class="fas fa-arrow-right"></i> Sync Data</small>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        }

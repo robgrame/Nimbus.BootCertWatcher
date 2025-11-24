@@ -54,6 +54,9 @@ public class IndexModel : PageModel
     // Command statistics
     public CommandStatistics? CommandStats { get; private set; }
 
+    // Windows Build statistics
+    public WindowsBuildStatistics? WindowsBuildStats { get; private set; }
+
     // Trend data (last 7 days)
     public Dictionary<string, int> ComplianceTrendData { get; private set; } = new();
 
@@ -78,6 +81,9 @@ public class IndexModel : PageModel
 
             // Load command statistics
             await LoadCommandStatisticsAsync();
+
+            // Load Windows build statistics
+            await LoadWindowsBuildStatisticsAsync();
 
             // Calculate trend data (last 7 days)
             CalculateComplianceTrend();
@@ -105,6 +111,25 @@ public class IndexModel : PageModel
             _logger.LogWarning(ex, "Failed to load command statistics");
             // Don't fail the whole page if commands aren't available
             CommandStats = null;
+        }
+    }
+
+    private async Task LoadWindowsBuildStatisticsAsync()
+    {
+        try
+        {
+            var httpClient = _httpClientFactory.CreateClient("SecureBootApi");
+            var apiBaseUrl = _apiSettings.BaseUrl ?? "https://localhost:5001";
+
+            WindowsBuildStats = await httpClient.GetFromJsonAsync<WindowsBuildStatistics>(
+                $"{apiBaseUrl}/api/WindowsVersion/statistics",
+                HttpContext.RequestAborted);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load Windows build statistics");
+            // Don't fail the whole page if Windows version tracking isn't available
+            WindowsBuildStats = null;
         }
     }
 
@@ -138,4 +163,15 @@ public class IndexModel : PageModel
         public int FailedCount { get; set; }
         public int CancelledCount { get; set; }
     }
+
+    public class WindowsBuildStatistics
+    {
+        public int TotalDevices { get; set; }
+        public int DevicesWithSecureBuilds { get; set; }
+        public int DevicesWithOutdatedBuilds { get; set; }
+        public int DevicesWithUnknownBuilds { get; set; }
+        public double SecureBuildPercentage { get; set; }
+        public Dictionary<string, int> BuildDistribution { get; set; } = new();
+    }
+
 }
