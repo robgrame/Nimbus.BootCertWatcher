@@ -37,3 +37,6 @@ Thumbs.db
 *.cer
 *.crt
 *.key
+
+# External repositories (kept as Git submodule/reference)
+external/

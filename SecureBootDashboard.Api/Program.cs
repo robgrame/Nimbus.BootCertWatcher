@@ -155,11 +155,24 @@ try
     Log.Information("Configuring Export Service...");
     builder.Services.AddScoped<IExportService, ExportService>();
 
-    // Configure Windows Version Service
+    // Configure Windows Version Service (Configuration-based, no WindowsVersionsCore dependency)
     Log.Information("Configuring Windows Version Service...");
-    builder.Services.AddHttpClient(); // For WindowsVersionsCore
-    builder.Services.AddScoped<WindowsVersionsCore.Services.IWindowsService, WindowsVersionsCore.Services.WindowsService>();
     builder.Services.AddScoped<SecureBootDashboard.Api.Services.IWindowsVersionService, SecureBootDashboard.Api.Services.WindowsVersionService>();
+
+    // Configure Windows Security Options
+    Log.Information("Configuring Windows Security Options...");
+    builder.Services.Configure<WindowsSecurityOptions>(builder.Configuration.GetSection("WindowsSecurity"));
+    var windowsSecurityConfig = builder.Configuration.GetSection("WindowsSecurity").Get<WindowsSecurityOptions>();
+    if (windowsSecurityConfig != null)
+    {
+        Log.Information("Windows Security Configuration:");
+        Log.Information("  Firmware Security Date: {Date}", windowsSecurityConfig.FirmwareSecurityDate.ToString("yyyy-MM-dd"));
+        Log.Information("  Minimum Secure Builds: {Count}", windowsSecurityConfig.MinimumSecureBuilds.Count);
+        foreach (var kvp in windowsSecurityConfig.MinimumSecureBuilds)
+        {
+            Log.Information("    {Version}: {BuildNumber} ({Name})", kvp.Key, kvp.Value.BuildNumber, kvp.Value.Name);
+        }
+    }
 
     // Configure Azure Queue Processor
     Log.Information("Configuring Queue Processor...");

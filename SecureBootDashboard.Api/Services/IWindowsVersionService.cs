@@ -3,34 +3,14 @@ using SecureBootDashboard.Api.Data;
 namespace SecureBootDashboard.Api.Services;
 
 /// <summary>
-/// Service for managing Windows version tracking and build security verification
+/// Service for managing Windows build security verification (configuration-based)
 /// </summary>
 public interface IWindowsVersionService
 {
     /// <summary>
-    /// Synchronizes Windows version data from WindowsVersionsCore to local database
-    /// </summary>
-    Task<WindowsVersionSyncResult> SyncWindowsVersionsAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Checks if a specific build number is considered secure
+    /// Checks if a specific build number is considered secure based on configuration
     /// </summary>
     Task<WindowsBuildSecurityStatus> CheckBuildSecurityAsync(string buildNumber, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets all Windows versions from database
-    /// </summary>
-    Task<IReadOnlyList<WindowsVersionEntity>> GetAllVersionsAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets all builds for a specific Windows version
-    /// </summary>
-    Task<IReadOnlyList<WindowsBuildEntity>> GetBuildsForVersionAsync(string version, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets the latest secure build for a Windows version
-    /// </summary>
-    Task<WindowsBuildEntity?> GetLatestSecureBuildAsync(string version, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets statistics about build security status across all devices
@@ -42,17 +22,6 @@ public interface IWindowsVersionService
     /// </summary>
     Task<IReadOnlyList<DeviceWithBuildStatus>> GetDevicesWithOutdatedBuildsAsync(CancellationToken cancellationToken = default);
 }
-
-/// <summary>
-/// Result of Windows version synchronization
-/// </summary>
-public record WindowsVersionSyncResult(
-    bool Success,
-    int VersionsSynced,
-    int BuildsSynced,
-    string? ErrorMessage = null,
-    DateTime? LastSyncedUtc = null
-);
 
 /// <summary>
 /// Security status of a Windows build

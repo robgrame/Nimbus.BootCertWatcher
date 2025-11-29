@@ -1,0 +1,73 @@
+[
+  {
+    "Version": "24H2",
+    "Build": "26100",
+    "Edition": 1,
+    "ServicingType": "Regular",
+    "ServiceOption": "General Availability Channel",
+    "ReleaseDate": "2024-10-01T00:00:00",
+    "Availability": "October 1, 2024",
+    "EndOfServicingStandard": "October 12, 2027",
+    "EndOfServicingEnterprise": "October 10, 2027",
+    "IsCurrentVersion": true,
+    "NewFeatures": [],
+    "KnownIssues": []
+  },
+  {
+    "Version": "23H2",
+    "Build": "22631",
+    "Edition": 1,
+    "ServicingType": "Regular",
+    "ServiceOption": "General Availability Channel",
+    "ReleaseDate": "2023-10-31T00:00:00",
+    "Availability": "October 31, 2023",
+    "EndOfServicingStandard": "November 11, 2025",
+    "EndOfServicingEnterprise": "November 10, 2026",
+    "IsCurrentVersion": false,
+    "NewFeatures": [],
+    "KnownIssues": []
+  },
+  {
+    "Version": "22H2",
+    "Build": "22621",
+    "Edition": 1,
+    "ServicingType": "Regular",
+    "ServiceOption": "General Availability Channel",
+    "ReleaseDate": "2022-09-20T00:00:00",
+    "Availability": "September 20, 2022",
+    "EndOfServicingStandard": "October 14, 2024",
+    "EndOfServicingEnterprise": "October 8, 2025",
+    "IsCurrentVersion": false,
+    "NewFeatures": [],
+    "KnownIssues": []
+  },
+  {
+    "Version": "21H2",
+    "Build": "22000",
+    "Edition": 1,
+    "ServicingType": "Regular",
+    "ServiceOption": "General Availability Channel",
+    "ReleaseDate": "2021-10-04T00:00:00",
+    "Availability": "October 4, 2021",
+    "EndOfServicingStandard": "October 10, 2023",
+    "EndOfServicingEnterprise": "October 8, 2024",
+    "IsCurrentVersion": false,
+    "NewFeatures": [],
+    "KnownIssues": []
+  },
+  {
+    "Version": "LTSC 2024",
+    "Build": "26100",
+    "Edition": 1,
+    "ServicingType": "LTSC",
+    "ServiceOption": "Long-Term Servicing Channel (LTSC)",
+    "ReleaseDate": "2024-11-25T00:00:00",
+    "Availability": "November 25, 2024",
+    "MainstreamSupportEndDate": "November 25, 2029",
+    "ExtendedSupportEndDate": "November 25, 2034",
+    "SupportEndDate": "November 25, 2034",
+    "IsCurrentVersion": true,
+    "NewFeatures": [],
+    "KnownIssues": []
+  }
+]

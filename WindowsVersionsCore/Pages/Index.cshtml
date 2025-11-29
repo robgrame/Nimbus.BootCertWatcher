@@ -1,0 +1,468 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home";
+    ViewData["Description"] = "Track Windows 10 and Windows 11 versions and updates - Stay updated with the latest Windows releases for IT administrators";
+}
+
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="hero-content fade-in-up">
+            <h1 class="hero-title">Windows Versions</h1>
+            <p class="hero-subtitle">
+                Stay updated with the latest Windows 10 and Windows 11 versions and updates
+            </p>
+            
+            <div class="hero-stats" id="hero-stats">
+                <div class="stat-item">
+                    <span class="stat-number" id="latest-win10-version">-</span>
+                    <span class="stat-label-windows-version">Latest <br /> <strong>Windows 10</strong> version</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" id="latest-win11-version">-</span>
+                    <span class="stat-label-windows-version">Latest <br /> <strong>Windows 11</strong> version</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number-kb" id="latest-release-info">-</span>
+                    <span class="stat-label">Latest Update Release</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Main Content -->
+<div class="container">
+    <!-- Windows 10 End of Service Warning -->
+    <div class="modern-alert alert-win10 mb-4">
+        <div class="alert-icon">!</div>
+        <div>
+            <strong>Windows 10 End of Support</strong>
+            <p class="mb-0">
+                Windows 10 (version 22H2 – final release) reaches end of support on <strong>October 14, 2025</strong>.
+                Plan migration to Windows 11 or LTSC where appropriate. Learn more from
+                <a href="https://learn.microsoft.com/en-us/windows/release-health/release-information" target="_blank" class="text-decoration-none">Windows release health</a>
+                and <a href="https://learn.microsoft.com/lifecycle" target="_blank" class="text-decoration-none">Microsoft Lifecycle</a>.
+                <a href="/Windows10" class="text-decoration-none ms-1">View Windows 10 details</a>.
+            </p>
+        </div>
+    </div>
+
+    <!-- Important Notice -->
+    <div class="modern-alert alert-warning">
+        <div class="alert-icon">!</div>
+        <div>
+            <strong>Important Notice</strong>
+            <p class="mb-0">
+                This site is <strong>not affiliated</strong> with Microsoft Corporation. Information is sourced from official Microsoft documentation and may include personal considerations. Refer to <a href="https://support.microsoft.com/en-us/windows/release-health-for-windows-11-feb2d264-ecd4-54fe-2211-4de9a0b9eb78" target="_blank" class="text-decoration-none">Microsoft's official documentation</a> for authoritative information.
+            </p>
+        </div>
+    </div>
+    
+    <!-- About This Site -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="modern-card h-100">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="bi bi-info-circle"></i>
+                    </div>
+                    <div>
+                        <h3 class="card-title">About This Site</h3>
+                        <p class="text-muted mb-0">Purpose, scope, and context</p>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">This site tracks Windows 10 and Windows 11 releases across all update channels. It provides a consolidated view of version numbers, builds, and key lifecycle dates to help IT administrators quickly assess currency and plan deployment strategies.</p>
+                    <div class="row g-3 mb-0">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled mb-0 about-points">
+                                <li><strong>What you get:</strong> Latest versions per Windows edition + update history</li>
+                                <li><strong>Data freshness:</strong> Regular updates from Microsoft documentation</li>
+                                <li><strong>JSON API:</strong> Simple endpoints for automation / dashboards</li>
+                                <li><strong>Visual cues:</strong> Recency indicators & styled version tags</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled mb-0 about-points">
+                                <li><strong>Use cases:</strong> Patch status checks, update tracking, version history</li>
+                                <li><strong>Audience:</strong> IT admins, security teams, system administrators</li>
+                                <li><strong>Approach:</strong> Read‑only aggregation of Microsoft‑published data</li>
+                                <li><strong>Scope:</strong> Windows 10 and Windows 11 client version metadata</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Windows 10 and 11 Cards -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-4">
+            <div class="modern-card win10">
+                <div class="card-header">
+                    <div class="card-icon win10">
+                        <i class="bi bi-windows"></i>
+                    </div>
+                    <div>
+                        <h2 class="card-title">Windows 10</h2>
+                        <p class="text-muted mb-0">Released July 29, 2015</p>
+                    </div>
+                </div>
+                <div id="windows10-summary" class="mb-3">
+                    <div class="text-center py-4">
+                        <div class="loading-spinner win10"></div>
+                        <p class="mt-2">Loading Windows 10 information...</p>
+                    </div>
+                </div>
+                <a href="/Windows10" class="btn-modern btn-win10">
+                    <i class="bi bi-arrow-right"></i>
+                    View Windows 10 Details
+                </a>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="modern-card win11">
+                <div class="card-header">
+                    <div class="card-icon win11">
+                        <i class="bi bi-windows"></i>
+                    </div>
+                    <div>
+                        <h2 class="card-title">Windows 11</h2>
+                        <p class="text-muted mb-0">Released October 5, 2021</p>
+                    </div>
+                </div>
+                <div id="windows11-summary" class="mb-3">
+                    <div class="text-center py-4">
+                        <div class="loading-spinner win11"></div>
+                        <p class="mt-2">Loading Windows 11 information...</p>
+                    </div>
+                </div>
+                <a href="/Windows11" class="btn-modern btn-win11">
+                    <i class="bi bi-arrow-right"></i>
+                    View Windows 11 Details
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feature Cards -->
+    <div class="row mb-5">
+        <div class="col-md-4 mb-4">
+            <div class="modern-card h-100">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
+                    <div>
+                        <h3 class="card-title">Update History</h3>
+                        <p class="text-muted mb-0">Track all updates</p>
+                    </div>
+                </div>
+                <p>Complete history of Windows 10 and Windows 11 updates with release dates, KB numbers, and build information.</p>
+                <a href="/Compare" class="btn-modern btn-primary">
+                    <i class="bi bi-arrow-left-right"></i>
+                    Compare Versions
+                </a>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="modern-card h-100">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <div>
+                        <h3 class="card-title">Security Updates</h3>
+                        <p class="text-muted mb-0">Stay secure</p>
+                    </div>
+                </div>
+                <p>Track security updates and patches to keep your Windows systems protected and compliant with the latest security fixes.</p>
+                <a href="/api/Windows/health" class="btn-modern btn-primary">
+                    <i class="bi bi-activity"></i>
+                    System Health
+                </a>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="modern-card h-100">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="bi bi-code-square"></i>
+                    </div>
+                    <div>
+                        <h3 class="card-title">API Access</h3>
+                        <p class="text-muted mb-0">For developers</p>
+                    </div>
+                </div>
+                <p>Programmatic access to Windows version data through our comprehensive REST API for integration into your tools.</p>
+                <div class="d-flex gap-2">
+                    <a href="/swagger" target="_blank" class="btn-modern btn-primary">
+                        <i class="bi bi-book"></i>
+                        API Documentation
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sources -->
+    <div class="row">
+        <div class="col-12">
+            <div class="modern-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="bi bi-link-45deg"></i>
+                    </div>
+                    <div>
+                        <h3 class="card-title">Data Sources</h3>
+                        <p class="text-muted mb-0">Official Microsoft documentation</p>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="https://support.microsoft.com/en-us/topic/windows-10-update-history-8127c2c6-6edf-4fdf-8b9f-0f7be1ef3562" target="_blank" class="btn-modern btn-secondary">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                        Windows 10 Update History
+                    </a>
+                    <a href="https://support.microsoft.com/en-us/topic/windows-11-version-24h2-update-history-0929c747-1815-4543-8461-0160d16f15e5" target="_blank" class="btn-modern btn-secondary">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                        Windows 11 Update History
+                    </a>
+                    <a href="https://learn.microsoft.com/en-us/windows/release-health/release-information" target="_blank" class="btn-modern btn-secondary">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                        Windows 10 Release Information
+                    </a>
+                    <a href="https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information" target="_blank" class="btn-modern btn-secondary">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                        Windows 11 Release Information
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            let win10Data = null;
+            let win11Data = null;
+            
+            function getLatestGeneralUpdate(recentUpdates) {
+                if (!Array.isArray(recentUpdates)) return null;
+                const general = recentUpdates
+                    .filter(u => {
+                        const t = (u.type || '').toLowerCase();
+                        const isGeneralType = t === 'general' || t === 'general update' || t === '';
+                        return !u.isSecurityUpdate && !u.isOptionalUpdate && isGeneralType;
+                    })
+                    .sort((a, b) => {
+                        const da = a.releaseDate ? new Date(a.releaseDate) : new Date(0);
+                        const db = b.releaseDate ? new Date(b.releaseDate) : new Date(0);
+                        return db - da;
+                    });
+                return general[0] || null;
+            }
+
+            function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+            function getReleaseWaveLetter(date) {
+                if (!(date instanceof Date) || isNaN(date)) return '';
+                const d = date.getDate();
+                const dow = date.getDay(); // 0=Sun, 1=Mon, 2=Tue
+                if (dow === 2 && d >= 8 && d <= 14) return 'B';
+                if (d >= 15 && d <= 21) return 'C';
+                if (d >= 22 && d <= 28) return 'D';
+                if (d >= 29) return 'E';
+                return '';
+            }
+            
+            // Load Windows 10 summary
+            $.get('/api/Windows10/summary')
+                .done(function(response) {
+                    if (response.success && response.data) {
+                        win10Data = response.data;
+                        updateStats();
+                        
+                        const latestGeneral10 = getLatestGeneralUpdate(win10Data.recentUpdates);
+                        const latestKb10 = latestGeneral10?.kbNumber || 'Unknown';
+                        const latestKbDate10 = latestGeneral10?.releaseDate ? new Date(latestGeneral10.releaseDate).toLocaleDateString() : 'Unknown';
+                        
+                        $('#windows10-summary').html(`
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span><strong>General Availability Channel:</strong></span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2 ps-2">
+                                    <span>Current Version:</span>
+                                    <strong>${win10Data.currentVersion}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2 ps-2">
+                                    <span>Latest Build:</span>
+                                    <strong>${win10Data.latestBuild}</strong>
+                                </div>
+                                
+                                <!-- Add LTSC section if available -->
+                                ${win10Data.ltscVersions && win10Data.ltscVersions.length > 0 ? `
+                                <div class="d-flex justify-content-between mb-2 mt-3">
+                                    <span><strong>LTSC Channel:</strong></span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2 ps-2">
+                                    <span>Current LTSC:</span>
+                                    <strong>${win10Data.ltscVersions.find(v => v.isCurrentVersion)?.version || 'Unknown'}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2 ps-2">
+                                    <span>Latest Build:</span>
+                                    <strong>${win10Data.ltscVersions.find(v => v.isCurrentVersion)?.latestBuild || 'Unknown'}</strong>
+                                </div>
+                                ` : ''}
+                                
+                                <div class="d-flex justify-content-between mt-3">
+                                    <span>Latest Release Update (GA):</span>
+                                    <strong>${latestKb10}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Release Date:</span>
+                                    <strong>${latestKbDate10}</strong>
+                                </div>
+                                ${win10Data.lastUpdateDate ? 
+                                    `<div class="text-end mt-3">
+                                        <small class="text-muted">Last updated: ${new Date(win10Data.lastUpdateDate).toLocaleDateString()}</small>
+                                    </div>` : ''}
+                            </div>
+                        `);
+                    } else {
+                        $('#windows10-summary').html(`
+                            <div class="alert alert-warning">
+                                <p class="mb-0">No Windows 10 data available. Please try refreshing the page.</p>
+                            </div>
+                        `);
+                    }
+                })
+                .fail(function() {
+                    $('#windows10-summary').html(`
+                        <div class="alert alert-danger">
+                            <p class="mb-0">Error loading Windows 10 data. Please try again later.</p>
+                        </div>
+                    `);
+                });
+            
+            // Load Windows 11 summary
+            $.get('/api/Windows11/summary')
+                .done(function(response) {
+                    if (response.success && response.data) {
+                        win11Data = response.data;
+                        updateStats();
+                        
+                        const latestGeneral11 = getLatestGeneralUpdate(win11Data.recentUpdates);
+                        const latestKb11 = latestGeneral11?.kbNumber || 'Unknown';
+                        const latestKbDate11 = latestGeneral11?.releaseDate ? new Date(latestGeneral11.releaseDate).toLocaleDateString() : 'Unknown';
+                        
+                        $('#windows11-summary').html(`
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span><strong>General Availability Channel:</strong></span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2 ps-2">
+                                    <span>Current Version:</span>
+                                    <strong>${win11Data.currentVersion}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2 ps-2">
+                                    <span>Latest Build:</span>
+                                    <strong>${win11Data.latestBuild}</strong>
+                                </div>
+                                
+                                <!-- Add LTSC section if available -->
+                                ${win11Data.ltscVersions && win11Data.ltscVersions.length > 0 ? `
+                                <div class="d-flex justify-content-between mb-2 mt-3">
+                                    <span><strong>LTSC Channel:</strong></span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2 ps-2">
+                                    <span>Current LTSC:</span>
+                                    <strong>${win11Data.ltscVersions.find(v => v.isCurrentVersion)?.version || 'Unknown'}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2 ps-2">
+                                    <span>Latest Build:</span>
+                                    <strong>${win11Data.ltscVersions.find(v => v.isCurrentVersion)?.latestBuild || 'Unknown'}</strong>
+                                </div>
+                                ` : ''}
+                                
+                                <div class="d-flex justify-content-between mt-3">
+                                    <span>Latest Release Update (GA):</span>
+                                    <strong>${latestKb11}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Release Date:</span>
+                                    <strong>${latestKbDate11}</strong>
+                                </div>
+                                ${win11Data.lastUpdateDate ? 
+                                    `<div class="text-end mt-3">
+                                        <small class="text-muted">Last updated: ${new Date(win11Data.lastUpdateDate).toLocaleDateString()}</small>
+                                    </div>` : ''}
+                            </div>
+                        `);
+                    } else {
+                        $('#windows11-summary').html(`
+                            <div class="alert alert-warning">
+                                <p class="mb-0">No Windows 11 data available. Please try refreshing the page.</p>
+                            </div>
+                        `);
+                    }
+                })
+                .fail(function() {
+                    $('#windows11-summary').html(`
+                        <div class="alert alert-danger">
+                            <p class="mb-0">Error loading Windows 11 data. Please try again later.</p>
+                        </div>
+                    `);
+                });
+                
+            // Update the hero stats with latest info
+            function updateStats() {
+                // Update latest versions
+                if (win10Data && win10Data.currentVersion) {
+                    $('#latest-win10-version').text(win10Data.currentVersion);
+                }
+                if (win11Data && win11Data.currentVersion) {
+                    $('#latest-win11-version').text(win11Data.currentVersion);
+                }
+
+                // Compute latest update release across Win10 and Win11
+                const latest10 = win10Data ? getLatestGeneralUpdate(win10Data.recentUpdates) : null;
+                const latest11 = win11Data ? getLatestGeneralUpdate(win11Data.recentUpdates) : null;
+
+                let latest = null;
+                const d10 = latest10?.releaseDate ? new Date(latest10.releaseDate) : null;
+                const d11 = latest11?.releaseDate ? new Date(latest11.releaseDate) : null;
+
+                if (d10 && d11) {
+                    latest = d10 > d11 ? { item: latest10, date: d10 } : { item: latest11, date: d11 };
+                } else if (d10) {
+                    latest = { item: latest10, date: d10 };
+                } else if (d11) {
+                    latest = { item: latest11, date: d11 };
+                }
+
+                if (latest && latest.date && latest.item?.kbNumber) {
+                    const y = latest.date.getFullYear();
+                    const m = pad2(latest.date.getMonth() + 1);
+                    const letter = getReleaseWaveLetter(latest.date);
+                    const kb = latest.item.kbNumber;
+                    const firstLine = `${y}.${m}${letter ? ' ' + letter : ''}`;
+                    const secondLine = kb;
+                    $('#latest-release-info').html(firstLine + '<br>' + secondLine);
+                }
+            }
+        });
+    </script>
+    
+    <style>
+        /* About points styling */
+        .about-points li {position:relative;padding-left:1rem;margin-bottom:.4rem;}
+        .about-points li:before {content:"•";position:absolute;left:0;color:var(--primary-color);}
+    </style>
+}

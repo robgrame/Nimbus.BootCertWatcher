@@ -277,6 +277,19 @@ The dashboard now includes powerful remote command processing capabilities:
 
 ## Components
 
+### 0. **WindowsVersionsCore** (ASP.NET Core 10)
+- **Integrated internal project** (migrated from external repository on 2025-11-24)
+- Originally from: https://github.com/robgrame/WindowsVersionsCore
+- Provides Windows 10/11 version and build tracking data
+- Used by:
+  - `SecureBootDashboard.Api` - Windows version services
+  - `SecureBootDashboard.WindowsVersionApi` - Standalone Windows version API
+- Features:
+  - Windows 10/11 version database
+  - Build number tracking
+  - Support lifecycle information
+  - KB article references
+
 ### 1. **SecureBootWatcher.Client** (.NET Framework 4.8)
 - Runs on managed Windows devices (desktops, servers, VMs)
 - Supports two execution modes:

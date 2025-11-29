@@ -1,0 +1,191 @@
+@page
+@model WindowsVersionsCore.Pages.AboutModel
+@{
+    ViewData["Title"] = "About";
+    ViewData["Description"] = "About Windows Versions - Tracking Windows 10 and Windows 11 updates and versions for IT administrators";
+}
+
+<!-- Hero Section (match home header) -->
+<section class="hero-section">
+    <div class="container">
+        <div class="hero-content fade-in-up">
+            <h1 class="hero-title">About Windows Versions</h1>
+            <p class="hero-subtitle">Purpose, scope, and how this site helps IT administrators</p>
+        </div>
+    </div>
+</section>
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="modern-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="bi bi-info-circle"></i>
+                    </div>
+                    <div>
+                        <h1 class="card-title">About Windows Versions</h1>
+                        <p class="text-muted mb-0">Our mission and purpose</p>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="lead">Windows Versions is a comprehensive tracking service for Windows 10 and Windows 11 updates and releases, designed specifically for IT administrators and professionals.</p>
+                    
+                    <h3 class="mt-4">Our Purpose</h3>
+                    <p>
+                        Staying on top of Windows updates can be challenging. Microsoft releases updates through various channels and at different times, making it difficult to keep track of what's current, what's secure, and what's relevant for your organization.
+                    </p>
+                    <p>
+                        This site serves as a centralized repository of Windows update information, offering the following benefits:
+                    </p>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="d-flex mb-3">
+                                <div class="me-3">
+                                    <div class="bg-primary text-white rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                                        <i class="bi bi-search"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h5>Comprehensive Tracking</h5>
+                                    <p>We monitor all Windows 10 and Windows 11 updates, including feature updates, security updates, and cumulative updates.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex mb-3">
+                                <div class="me-3">
+                                    <div class="bg-primary text-white rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                                        <i class="bi bi-clock-history"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h5>Historical Data</h5>
+                                    <p>Access the complete update history for both Windows 10 and Windows 11 releases with detailed information.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="d-flex mb-3">
+                                <div class="me-3">
+                                    <div class="bg-primary text-white rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                                        <i class="bi bi-code-square"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h5>API Access</h5>
+                                    <p>Programmatic access to all Windows version data through our REST API for integration with your tools and dashboards.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex mb-3">
+                                <div class="me-3">
+                                    <div class="bg-primary text-white rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                                        <i class="bi bi-shield-check"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h5>Security Focus</h5>
+                                    <p>Special attention to security updates and patches to help you keep your systems secure and compliant.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h3 class="mt-4">Our Data Sources</h3>
+                    <p>
+                        All data is sourced from official Microsoft documentation and update channels. We regularly update our database to ensure you have the most current information. Primary sources include:
+                    </p>
+                    
+                    <ul class="list-group mb-4">
+                        <li class="list-group-item d-flex align-items-center">
+                            <i class="bi bi-link-45deg me-3 text-primary"></i>
+                            <div>
+                                <a href="https://support.microsoft.com/en-us/topic/windows-10-update-history-8127c2c6-6edf-4fdf-8b9f-0f7be1ef3562" target="_blank" class="text-decoration-none">Windows 10 Update History</a>
+                                <p class="text-muted mb-0 small">Official Microsoft documentation for Windows 10 updates</p>
+                            </div>
+                        </li>
+                        <li class="list-group-item d-flex align-items-center">
+                            <i class="bi bi-link-45deg me-3 text-primary"></i>
+                            <div>
+                                <a href="https://support.microsoft.com/en-us/topic/windows-11-version-24h2-update-history-0929c747-1815-4543-8461-0160d16f15e5" target="_blank" class="text-decoration-none">Windows 11 Update History</a>
+                                <p class="text-muted mb-0 small">Official Microsoft documentation for Windows 11 updates</p>
+                            </div>
+                        </li>
+                        <li class="list-group-item d-flex align-items-center">
+                            <i class="bi bi-link-45deg me-3 text-primary"></i>
+                            <div>
+                                <a href="https://learn.microsoft.com/en-us/windows/release-health/release-information" target="_blank" class="text-decoration-none">Windows 10 Release Information</a>
+                                <p class="text-muted mb-0 small">Detailed information about Windows 10 release cadence and lifecycle</p>
+                            </div>
+                        </li>
+                        <li class="list-group-item d-flex align-items-center">
+                            <i class="bi bi-link-45deg me-3 text-primary"></i>
+                            <div>
+                                <a href="https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information" target="_blank" class="text-decoration-none">Windows 11 Release Information</a>
+                                <p class="text-muted mb-0 small">Detailed information about Windows 11 release cadence and lifecycle</p>
+                            </div>
+                        </li>
+                    </ul>
+                    
+                    <div class="modern-alert alert-info mt-4">
+                        <div class="alert-icon"><i class="bi bi-info"></i></div>
+                        <div>
+                            <strong>Disclaimer</strong>
+                            <p class="mb-0">
+                                This site is not affiliated with Microsoft Corporation. All trademarks, service marks, trade names, product names, and logos appearing on the site are the property of their respective owners. Information is provided "as is" without warranty of any kind.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="modern-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <div>
+                        <h3 class="card-title">For IT Administrators</h3>
+                        <p class="text-muted mb-0">How this site can help you</p>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p>As an IT administrator, you can use Windows Versions to:</p>
+                    <ul>
+                        <li>Track the latest Windows 10 and Windows 11 updates</li>
+                        <li>Plan your update deployment strategy</li>
+                        <li>Verify patch compliance across your organization</li>
+                        <li>Stay informed about security updates</li>
+                        <li>Integrate version data into your monitoring systems</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="modern-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="bi bi-github"></i>
+                    </div>
+                    <div>
+                        <h3 class="card-title">Open Source</h3>
+                        <p class="text-muted mb-0">Community contributions welcome</p>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p>Windows Versions is an open source project. We welcome contributions from the community to help improve the service.</p>
+                    <a href="https://github.com/robgrame/WindowsVersionsCore" target="_blank" class="btn-modern btn-primary mt-2">
+                        <i class="bi bi-github me-2"></i>View on GitHub
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

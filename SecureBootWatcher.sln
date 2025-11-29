@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31903.59
+# Visual Studio Version 18
+VisualStudioVersion = 18.3.11218.70
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureBootWatcher.Client", "SecureBootWatcher.Client\SecureBootWatcher.Client.csproj", "{F18F0A4A-A1C5-4640-BD3B-8D2F58D29F5A}"
 EndProject
@@ -20,10 +20,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureBootDashboard.Web.Tests", "SecureBootDashboard.Web.Tests\SecureBootDashboard.Web.Tests.csproj", "{1DF385AC-BFF3-4D91-8DB9-0A552F5669D8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureBootDashboard.WindowsVersionApi", "SecureBootDashboard.WindowsVersionApi\SecureBootDashboard.WindowsVersionApi.csproj", "{4A914856-698B-4BDB-A767-99959AE83883}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "external", "external", "{A288BEE0-695A-BEEA-455C-649571D89326}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsVersionsCore", "external\WindowsVersionsCore\WindowsVersionsCore.csproj", "{63DCF26E-1DAF-4F81-8D96-E57104AB5FAA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -143,23 +139,8 @@ Global
 		{4A914856-698B-4BDB-A767-99959AE83883}.Release|x64.Build.0 = Release|Any CPU
 		{4A914856-698B-4BDB-A767-99959AE83883}.Release|x86.ActiveCfg = Release|Any CPU
 		{4A914856-698B-4BDB-A767-99959AE83883}.Release|x86.Build.0 = Release|Any CPU
-		{63DCF26E-1DAF-4F81-8D96-E57104AB5FAA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{63DCF26E-1DAF-4F81-8D96-E57104AB5FAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{63DCF26E-1DAF-4F81-8D96-E57104AB5FAA}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{63DCF26E-1DAF-4F81-8D96-E57104AB5FAA}.Debug|x64.Build.0 = Debug|Any CPU
-		{63DCF26E-1DAF-4F81-8D96-E57104AB5FAA}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{63DCF26E-1DAF-4F81-8D96-E57104AB5FAA}.Debug|x86.Build.0 = Debug|Any CPU
-		{63DCF26E-1DAF-4F81-8D96-E57104AB5FAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{63DCF26E-1DAF-4F81-8D96-E57104AB5FAA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{63DCF26E-1DAF-4F81-8D96-E57104AB5FAA}.Release|x64.ActiveCfg = Release|Any CPU
-		{63DCF26E-1DAF-4F81-8D96-E57104AB5FAA}.Release|x64.Build.0 = Release|Any CPU
-		{63DCF26E-1DAF-4F81-8D96-E57104AB5FAA}.Release|x86.ActiveCfg = Release|Any CPU
-		{63DCF26E-1DAF-4F81-8D96-E57104AB5FAA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{63DCF26E-1DAF-4F81-8D96-E57104AB5FAA} = {A288BEE0-695A-BEEA-455C-649571D89326}
 	EndGlobalSection
 EndGlobal

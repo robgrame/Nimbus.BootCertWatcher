@@ -1,0 +1,396 @@
+@page
+@model CompareModel
+@{
+    ViewData["Title"] = "Compare Windows Versions";
+}
+
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1 class="display-4 fw-bold">
+                <i class="fas fa-balance-scale text-primary me-2"></i>Compare Windows Versions
+            </h1>
+            <p class="lead">Compare different Windows versions to understand their differences and compatibility.</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">Version Comparison</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mx-auto">
+                            <form id="compare-form" class="needs-validation" novalidate>
+                                <div class="mb-3">
+                                    <label for="version1" class="form-label">First Version</label>
+                                    <input type="text" class="form-control" id="version1" name="version1" 
+                                           placeholder="e.g., 21H2, 22H2, 10.0.19042" required>
+                                    <div class="invalid-feedback">
+                                        Please enter the first Windows version.
+                                    </div>
+                                    <div class="form-text">
+                                        Can be version name (e.g., 21H2) or build number (e.g., 19044)
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="version2" class="form-label">Second Version</label>
+                                    <input type="text" class="form-control" id="version2" name="version2" 
+                                           placeholder="e.g., 21H2, 22H2, 10.0.19042" required>
+                                    <div class="invalid-feedback">
+                                        Please enter the second Windows version.
+                                    </div>
+                                    <div class="form-text">
+                                        Can be version name (e.g., 21H2) or build number (e.g., 19044)
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-exchange-alt me-2"></i>Compare Versions
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-md-8 mx-auto">
+                            <div id="comparison-result" style="display: none;">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h4 class="card-title mb-0">Comparison Results</h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="result-content"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="comparison-error" class="alert alert-danger" style="display: none;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-info text-white">
+                    <h3 class="card-title mb-0">Windows 10 Versions</h3>
+                </div>
+                <div class="card-body">
+                    <div id="win10-versions">
+                        <div class="text-center my-3">
+                            <div class="spinner-border text-info" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading Windows 10 versions...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-success text-white">
+                    <h3 class="card-title mb-0">Windows 11 Versions</h3>
+                </div>
+                <div class="card-body">
+                    <div id="win11-versions">
+                        <div class="text-center my-3">
+                            <div class="spinner-border text-success" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading Windows 11 versions...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">Common Windows Build Numbers</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Edition</th>
+                                    <th>Version</th>
+                                    <th>Marketing Name</th>
+                                    <th>Build Number</th>
+                                    <th>Release Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Windows 11</td>
+                                    <td>24H2</td>
+                                    <td>Windows 11 2024 Update</td>
+                                    <td>26100.xxx</td>
+                                    <td>October 2024 (Expected)</td>
+                                </tr>
+                                <tr>
+                                    <td>Windows 11</td>
+                                    <td>23H2</td>
+                                    <td>Windows 11 2023 Update</td>
+                                    <td>22631.xxx</td>
+                                    <td>October 31, 2023</td>
+                                </tr>
+                                <tr>
+                                    <td>Windows 11</td>
+                                    <td>22H2</td>
+                                    <td>Windows 11 2022 Update</td>
+                                    <td>22621.xxx</td>
+                                    <td>September 20, 2022</td>
+                                </tr>
+                                <tr>
+                                    <td>Windows 11</td>
+                                    <td>21H2</td>
+                                    <td>Original Release</td>
+                                    <td>22000.xxx</td>
+                                    <td>October 5, 2021</td>
+                                </tr>
+                                <tr>
+                                    <td>Windows 10</td>
+                                    <td>22H2</td>
+                                    <td>October 2022 Update</td>
+                                    <td>19045.xxx</td>
+                                    <td>October 18, 2022</td>
+                                </tr>
+                                <tr>
+                                    <td>Windows 10</td>
+                                    <td>21H2</td>
+                                    <td>November 2021 Update</td>
+                                    <td>19044.xxx</td>
+                                    <td>November 16, 2021</td>
+                                </tr>
+                                <tr>
+                                    <td>Windows 10</td>
+                                    <td>21H1</td>
+                                    <td>May 2021 Update</td>
+                                    <td>19043.xxx</td>
+                                    <td>May 18, 2021</td>
+                                </tr>
+                                <tr>
+                                    <td>Windows 10</td>
+                                    <td>20H2</td>
+                                    <td>October 2020 Update</td>
+                                    <td>19042.xxx</td>
+                                    <td>October 20, 2020</td>
+                                </tr>
+                                <tr>
+                                    <td>Windows 10</td>
+                                    <td>2004</td>
+                                    <td>May 2020 Update</td>
+                                    <td>19041.xxx</td>
+                                    <td>May 27, 2020</td>
+                                </tr>
+                                <tr>
+                                    <td>Windows 10</td>
+                                    <td>1909</td>
+                                    <td>November 2019 Update</td>
+                                    <td>18363.xxx</td>
+                                    <td>November 12, 2019</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Form validation
+        $(document).ready(function() {
+            // Load Windows 10 versions
+            $.get('/api/Windows10/versions')
+                .done(function(response) {
+                    if (response.success && response.data && response.data.length > 0) {
+                        const versions = response.data;
+                        const sortedVersions = versions.sort((a, b) => {
+                            // Sort by release date (newest first)
+                            const dateA = a.releaseDate ? new Date(a.releaseDate) : new Date(0);
+                            const dateB = b.releaseDate ? new Date(b.releaseDate) : new Date(0);
+                            return dateB - dateA;
+                        });
+                        
+                        let html = '<div class="table-responsive"><table class="table table-sm table-hover">';
+                        html += '<thead><tr><th>Version</th><th>Channel</th><th>Build</th><th>Release Date</th></tr></thead>';
+                        html += '<tbody>';
+                        
+                        sortedVersions.forEach(version => {
+                            const releaseDate = version.releaseDate 
+                                ? new Date(version.releaseDate).toLocaleDateString() 
+                                : 'Unknown';
+                                
+                            const currentBadge = version.isCurrentVersion 
+                                ? '<span class="badge bg-success ms-1">Current</span>' 
+                                : '';
+                            
+                            const ch = version.servicingType === 'Regular' ? 'GA' : (version.servicingType || '');
+                            const chBadge = ch ? `<span class="badge bg-light text-dark">${ch}</span>` : '';
+                                
+                            html += `<tr>
+                                <td>${version.version || 'N/A'} ${currentBadge}</td>
+                                <td>${chBadge}</td>
+                                <td>${version.build || 'N/A'}</td>
+                                <td>${releaseDate}</td>
+                            </tr>`;
+                        });
+                        
+                        html += '</tbody></table></div>';
+                        $('#win10-versions').html(html);
+                    } else {
+                        $('#win10-versions').html('<div class="alert alert-warning">No Windows 10 versions available.</div>');
+                    }
+                })
+                .fail(function() {
+                    $('#win10-versions').html('<div class="alert alert-danger">Failed to load Windows 10 versions.</div>');
+                });
+                
+            // Load Windows 11 versions
+            $.get('/api/Windows11/versions')
+                .done(function(response) {
+                    if (response.success && response.data && response.data.length > 0) {
+                        const versions = response.data;
+                        const sortedVersions = versions.sort((a, b) => {
+                            // Sort by release date (newest first)
+                            const dateA = a.releaseDate ? new Date(a.releaseDate) : new Date(0);
+                            const dateB = b.releaseDate ? new Date(b.releaseDate) : new Date(0);
+                            return dateB - dateA;
+                        });
+                        
+                        let html = '<div class="table-responsive"><table class="table table-sm table-hover">';
+                        html += '<thead><tr><th>Version</th><th>Channel</th><th>Build</th><th>Release Date</th></tr></thead>';
+                        html += '<tbody>';
+                        
+                        sortedVersions.forEach(version => {
+                            const releaseDate = version.releaseDate 
+                                ? new Date(version.releaseDate).toLocaleDateString() 
+                                : 'Unknown';
+                                
+                            const currentBadge = version.isCurrentVersion 
+                                ? '<span class="badge bg-success ms-1">Current</span>' 
+                                : '';
+                            
+                            const ch = version.servicingType === 'Regular' ? 'GA' : (version.servicingType || '');
+                            const chBadge = ch ? `<span class="badge bg-light text-dark">${ch}</span>` : '';
+                                
+                            html += `<tr>
+                                <td>${version.version || 'N/A'} ${currentBadge}</td>
+                                <td>${chBadge}</td>
+                                <td>${version.build || 'N/A'}</td>
+                                <td>${releaseDate}</td>
+                            </tr>`;
+                        });
+                        
+                        html += '</tbody></table></div>';
+                        $('#win11-versions').html(html);
+                    } else {
+                        $('#win11-versions').html('<div class="alert alert-warning">No Windows 11 versions available.</div>');
+                    }
+                })
+                .fail(function() {
+                    $('#win11-versions').html('<div class="alert alert-danger">Failed to load Windows 11 versions.</div>');
+                });
+                
+            // Form validation and submission
+            (function() {
+                'use strict';
+                
+                const form = document.getElementById('compare-form');
+                
+                form.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    
+                    if (form.checkValidity()) {
+                        const version1 = $('#version1').val().trim();
+                        const version2 = $('#version2').val().trim();
+                        
+                        compareVersions(version1, version2);
+                    }
+                    
+                    form.classList.add('was-validated');
+                }, false);
+            })();
+            
+            function compareVersions(version1, version2) {
+                $('#comparison-result').hide();
+                $('#comparison-error').hide();
+                
+                $.get(`/api/Windows/compare?version1=${encodeURIComponent(version1)}&version2=${encodeURIComponent(version2)}`)
+                    .done(function(response) {
+                        if (response.success && response.data) {
+                            const comparison = response.data;
+                            
+                            let resultHtml = '';
+                            let resultClass = '';
+                            
+                            if (comparison.result < 0) {
+                                resultHtml = `
+                                    <div class="text-center mb-4">
+                                        <div class="display-4">
+                                            <span class="text-danger">${comparison.version1}</span>
+                                            <i class="fas fa-arrow-left mx-3"></i>
+                                            <span class="text-success">${comparison.version2}</span>
+                                        </div>
+                                        <p class="lead">${comparison.version1} is older than ${comparison.version2}</p>
+                                    </div>
+                                `;
+                            } else if (comparison.result > 0) {
+                                resultHtml = `
+                                    <div class="text-center mb-4">
+                                        <div class="display-4">
+                                            <span class="text-success">${comparison.version1}</span>
+                                            <i class="fas fa-arrow-right mx-3"></i>
+                                            <span class="text-danger">${comparison.version2}</span>
+                                        </div>
+                                        <p class="lead">${comparison.version1} is newer than ${comparison.version2}</p>
+                                    </div>
+                                `;
+                            } else {
+                                resultHtml = `
+                                    <div class="text-center mb-4">
+                                        <div class="display-4">
+                                            <span class="text-primary">${comparison.version1}</span>
+                                            <i class="fas fa-equals mx-3"></i>
+                                            <span class="text-primary">${comparison.version2}</span>
+                                        </div>
+                                        <p class="lead">These versions are the same</p>
+                                    </div>
+                                `;
+                            }
+                            
+                            resultHtml += `
+                                <div class="alert alert-info">
+                                    <p><i class="fas fa-info-circle me-2"></i>Comparison method: ${comparison.description}</p>
+                                </div>
+                            `;
+                            
+                            $('#result-content').html(resultHtml);
+                            $('#comparison-result').show();
+                        } else {
+                            $('#comparison-error').text(response.message || 'Failed to compare versions.');
+                            $('#comparison-error').show();
+                        }
+                    })
+                    .fail(function(xhr) {
+                        $('#comparison-error').text('Failed to compare versions. Please try again.');
+                        $('#comparison-error').show();
+                    });
+            }
+        });
+    </script>
+}

@@ -5,10 +5,10 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $false)]
-    [string]$ApiBaseUrl = "",
+    [string]$ApiBaseUrl,
     
     [Parameter(Mandatory = $false)]
-    [string]$FleetId = "",
+    [string]$FleetId = "MSLAB",
     
     [Parameter(Mandatory = $false)]
     [string]$CertificatePassword = "",
@@ -221,12 +221,16 @@ try {
             $config = Get-Content $appsettingsPath -Raw | ConvertFrom-Json
             
             if (-not [string]::IsNullOrEmpty($ApiBaseUrl)) {
-                $config.SecureBootWatcher.Sinks.WebApi.BaseAddress = $ApiBaseUrl
-                $config.SecureBootWatcher.Sinks.EnableWebApi = $true
+                Write-InstallLog "Configure WebApi $ApiBaseUrl"
+                
+                # FIX: Correct JSON path - Sinks.WebApi.BaseAddress (not SecureBootWatcher.Sinks)
+                $config.Sinks.WebApi.BaseAddress = $ApiBaseUrl
+                $config.Sinks.EnableWebApi = $true
                 Write-InstallLog "Set API Base URL: $ApiBaseUrl"
             }
             
             if (-not [string]::IsNullOrEmpty($FleetId)) {
+                # FIX: Correct JSON path - SecureBootWatcher.FleetId
                 $config.SecureBootWatcher.FleetId = $FleetId
                 Write-InstallLog "Set Fleet ID: $FleetId"
             }
@@ -273,11 +277,11 @@ try {
     switch ($ScheduleType) {
         "Once" {
             $trigger = New-ScheduledTaskTrigger -Once -At $taskDateTime -RandomDelay $randomDelayTimeSpan
-            $scheduleDescription = "Once at $TaskTime (±$RandomDelayMinutes min)"
+            $scheduleDescription = "Once at $TaskTime (ï¿½$RandomDelayMinutes min)"
         }
         "Daily" {
             $trigger = New-ScheduledTaskTrigger -Daily -At $taskDateTime -RandomDelay $randomDelayTimeSpan
-            $scheduleDescription = "Daily at $TaskTime (±$RandomDelayMinutes min)"
+            $scheduleDescription = "Daily at $TaskTime (ï¿½$RandomDelayMinutes min)"
         }
         "Hourly" {
             # Create a trigger that repeats every hour
