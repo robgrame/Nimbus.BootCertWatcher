@@ -152,6 +152,7 @@
                                 <th><i class="fas fa-code-branch"></i> Version</th>
                                 <th><i class="fas fa-industry"></i> Manufacturer / Model</th>
                                 <th><i class="fas fa-shield-alt"></i> Secure Boot</th>
+                                <th><i class="fas fa-certificate"></i> OEM Cert</th>
                                 <th><i class="fas fa-file-alt"></i> Reports</th>
                                 <th><i class="fas fa-traffic-light"></i> State</th>
                                 <th><i class="fas fa-check-circle"></i> Ready to Update</th>
@@ -317,6 +318,71 @@
                                         }
                                     </td>
                                     <td>
+                                        @{
+                                            // Build OEM Certificate status tooltip
+                                            var oemCertTooltipParts = new List<string>();
+                                            var totalOemCerts = device.ExpiredOemCertificateCount + 
+                                                              device.CriticalOemCertificateCount + 
+                                                              device.WarningOemCertificateCount + 
+                                                              device.ValidOemCertificateCount;
+
+                                            if (totalOemCerts > 0)
+                                            {
+                                                if (device.ValidOemCertificateCount > 0)
+                                                    oemCertTooltipParts.Add($"? {device.ValidOemCertificateCount} valid");
+                                                if (device.WarningOemCertificateCount > 0)
+                                                    oemCertTooltipParts.Add($"?? {device.WarningOemCertificateCount} expiring (<180 days)");
+                                                if (device.CriticalOemCertificateCount > 0)
+                                                    oemCertTooltipParts.Add($"?? {device.CriticalOemCertificateCount} critical (<90 days)");
+                                                if (device.ExpiredOemCertificateCount > 0)
+                                                    oemCertTooltipParts.Add($"? {device.ExpiredOemCertificateCount} expired");
+                                            }
+                                            else
+                                            {
+                                                oemCertTooltipParts.Add("?? No OEM certificates found - verify if VM/consumer device or firmware read error");
+                                            }
+
+                                            var oemCertTooltip = string.Join("\n", oemCertTooltipParts);
+                                        }
+
+                                        @if (device.AreOemCertificatesValid)
+                                        {
+                                            <span class="badge bg-success" title="@oemCertTooltip">
+                                                <i class="fas fa-check-circle"></i> Valid
+                                            </span>
+                                        }
+                                        else if (device.ExpiredOemCertificateCount > 0)
+                                        {
+                                            <span class="badge bg-danger" title="@oemCertTooltip">
+                                                <i class="fas fa-times-circle"></i> Expired (@device.ExpiredOemCertificateCount)
+                                            </span>
+                                        }
+                                        else if (device.CriticalOemCertificateCount > 0)
+                                        {
+                                            <span class="badge bg-warning text-dark" title="@oemCertTooltip">
+                                                <i class="fas fa-exclamation-triangle"></i> Critical (@device.CriticalOemCertificateCount)
+                                            </span>
+                                        }
+                                        else if (device.WarningOemCertificateCount > 0)
+                                        {
+                                            <span class="badge bg-warning text-dark" title="@oemCertTooltip">
+                                                <i class="fas fa-exclamation-circle"></i> Warning (@device.WarningOemCertificateCount)
+                                            </span>
+                                        }
+                                        else if (device.HasNoOemCertificates)
+                                        {
+                                            <span class="badge bg-warning text-dark" title="@oemCertTooltip">
+                                                <i class="fas fa-exclamation-triangle"></i> No OEM
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary" title="@oemCertTooltip">
+                                                <i class="fas fa-question-circle"></i> Unknown
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
                                         <span class="badge bg-secondary">@device.ReportCount</span>
                                     </td>
                                     <td>
@@ -350,34 +416,70 @@
                                         }
                                     </td>
                                     <td>
-                                        @if (device.ReadyToUpdate)
+                                        @if (device.IsReadyToUpdate)
                                         {
-                                            <span class="badge bg-success" title="Firmware >= 2024 and OS build meets November 2024 requirements">
+                                            <span class="badge bg-success" 
+                                                  title="@device.CertificateEvaluationDetails&#10;@device.OSEvaluationDetails">
                                                 <i class="fas fa-check-circle"></i> Ready
                                             </span>
                                         }
                                         else
                                         {
-                                            var tooltipText = "";
-                                            if (!device.IsFirmwareReady && !device.IsOSUpdateReady)
+                                            var tooltipParts = new List<string>();
+                                            var badgeClass = "bg-warning text-dark";
+                                            var badgeIcon = "fa-exclamation-triangle";
+                                            
+                                            // Check certificate issues
+                                            if (!device.AreOemCertificatesValid)
                                             {
-                                                tooltipText = "Firmware needs update (>= 2024) and OS needs November 2024+ update";
-                                            }
-                                            else if (!device.IsFirmwareReady)
-                                            {
-                                                tooltipText = "Firmware needs update (>= 2024)";
-                                            }
-                                            else if (!device.IsOSUpdateReady)
-                                            {
-                                                tooltipText = "OS needs November 2024+ update";
-                                            }
-                                            else
-                                            {
-                                                tooltipText = "Missing firmware or OS update information";
+                                                if (device.ExpiredOemCertificateCount > 0)
+                                                {
+                                                    tooltipParts.Add($"? {device.ExpiredOemCertificateCount} OEM certificate(s) expired");
+                                                    badgeClass = "bg-danger";
+                                                    badgeIcon = "fa-times-circle";
+                                                }
+                                                else if (device.CriticalOemCertificateCount > 0)
+                                                {
+                                                    tooltipParts.Add($"?? {device.CriticalOemCertificateCount} OEM certificate(s) expiring soon");
+                                                }
+                                                else
+                                                {
+                                                    tooltipParts.Add("? OEM certificate validation failed");
+                                                }
                                             }
                                             
-                                            <span class="badge bg-warning text-dark" title="@tooltipText">
-                                                <i class="fas fa-exclamation-triangle"></i> Not Ready
+                                            if (!device.HasWindowsUEFICA2023)
+                                            {
+                                                tooltipParts.Add("? Windows UEFI CA 2023 not found");
+                                                badgeClass = "bg-danger";
+                                                badgeIcon = "fa-times-circle";
+                                            }
+                                            
+                                            if (!device.IsOSReady)
+                                            {
+                                                // Use detailed message from API invece di messaggio generico
+                                                if (!string.IsNullOrEmpty(device.OSEvaluationDetails))
+                                                {
+                                                    tooltipParts.Add(device.OSEvaluationDetails);
+                                                }
+                                                else
+                                                {
+                                                    tooltipParts.Add("? OS build does not meet requirements");
+                                                }
+                                            }
+                                            
+                                            // Show warning count if present
+                                            if (device.WarningOemCertificateCount > 0)
+                                            {
+                                                tooltipParts.Add($"?? {device.WarningOemCertificateCount} certificate(s) need attention");
+                                            }
+                                            
+                                            var tooltipText = tooltipParts.Any() 
+                                                ? string.Join("\n", tooltipParts) 
+                                                : "Not ready for update";
+                                            
+                                            <span class="badge @badgeClass" title="@tooltipText">
+                                                <i class="fas @badgeIcon"></i> Not Ready
                                             </span>
                                         }
                                     </td>

@@ -17,15 +17,18 @@ namespace SecureBootDashboard.Api.Controllers
     {
         private readonly SecureBootDbContext _dbContext;
         private readonly IExportService _exportService;
+        private readonly ISecureBootReadinessService _readinessService;
         private readonly ILogger<DevicesController> _logger;
 
         public DevicesController(
             SecureBootDbContext dbContext,
             IExportService exportService,
+            ISecureBootReadinessService readinessService,
             ILogger<DevicesController> logger)
         {
             _dbContext = dbContext;
             _exportService = exportService;
+            _readinessService = readinessService;
             _logger = logger;
         }
 
@@ -49,12 +52,13 @@ namespace SecureBootDashboard.Api.Controllers
                 uint? allowTelemetry = null;
                 bool? microsoftUpdateManagedOptIn = null;
                 uint? windowsUEFICA2023Capable = null;
+                SecureBootWatcher.Shared.Models.SecureBootCertificateCollection? certificates = null;
                 
                 if (latestReport != null && !string.IsNullOrEmpty(latestReport.RegistryStateJson))
                 {
                     try
                     {
-                        // Deserialize the full report to get both Registry and TelemetryPolicy
+                        // Deserialize the full report to get Registry and TelemetryPolicy
                         var report = System.Text.Json.JsonSerializer.Deserialize<SecureBootWatcher.Shared.Models.SecureBootStatusReport>(
                             latestReport.RegistryStateJson);
                         
@@ -73,6 +77,26 @@ namespace SecureBootDashboard.Api.Controllers
                         _logger.LogWarning(ex, "Failed to deserialize registry state for device {DeviceId}", d.Id);
                     }
                 }
+                
+                // Deserialize certificates
+                if (latestReport != null && !string.IsNullOrEmpty(latestReport.CertificatesJson))
+                {
+                    try
+                    {
+                        certificates = System.Text.Json.JsonSerializer.Deserialize<SecureBootWatcher.Shared.Models.SecureBootCertificateCollection>(
+                            latestReport.CertificatesJson);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to deserialize certificates for device {DeviceId}", d.Id);
+                    }
+                }
+                
+                // Evaluate readiness using the service
+                var readinessEvaluation = _readinessService.EvaluateReadiness(
+                    certificates,
+                    d.OSVersion,
+                    d.OSBuildNumber);
                 
                 return new DeviceSummaryResponse(
                     d.Id,
@@ -98,7 +122,21 @@ namespace SecureBootDashboard.Api.Controllers
                     d.FirmwareReleaseDate,
                     allowTelemetry,
                     microsoftUpdateManagedOptIn,
-                    windowsUEFICA2023Capable);
+                    windowsUEFICA2023Capable)
+                {
+                    // Set readiness properties from evaluation
+                    IsReadyToUpdate = readinessEvaluation.IsReadyToUpdate,
+                    IsOSReady = readinessEvaluation.IsOSReady,
+                    AreOemCertificatesValid = readinessEvaluation.AreOemCertificatesValid,
+                    HasWindowsUEFICA2023 = readinessEvaluation.HasWindowsUEFICA2023,
+                    HasNoOemCertificates = readinessEvaluation.HasNoOemCertificates,
+                    ExpiredOemCertificateCount = readinessEvaluation.ExpiredOemCertificateCount,
+                    CriticalOemCertificateCount = readinessEvaluation.CriticalOemCertificateCount,
+                    WarningOemCertificateCount = readinessEvaluation.WarningOemCertificateCount,
+                    ValidOemCertificateCount = readinessEvaluation.ValidOemCertificateCount,
+                    OSEvaluationDetails = readinessEvaluation.OSEvaluationDetails,
+                    CertificateEvaluationDetails = readinessEvaluation.CertificateEvaluationDetails
+                };
             }).ToArray();
         }
 
@@ -215,6 +253,27 @@ namespace SecureBootDashboard.Api.Controllers
             }
 
             var latestReport = device.Reports.FirstOrDefault();
+            
+            // Deserialize certificates for readiness evaluation
+            SecureBootWatcher.Shared.Models.SecureBootCertificateCollection? certificates = null;
+            if (latestReport != null && !string.IsNullOrEmpty(latestReport.CertificatesJson))
+            {
+                try
+                {
+                    certificates = System.Text.Json.JsonSerializer.Deserialize<SecureBootWatcher.Shared.Models.SecureBootCertificateCollection>(
+                        latestReport.CertificatesJson);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to deserialize certificates for device {DeviceId}", device.Id);
+                }
+            }
+            
+            // Evaluate readiness using the service
+            var readinessEvaluation = _readinessService.EvaluateReadiness(
+                certificates,
+                device.OSVersion,
+                device.OSBuildNumber);
 
             return new DeviceDetailResponse(
                 device.Id,
@@ -235,229 +294,183 @@ namespace SecureBootDashboard.Api.Controllers
                     r.Id,
                     r.CreatedAtUtc,
                     r.DeploymentState,
-                    r.ClientVersion)).ToArray());
-        }
-
-        /// <summary>
-        /// Get report history for a specific device
-        /// </summary>
-        [HttpGet("{id:guid}/reports")]
-        public async Task<IReadOnlyCollection<ReportHistoryItem>> GetDeviceReportsAsync(
-            Guid id,
-            [FromQuery] int limit = 50,
-            CancellationToken cancellationToken = default)
-        {
-            limit = Math.Clamp(limit, 1, 200);
-
-            var reports = await _dbContext.Reports
-                .AsNoTracking()
-                .Where(r => r.DeviceId == id)
-                .OrderByDescending(r => r.CreatedAtUtc)
-                .Take(limit)
-                .Select(r => new ReportHistoryItem(
-                    r.Id,
-                    r.CreatedAtUtc,
-                    r.DeploymentState,
-                    r.ClientVersion))
-                .ToListAsync(cancellationToken);
-
-            return reports;
-        }
-
-        /// <summary>
-        /// Export reports for a specific device to Excel
-        /// </summary>
-        [HttpGet("{id:guid}/reports/export/excel")]
-        public async Task<IActionResult> ExportDeviceReportsToExcelAsync(Guid id, CancellationToken cancellationToken)
-        {
-            try
+                    r.ClientVersion)).ToArray())
             {
-                _logger.LogInformation("Exporting reports for device {DeviceId} to Excel", id);
-
-                // Get device first to include machine name in filename
-                var device = await _dbContext.Devices
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
-
-                if (device == null)
-                {
-                    return NotFound();
-                }
-
-                // Get reports
-                var reports = await _dbContext.Reports
-                    .AsNoTracking()
-                    .Where(r => r.DeviceId == id)
-                    .OrderByDescending(r => r.CreatedAtUtc)
-                    .ToListAsync(cancellationToken);
-
-                // Map to ReportSummary
-                var reportSummaries = reports.Select(r => new ReportSummary(
-                    r.Id,
-                    device.MachineName,
-                    device.DomainName,
-                    r.CreatedAtUtc,
-                    r.DeploymentState
-                )).ToList();
-
-                // Export to Excel
-                var excelBytes = await _exportService.ExportReportsToExcelAsync(reportSummaries, cancellationToken);
-
-                var fileName = $"SecureBoot_Reports_{device.MachineName}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.xlsx";
-                return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to export reports for device {DeviceId} to Excel", id);
-                return StatusCode(500, new { Error = "Failed to export reports to Excel" });
-            }
+                // Add readiness properties from evaluation
+                IsReadyToUpdate = readinessEvaluation.IsReadyToUpdate,
+                IsOSReady = readinessEvaluation.IsOSReady,
+                AreOemCertificatesValid = readinessEvaluation.AreOemCertificatesValid,
+                HasWindowsUEFICA2023 = readinessEvaluation.HasWindowsUEFICA2023,
+                HasNoOemCertificates = readinessEvaluation.HasNoOemCertificates,
+                ExpiredOemCertificateCount = readinessEvaluation.ExpiredOemCertificateCount,
+                CriticalOemCertificateCount = readinessEvaluation.CriticalOemCertificateCount,
+                WarningOemCertificateCount = readinessEvaluation.WarningOemCertificateCount,
+                ValidOemCertificateCount = readinessEvaluation.ValidOemCertificateCount,
+                OSEvaluationDetails = readinessEvaluation.OSEvaluationDetails,
+                CertificateEvaluationDetails = readinessEvaluation.CertificateEvaluationDetails
+            };
         }
-
-        /// <summary>
-        /// Export reports for a specific device to CSV
-        /// </summary>
-        [HttpGet("{id:guid}/reports/export/csv")]
-        public async Task<IActionResult> ExportDeviceReportsToCsvAsync(Guid id, CancellationToken cancellationToken)
-        {
-            try
-            {
-                _logger.LogInformation("Exporting reports for device {DeviceId} to CSV", id);
-
-                // Get device first
-                var device = await _dbContext.Devices
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
-
-                if (device == null)
-                {
-                    return NotFound();
-                }
-
-                // Get reports
-                var reports = await _dbContext.Reports
-                    .AsNoTracking()
-                    .Where(r => r.DeviceId == id)
-                    .OrderByDescending(r => r.CreatedAtUtc)
-                    .ToListAsync(cancellationToken);
-
-                // Map to ReportSummary
-                var reportSummaries = reports.Select(r => new ReportSummary(
-                    r.Id,
-                    device.MachineName,
-                    device.DomainName,
-                    r.CreatedAtUtc,
-                    r.DeploymentState
-                )).ToList();
-
-                // Export to CSV
-                var csvBytes = await _exportService.ExportReportsToCsvAsync(reportSummaries, cancellationToken);
-
-                var fileName = $"SecureBoot_Reports_{device.MachineName}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv";
-                return File(csvBytes, "text/csv", fileName);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to export reports for device {DeviceId} to CSV", id);
-                return StatusCode(500, new { Error = "Failed to export reports to CSV" });
-            }
-        }
-
-        public sealed record DeviceSummaryResponse(
-            Guid Id,
-            string MachineName,
-            string? DomainName,
-            string? FleetId,
-            string? Manufacturer,
-            string? Model,
-            DateTimeOffset FirstSeenUtc,
-            DateTimeOffset LastSeenUtc,
-            int ReportCount,
-            string? LatestDeploymentState,
-            DateTimeOffset? LatestReportDate,
-            bool? UEFISecureBootEnabled,
-            string? ClientVersion,
-            string? OperatingSystem,
-            string? OSVersion,
-            string? OSBuildNumber,
-            int? OSProductType,
-            string? ChassisTypesJson,
-            bool? IsVirtualMachine,
-            string? VirtualizationPlatform,
-            DateTime? FirmwareReleaseDate,
-            // Telemetry and CFR data
-            uint? AllowTelemetry,
-            bool? MicrosoftUpdateManagedOptIn,
-            uint? WindowsUEFICA2023Capable)
-        {
-            /// <summary>
-            /// Indicates if the device is ready to update based on:
-            /// - Firmware release date newer than 2024 (>= Jan 1, 2024)
-            /// - OS build number indicating updates from November 2024 or later
-            /// </summary>
-            public bool ReadyToUpdate => IsFirmwareReady && IsOSUpdateReady;
-
-            /// <summary>
-            /// Firmware is ready if release date is >= January 1, 2024
-            /// </summary>
-            public bool IsFirmwareReady => FirmwareReleaseDate.HasValue && 
-                                          FirmwareReleaseDate.Value >= new DateTime(2024, 1, 1);
-
-            /// <summary>
-            /// OS is ready if build number indicates November 2024 updates or later.
-            /// - Windows 11 24H2+: Build >= 26100 (October 2024 release)
-            /// - Windows Server 2022: Build >= 20349 with recent updates
-            /// - Windows 10 22H2: Build >= 19046 with recent updates
-            /// Note: Without UBR (Update Build Revision), we use major build numbers only.
-            /// </summary>
-            public bool IsOSUpdateReady
-            {
-                get
-                {
-                    if (string.IsNullOrEmpty(OSBuildNumber) || !int.TryParse(OSBuildNumber, out var buildNumber))
-                        return false;
-
-                    // Windows 11 24H2 or later (October 2024 release)
-                    if (buildNumber >= 26100)
-                        return true;
-
-                    // Windows Server 2022 - Build 20348.x - check if recent enough
-                    // Need build 20349 or higher (since we can't check UBR)
-                    if (buildNumber >= 20349 && buildNumber < 26000)
-                        return true;
-
-                    // Windows 10 22H2 - Build 19045.x - check if recent enough
-                    // Need build 19046 or higher (since we can't check UBR)
-                    if (buildNumber >= 19046 && buildNumber < 20000)
-                        return true;
-
-                    // For exact build matching (e.g., 19045.5011), we'd need UBR (Update Build Revision)
-                    // Since we only have major build number, be conservative
-                    return false;
-                }
-            }
-        }
-
-        public sealed record DeviceDetailResponse(
-            Guid Id,
-            string MachineName,
-            string? DomainName,
-            string? UserPrincipalName,
-            string? FleetId,
-            string? Manufacturer,
-            string? Model,
-            string? FirmwareVersion,
-            string? TagsJson,
-            DateTimeOffset FirstSeenUtc,
-            DateTimeOffset LastSeenUtc,
-            bool? UEFISecureBootEnabled,
-            string? LatestRegistryStateJson,
-            string? LatestCertificatesJson,
-            IReadOnlyCollection<ReportHistoryItem> RecentReports);
-
-        public sealed record ReportHistoryItem(
-            Guid ReportId,
-            DateTimeOffset CreatedAtUtc,
-            string? DeploymentState,
-            string? ClientVersion);
     }
+
+    // Response DTOs
+    public sealed record DeviceSummaryResponse(
+        Guid Id,
+        string MachineName,
+        string? DomainName,
+        string? FleetId,
+        string? Manufacturer,
+        string? Model,
+        DateTimeOffset FirstSeenUtc,
+        DateTimeOffset LastSeenUtc,
+        int ReportCount,
+        string? LatestDeploymentState,
+        DateTimeOffset? LatestReportDate,
+        bool? UEFISecureBootEnabled,
+        string? ClientVersion,
+        string? OperatingSystem,
+        string? OSVersion,
+        string? OSBuildNumber,
+        int? OSProductType,
+        string? ChassisTypesJson,
+        bool? IsVirtualMachine,
+        string? VirtualizationPlatform,
+        DateTime? FirmwareReleaseDate,
+        uint? AllowTelemetry,
+        bool? MicrosoftUpdateManagedOptIn,
+        uint? WindowsUEFICA2023Capable)
+    {
+        /// <summary>
+        /// Overall readiness status - set by SecureBootReadinessService
+        /// </summary>
+        public bool IsReadyToUpdate { get; init; }
+
+        /// <summary>
+        /// OS version meets minimum requirements - set by SecureBootReadinessService
+        /// </summary>
+        public bool IsOSReady { get; init; }
+
+        /// <summary>
+        /// OEM certificates are valid (not expired and not expiring soon) - set by SecureBootReadinessService
+        /// </summary>
+        public bool AreOemCertificatesValid { get; init; }
+
+        /// <summary>
+        /// Windows UEFI CA 2023 is present in db - set by SecureBootReadinessService
+        /// </summary>
+        public bool HasWindowsUEFICA2023 { get; init; }
+
+        /// <summary>
+        /// Indicates if no OEM certificates were found (VM, consumer device, or read error)
+        /// </summary>
+        public bool HasNoOemCertificates { get; init; }
+
+        /// <summary>
+        /// Number of expired OEM certificates
+        /// </summary>
+        public int ExpiredOemCertificateCount { get; init; }
+
+        /// <summary>
+        /// Number of OEM certificates expiring within critical threshold
+        /// </summary>
+        public int CriticalOemCertificateCount { get; init; }
+
+        /// <summary>
+        /// Number of OEM certificates expiring within warning threshold
+        /// </summary>
+        public int WarningOemCertificateCount { get; init; }
+
+        /// <summary>
+        /// Number of valid OEM certificates
+        /// </summary>
+        public int ValidOemCertificateCount { get; init; }
+
+        /// <summary>
+        /// Detailed OS evaluation message
+        /// </summary>
+        public string OSEvaluationDetails { get; init; } = string.Empty;
+
+        /// <summary>
+        /// Detailed certificate evaluation message
+        /// </summary>
+        public string CertificateEvaluationDetails { get; init; } = string.Empty;
+    }
+
+    public sealed record DeviceDetailResponse(
+        Guid Id,
+        string MachineName,
+        string? DomainName,
+        string? UserPrincipalName,
+        string? FleetId,
+        string? Manufacturer,
+        string? Model,
+        string? FirmwareVersion,
+        string? TagsJson,
+        DateTimeOffset FirstSeenUtc,
+        DateTimeOffset LastSeenUtc,
+        bool? UEFISecureBootEnabled,
+        string? LatestRegistryStateJson,
+        string? LatestCertificatesJson,
+        IReadOnlyCollection<ReportHistoryItem> RecentReports)
+    {
+        /// <summary>
+        /// Overall readiness status
+        /// </summary>
+        public bool IsReadyToUpdate { get; init; }
+
+        /// <summary>
+        /// OS version meets minimum requirements
+        /// </summary>
+        public bool IsOSReady { get; init; }
+
+        /// <summary>
+        /// OEM certificates are valid (not expired and not expiring soon)
+        /// </summary>
+        public bool AreOemCertificatesValid { get; init; }
+
+        /// <summary>
+        /// Windows UEFI CA 2023 is present in db
+        /// </summary>
+        public bool HasWindowsUEFICA2023 { get; init; }
+
+        /// <summary>
+        /// Indicates if no OEM certificates were found (VM, consumer device, or read error)
+        /// </summary>
+        public bool HasNoOemCertificates { get; init; }
+
+        /// <summary>
+        /// Number of expired OEM certificates
+        /// </summary>
+        public int ExpiredOemCertificateCount { get; init; }
+
+        /// <summary>
+        /// Number of OEM certificates expiring within critical threshold
+        /// </summary>
+        public int CriticalOemCertificateCount { get; init; }
+
+        /// <summary>
+        /// Number of OEM certificates expiring within warning threshold
+        /// </summary>
+        public int WarningOemCertificateCount { get; init; }
+
+        /// <summary>
+        /// Number of valid OEM certificates
+        /// </summary>
+        public int ValidOemCertificateCount { get; init; }
+
+        /// <summary>
+        /// Detailed OS evaluation message
+        /// </summary>
+        public string OSEvaluationDetails { get; init; } = string.Empty;
+
+        /// <summary>
+        /// Detailed certificate evaluation message
+        /// </summary>
+        public string CertificateEvaluationDetails { get; init; } = string.Empty;
+    }
+
+    public sealed record ReportHistoryItem(
+        Guid ReportId,
+        DateTimeOffset CreatedAtUtc,
+        string? DeploymentState,
+        string? ClientVersion);
 }

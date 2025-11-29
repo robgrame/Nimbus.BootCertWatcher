@@ -223,14 +223,14 @@ try {
             if (-not [string]::IsNullOrEmpty($ApiBaseUrl)) {
                 Write-InstallLog "Configure WebApi $ApiBaseUrl"
                 
-                # FIX: Correct JSON path - Sinks.WebApi.BaseAddress (not SecureBootWatcher.Sinks)
-                $config.Sinks.WebApi.BaseAddress = $ApiBaseUrl
-                $config.Sinks.EnableWebApi = $true
+                # FIX: Correct JSON path - SecureBootWatcher.Sinks.WebApi.BaseAddress
+                $config.SecureBootWatcher.Sinks.WebApi.BaseAddress = $ApiBaseUrl
+                $config.SecureBootWatcher.Sinks.EnableWebApi = $true
                 Write-InstallLog "Set API Base URL: $ApiBaseUrl"
             }
             
             if (-not [string]::IsNullOrEmpty($FleetId)) {
-                # FIX: Correct JSON path - SecureBootWatcher.FleetId
+                # Correct JSON path - SecureBootWatcher.FleetId
                 $config.SecureBootWatcher.FleetId = $FleetId
                 Write-InstallLog "Set Fleet ID: $FleetId"
             }

@@ -174,6 +174,28 @@ try
         }
     }
 
+    // Configure Secure Boot Readiness Options
+    Log.Information("Configuring Secure Boot Readiness Options...");
+    builder.Services.Configure<SecureBootReadinessOptions>(builder.Configuration.GetSection("SecureBootReadiness"));
+    var readinessConfig = builder.Configuration.GetSection("SecureBootReadiness").Get<SecureBootReadinessOptions>();
+    if (readinessConfig != null)
+    {
+        Log.Information("Secure Boot Readiness Configuration:");
+        Log.Information("  Certificate Expiration Warning Days: {Days}", readinessConfig.CertificateExpirationWarningDays);
+        Log.Information("  Certificate Expiration Critical Days: {Days}", readinessConfig.CertificateExpirationCriticalDays);
+        Log.Information("  Require Windows UEFI CA 2023: {Required}", readinessConfig.RequireWindowsUEFICA2023);
+        Log.Information("  Windows UEFI CA 2023 Thumbprint: {Thumbprint}", readinessConfig.WindowsUEFICA2023Thumbprint);
+        Log.Information("  Require OEM Certificates Valid: {Required}", readinessConfig.RequireOemCertificatesValid);
+        Log.Information("  Minimum OS Build Versions: {Count}", readinessConfig.MinimumOSBuildVersions.Count);
+        foreach (var kvp in readinessConfig.MinimumOSBuildVersions)
+        {
+            Log.Information("    {OS}: {Build}", kvp.Key, kvp.Value);
+        }
+    }
+
+    // Register Secure Boot Readiness Service
+    builder.Services.AddScoped<ISecureBootReadinessService, SecureBootReadinessService>();
+
     // Configure Azure Queue Processor
     Log.Information("Configuring Queue Processor...");
     var queueConfig = builder.Configuration.GetSection("QueueProcessor");

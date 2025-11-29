@@ -26,8 +26,30 @@ namespace SecureBootWatcher.Client.Services
                     try
                     {
                         identity.OperatingSystem = os["Caption"]?.ToString();
+                        
+                        // Get full version with UBR (Update Build Revision)
+                        // Format: "10.0.19045.5131" (Major.Minor.Build.UBR)
                         identity.OSVersion = os["Version"]?.ToString();
-                        identity.OSBuildNumber = os["BuildNumber"]?.ToString();
+                        
+                        // Extract build number with UBR from OSVersion
+                        // Example: "10.0.19045.5131" -> "19045.5131"
+                        if (!string.IsNullOrEmpty(identity.OSVersion))
+                        {
+                            var versionParts = identity.OSVersion.Split('.');
+                            if (versionParts.Length >= 3)
+                            {
+                                // Build.UBR format (e.g., "19045.5131")
+                                if (versionParts.Length >= 4)
+                                {
+                                    identity.OSBuildNumber = $"{versionParts[2]}.{versionParts[3]}";
+                                }
+                                else
+                                {
+                                    // Fallback: just Build if UBR not available
+                                    identity.OSBuildNumber = versionParts[2];
+                                }
+                            }
+                        }
                         
                         var productType = os["ProductType"];
                         if (productType != null)

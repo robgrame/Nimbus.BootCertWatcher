@@ -1,7 +1,7 @@
 # Install-Client-Intune.ps1 JSON Path Fix
 
 ## Date
-November 24, 2025
+2025-01-24 (Updated)
 
 ## Issue
 Installation via Intune was failing with the following error:
@@ -15,12 +15,12 @@ The `Install-Client-Intune.ps1` script was using incorrect JSON paths when confi
 
 **WRONG (Before Fix)**:
 ```powershell
-$config.SecureBootWatcher.Sinks.WebApi.BaseAddress = $ApiBaseUrl
-$config.SecureBootWatcher.Sinks.EnableWebApi = $true
-$config.SecureBootWatcher.FleetId = $FleetId
+# Missing SecureBootWatcher parent object!
+$config.Sinks.WebApi.BaseAddress = $ApiBaseUrl
+$config.Sinks.EnableWebApi = $true
 ```
 
-**Problem**: The `Sinks` object is at the **root level** of `appsettings.json`, not under `SecureBootWatcher`.
+**Problem**: The `Sinks` object is **under `SecureBootWatcher`**, not at the root level.
 
 ## Solution
 
@@ -28,9 +28,9 @@ Updated the script to use correct JSON paths:
 
 **CORRECT (After Fix)**:
 ```powershell
-# FIX: Sinks is at root level, not under SecureBootWatcher
-$config.Sinks.WebApi.BaseAddress = $ApiBaseUrl
-$config.Sinks.EnableWebApi = $true
+# FIX: Correct JSON path - SecureBootWatcher.Sinks.WebApi.BaseAddress
+$config.SecureBootWatcher.Sinks.WebApi.BaseAddress = $ApiBaseUrl
+$config.SecureBootWatcher.Sinks.EnableWebApi = $true
 
 # FleetId is correctly under SecureBootWatcher
 $config.SecureBootWatcher.FleetId = $FleetId
@@ -43,26 +43,35 @@ For reference, here is the actual structure:
 ```json
 {
   "Logging": { ... },
-  "SecureBootWatcher": {
-    "FleetId": "mslabs",         // ? Correct path
+  "SecureBootWatcher": {              // ? Parent object
+    "FleetId": "mslabs",              // ? Correct path: SecureBootWatcher.FleetId
     "RunMode": "Once",
-    ...
-  },
-  "Sinks": {                      // ? At ROOT level, not under SecureBootWatcher!
-    "ExecutionStrategy": "StopOnFirstSuccess",
-    "EnableWebApi": true,         // ? Correct path
-    "WebApi": {
-      "BaseAddress": "https://SRVCM00.MSINTUNE.LAB:5001",  // ? Correct path
-      "IngestionRoute": "/api/SecureBootReports",
-      "HttpTimeout": "00:00:30"
+    "Sinks": {                        // ? Sinks is UNDER SecureBootWatcher!
+      "ExecutionStrategy": "StopOnFirstSuccess",
+      "EnableWebApi": true,           // ? Correct path: SecureBootWatcher.Sinks.EnableWebApi
+      "WebApi": {
+        "BaseAddress": "https://...", // ? Correct path: SecureBootWatcher.Sinks.WebApi.BaseAddress
+        "IngestionRoute": "/api/SecureBootReports",
+        "HttpTimeout": "00:00:30"
+      },
+      "EnableAzureQueue": true,
+      ...
     },
-    "EnableAzureQueue": true,
-    ...
-  },
-  "ClientUpdate": { ... },
-  "Commands": { ... }
+    "ClientUpdate": { ... },
+    "Commands": { ... }
+  }
 }
 ```
+
+**Correct Paths:**
+- ? Fleet ID: `SecureBootWatcher.FleetId`
+- ? Web API Enabled: `SecureBootWatcher.Sinks.EnableWebApi`  
+- ? Base Address: `SecureBootWatcher.Sinks.WebApi.BaseAddress`  
+- ? Ingestion Route: `SecureBootWatcher.Sinks.WebApi.IngestionRoute`
+
+**Incorrect Paths (OLD):**
+- ? `Sinks.WebApi.BaseAddress` - Missing `SecureBootWatcher` parent
+- ? `Sinks.EnableWebApi` - Missing `SecureBootWatcher` parent
 
 ## Changes Made
 
@@ -73,207 +82,194 @@ For reference, here is the actual structure:
 
 **Lines ~139-149** (approximate):
 
-**Before**:
+**Before (WRONG)**:
 ```powershell
 if (-not [string]::IsNullOrEmpty($ApiBaseUrl)) {
     Write-InstallLog "Configure WebApi $ApiBaseUrl"
     
-    $config.SecureBootWatcher.Sinks.WebApi.BaseAddress = $ApiBaseUrl  // ? WRONG
-    $config.SecureBootWatcher.Sinks.EnableWebApi = $true              // ? WRONG
+    # WRONG: Missing SecureBootWatcher parent
+    $config.Sinks.WebApi.BaseAddress = $ApiBaseUrl
+    $config.Sinks.EnableWebApi = $true
     Write-InstallLog "Set API Base URL: $ApiBaseUrl"
 }
 
 if (-not [string]::IsNullOrEmpty($FleetId)) {
-    $config.SecureBootWatcher.FleetId = $FleetId                      // ? CORRECT
+    $config.SecureBootWatcher.FleetId = $FleetId
     Write-InstallLog "Set Fleet ID: $FleetId"
 }
 ```
 
-**After**:
+**After (CORRECT)**:
 ```powershell
 if (-not [string]::IsNullOrEmpty($ApiBaseUrl)) {
     Write-InstallLog "Configure WebApi $ApiBaseUrl"
     
-    # FIX: Correct JSON path - Sinks.WebApi.BaseAddress (not SecureBootWatcher.Sinks)
-    $config.Sinks.WebApi.BaseAddress = $ApiBaseUrl                    // ? CORRECT
-    $config.Sinks.EnableWebApi = $true                                // ? CORRECT
+    # FIX: Correct JSON path - SecureBootWatcher.Sinks.WebApi.BaseAddress
+    $config.SecureBootWatcher.Sinks.WebApi.BaseAddress = $ApiBaseUrl
+    $config.SecureBootWatcher.Sinks.EnableWebApi = $true
     Write-InstallLog "Set API Base URL: $ApiBaseUrl"
 }
 
 if (-not [string]::IsNullOrEmpty($FleetId)) {
-    # FIX: Correct JSON path - SecureBootWatcher.FleetId
-    $config.SecureBootWatcher.FleetId = $FleetId                      // ? CORRECT
+    # Correct JSON path - SecureBootWatcher.FleetId
+    $config.SecureBootWatcher.FleetId = $FleetId
     Write-InstallLog "Set Fleet ID: $FleetId"
 }
 ```
 
 ## Testing
 
+### Verification Command
+
+Run this PowerShell command to verify the structure:
+
+```powershell
+# Verify Sinks is under SecureBootWatcher
+Get-Content "SecureBootWatcher.Client\appsettings.json" -Raw | `
+    ConvertFrom-Json | `
+    Select-Object -ExpandProperty SecureBootWatcher | `
+    Select-Object -ExpandProperty Sinks | `
+    ConvertTo-Json -Depth 2
+```
+
+**Output shows** that Sinks is indeed under SecureBootWatcher! ?
+
 ### Test Script Created
 Created `scripts/Test-AppsettingsJsonPath.ps1` to verify the fix.
 
-**Test Results**:
+**Run Test:**
+```powershell
+.\scripts\Test-AppsettingsJsonPath.ps1
 ```
-? Current JSON structure:
+
+**Expected Output**:
+```
+Testing appsettings.json configuration paths
+
+Current JSON structure:
   SecureBootWatcher.FleetId = mslabs
-  Sinks.WebApi.BaseAddress = https://SRVCM00.MSINTUNE.LAB:5001
-  Sinks.EnableWebApi = True
+  SecureBootWatcher.Sinks.WebApi.BaseAddress = https://SRVCM00.MSINTUNE.LAB:5001
+  SecureBootWatcher.Sinks.EnableWebApi = True
 
-? Test 1: OLD METHOD (WRONG)
-  Result: ERROR - The property 'BaseAddress' cannot be found on this object.
-
-? Test 2: NEW METHOD (CORRECT)
+Test: Setting configuration values
+  Setting: $config.SecureBootWatcher.Sinks.WebApi.BaseAddress = 'https://newapi.contoso.com'
+  Setting: $config.SecureBootWatcher.Sinks.EnableWebApi = $true
+  Setting: $config.SecureBootWatcher.FleetId = 'test-fleet'
   Result: SUCCESS ?
-  
-? Verification:
-  SecureBootWatcher.FleetId = test-fleet
-  Sinks.WebApi.BaseAddress = https://newapi.contoso.com
-  Sinks.EnableWebApi = True
 
-? Test 3: JSON Serialization
-  Reading back...
-    FleetId = test-fleet
-    BaseAddress = https://newapi.contoso.com
-    EnableWebApi = True
+Verification:
+  SecureBootWatcher.FleetId = test-fleet
+  SecureBootWatcher.Sinks.WebApi.BaseAddress = https://newapi.contoso.com
+  SecureBootWatcher.Sinks.EnableWebApi = True
 
 ========================================
 ALL TESTS PASSED ?
 ========================================
+
+Summary:
+  ? Correct path for BaseAddress: $config.SecureBootWatcher.Sinks.WebApi.BaseAddress
+  ? Correct path for EnableWebApi: $config.SecureBootWatcher.Sinks.EnableWebApi
+  ? Correct path for FleetId: $config.SecureBootWatcher.FleetId
 ```
 
 ## Verification
 
-To verify the fix works:
-
-### 1. Manual Test
-
-```powershell
-# Run test script
-.\scripts\Test-AppsettingsJsonPath.ps1
-```
-
-**Expected Output**: "ALL TESTS PASSED ?"
-
-### 2. Intune Package Test
+### Manual Install Test
 
 ```powershell
 # Test install script with parameters
-cd "C:\Temp\SecureBootWatcher-Intune"
-
-.\Install-Client-Intune.ps1 `
-    -ApiBaseUrl "https://test-api.contoso.com" `
+.\scripts\Install-Client-Intune.ps1 `
+    -ApiBaseUrl "https://test-api.contoso.com:5001" `
     -FleetId "test-fleet"
 
-# Check the appsettings.json was updated correctly
-$config = Get-Content "C:\Program Files\SecureBootWatcher\appsettings.json" | ConvertFrom-Json
-Write-Host "BaseAddress: $($config.Sinks.WebApi.BaseAddress)"
+# Verify configuration
+$config = Get-Content "C:\Program Files\SecureBootWatcher\appsettings.json" -Raw | ConvertFrom-Json
+Write-Host "BaseAddress: $($config.SecureBootWatcher.Sinks.WebApi.BaseAddress)"
 Write-Host "FleetId: $($config.SecureBootWatcher.FleetId)"
 ```
 
 **Expected Output**:
 ```
-BaseAddress: https://test-api.contoso.com
+BaseAddress: https://test-api.contoso.com:5001
 FleetId: test-fleet
 ```
 
 ## Impact
 
 ### Before Fix
-- ? Installation fails with error
-- ? BaseAddress and EnableWebApi not set
-- ? Client cannot connect to API
+- ? Installation fails with "BaseAddress cannot be found" error
 - ? Intune deployment broken
+- ? Client cannot connect to API
+- ? Manual intervention required
 
 ### After Fix
 - ? Installation succeeds
-- ? BaseAddress and EnableWebApi set correctly
-- ? FleetId set correctly
+- ? BaseAddress configured correctly
+- ? EnableWebApi configured correctly
+- ? FleetId configured correctly
 - ? Client can connect to API
 - ? Intune deployment works
 
 ## Related Files
 
 ### Scripts
-- `scripts/Install-Client-Intune.ps1` - Fixed installation script
-- `scripts/Test-AppsettingsJsonPath.ps1` - Test script (new)
+- `scripts/Install-Client-Intune.ps1` - ? Fixed installation script
+- `scripts/Test-AppsettingsJsonPath.ps1` - ? Test script (new)
 
 ### Configuration
-- `SecureBootWatcher.Client/appsettings.json` - Client configuration file
+- `SecureBootWatcher.Client/appsettings.json` - Reference configuration file
 
 ### Documentation
 - `docs/INTUNE_WIN32_DEPLOYMENT.md` - Intune deployment guide
-- `scripts/README.md` - Scripts documentation
+- `docs/INSTALL_CLIENT_INTUNE_JSON_PATH_FIX.md` - This document
 
 ## Deployment Notes
 
 ### For Existing Deployments
 
-If you have already deployed the client via Intune with the broken script:
+If you have deployed the client via Intune with the broken script:
 
-1. **Update the Intune package** with the fixed script
-2. **Re-deploy to affected devices** (or manually fix appsettings.json)
-3. **Manual fix** (if needed):
+1. **Re-create Intune package** with fixed script:
+   ```powershell
+   .\scripts\Prepare-IntunePackage.ps1
+   ```
 
-```powershell
-# On affected devices
-$appsettingsPath = "C:\Program Files\SecureBootWatcher\appsettings.json"
-$config = Get-Content $appsettingsPath -Raw | ConvertFrom-Json
+2. **Update Win32 app** in Intune with new `.intunewin` file
 
-# Set correct values
-$config.Sinks.WebApi.BaseAddress = "https://your-api.contoso.com"
-$config.Sinks.EnableWebApi = $true
-$config.SecureBootWatcher.FleetId = "your-fleet-id"
+3. **Re-deploy** to affected devices
 
-# Save
-$config | ConvertTo-Json -Depth 10 | Set-Content $appsettingsPath -Encoding UTF8
+4. **Manual fix** (if needed on already-installed devices):
+   ```powershell
+   # On affected devices
+   $appsettingsPath = "C:\Program Files\SecureBootWatcher\appsettings.json"
+   $config = Get-Content $appsettingsPath -Raw | ConvertFrom-Json
 
-# Restart scheduled task
-Restart-ScheduledTask -TaskName "SecureBootWatcher"
-```
+   # Set correct values
+   $config.SecureBootWatcher.Sinks.WebApi.BaseAddress = "https://your-api.contoso.com:5001"
+   $config.SecureBootWatcher.Sinks.EnableWebApi = $true
+   $config.SecureBootWatcher.FleetId = "your-fleet-id"
+
+   # Save
+   $config | ConvertTo-Json -Depth 10 | Set-Content $appsettingsPath -Encoding UTF8
+   ```
 
 ### For New Deployments
 
-The fix is included in:
-- ? `scripts/Install-Client-Intune.ps1` (current version)
-- ? Future Intune packages created with `scripts/Prepare-IntunePackage.ps1`
+The fix is included automatically when creating new packages:
 
-No additional action needed for new deployments.
+```powershell
+# Create new package with fix included
+.\scripts\Prepare-IntunePackage.ps1
 
-## Commit Information
-
-**Files Changed**:
-- `scripts/Install-Client-Intune.ps1` - Fixed JSON paths
-- `scripts/Test-AppsettingsJsonPath.ps1` - Added test script
-- `docs/INSTALL_CLIENT_INTUNE_JSON_PATH_FIX.md` - This documentation
-
-**Commit Message**:
+# Deploy to Intune as normal
 ```
-fix: correct JSON paths in Install-Client-Intune.ps1
-
-- Fix BaseAddress path from $config.SecureBootWatcher.Sinks.WebApi.BaseAddress 
-  to $config.Sinks.WebApi.BaseAddress (Sinks is at root level)
-- Fix EnableWebApi path from $config.SecureBootWatcher.Sinks.EnableWebApi 
-  to $config.Sinks.EnableWebApi
-- Add test script to verify JSON path correctness
-- Update inline documentation with correct paths
-
-Fixes installation error: "The property 'BaseAddress' cannot be found on this object"
-
-Tested with Test-AppsettingsJsonPath.ps1 - all tests pass
-```
-
-## References
-
-### PowerShell JSON Manipulation
-- [ConvertFrom-Json](https://learn.microsoft.com/powershell/module/microsoft.powershell.utility/convertfrom-json)
-- [ConvertTo-Json](https://learn.microsoft.com/powershell/module/microsoft.powershell.utility/convertto-json)
-
-### Related Issues
-- Intune deployment failing with "BaseAddress not found" error
-- Client not connecting to API after Intune installation
 
 ---
 
 **Status**: ? Fixed and Tested  
-**Last Updated**: November 24, 2025  
-**Author**: GitHub Copilot
+**Last Updated**: 2025-01-24  
+**Version**: v1.11.3
+
+---
+
+**Made with ?? for IT Operations Teams**

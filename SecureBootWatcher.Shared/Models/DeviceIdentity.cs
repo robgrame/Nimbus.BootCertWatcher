@@ -33,12 +33,15 @@ namespace SecureBootWatcher.Shared.Models
         public string? OperatingSystem { get; set; }
 
         /// <summary>
-        /// Operating system version (e.g., "10.0.19045").
+        /// Operating system version with UBR (Update Build Revision).
+        /// Format: "Major.Minor.Build.UBR" (e.g., "10.0.19045.5131")
+        /// This is the complete version string from Win32_OperatingSystem.Version
         /// </summary>
         public string? OSVersion { get; set; }
 
         /// <summary>
-        /// Operating system build number (e.g., "19045" from version "10.0.19045").
+        /// Operating system build number extracted from OSVersion (e.g., "19045.5131" from "10.0.19045.5131").
+        /// Includes both the major build and UBR (Update Build Revision) for accurate update tracking.
         /// </summary>
         public string? OSBuildNumber { get; set; }
 

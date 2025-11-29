@@ -49,51 +49,59 @@ public sealed record DeviceSummary(
     uint? WindowsUEFICA2023Capable)
 {
     /// <summary>
-    /// Indicates if the device is ready to update based on:
-    /// - Firmware release date newer than 2024 (>= Jan 1, 2024)
-    /// - OS build number indicating updates from November 2024 or later
+    /// Overall readiness status - calculated by SecureBootReadinessService
     /// </summary>
-    public bool ReadyToUpdate => IsFirmwareReady && IsOSUpdateReady;
+    public bool IsReadyToUpdate { get; init; }
 
     /// <summary>
-    /// Firmware is ready if release date is >= January 1, 2024
+    /// OS version meets minimum requirements
     /// </summary>
-    public bool IsFirmwareReady => FirmwareReleaseDate.HasValue && 
-                                  FirmwareReleaseDate.Value >= new DateTime(2024, 1, 1);
+    public bool IsOSReady { get; init; }
 
     /// <summary>
-    /// OS is ready if build number indicates November 2024 updates or later.
-    /// - Windows 11 24H2+: Build >= 26100 (October 2024 release)
-    /// - Windows Server 2022: Build >= 20349 with recent updates
-    /// - Windows 10 22H2: Build >= 19046 with recent updates
-    /// Note: Without UBR (Update Build Revision), we use major build numbers only.
+    /// OEM certificates are valid (not expired and not expiring soon)
     /// </summary>
-    public bool IsOSUpdateReady
-    {
-        get
-        {
-            if (string.IsNullOrEmpty(OSBuildNumber) || !int.TryParse(OSBuildNumber, out var buildNumber))
-                return false;
+    public bool AreOemCertificatesValid { get; init; }
 
-            // Windows 11 24H2 or later (October 2024 release)
-            if (buildNumber >= 26100)
-                return true;
+    /// <summary>
+    /// Windows UEFI CA 2023 is present in db
+    /// </summary>
+    public bool HasWindowsUEFICA2023 { get; init; }
 
-            // Windows Server 2022 - Build 20348.x - check if recent enough
-            // Need build 20349 or higher (since we can't check UBR)
-            if (buildNumber >= 20349 && buildNumber < 26000)
-                return true;
+    /// <summary>
+    /// Indicates if no OEM certificates were found (VM, consumer device, or read error)
+    /// </summary>
+    public bool HasNoOemCertificates { get; init; }
 
-            // Windows 10 22H2 - Build 19045.x - check if recent enough
-            // Need build 19046 or higher (since we can't check UBR)
-            if (buildNumber >= 19046 && buildNumber < 20000)
-                return true;
+    /// <summary>
+    /// Number of expired OEM certificates
+    /// </summary>
+    public int ExpiredOemCertificateCount { get; init; }
 
-            // For exact build matching (e.g., 19045.5011), we'd need UBR (Update Build Revision)
-            // Since we only have major build number, be conservative
-            return false;
-        }
-    }
+    /// <summary>
+    /// Number of OEM certificates expiring within critical threshold
+    /// </summary>
+    public int CriticalOemCertificateCount { get; init; }
+
+    /// <summary>
+    /// Number of OEM certificates expiring within warning threshold
+    /// </summary>
+    public int WarningOemCertificateCount { get; init; }
+
+    /// <summary>
+    /// Number of valid OEM certificates
+    /// </summary>
+    public int ValidOemCertificateCount { get; init; }
+
+    /// <summary>
+    /// Detailed OS evaluation message
+    /// </summary>
+    public string OSEvaluationDetails { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Detailed certificate evaluation message
+    /// </summary>
+    public string CertificateEvaluationDetails { get; init; } = string.Empty;
 }
 
 public sealed record DeviceDetail(
@@ -111,7 +119,63 @@ public sealed record DeviceDetail(
     bool? UEFISecureBootEnabled,
     string? LatestRegistryStateJson,
     string? LatestCertificatesJson,
-    IReadOnlyCollection<ReportHistoryItem> RecentReports);
+    IReadOnlyCollection<ReportHistoryItem> RecentReports)
+{
+    /// <summary>
+    /// Overall readiness status
+    /// </summary>
+    public bool IsReadyToUpdate { get; init; }
+
+    /// <summary>
+    /// OS version meets minimum requirements
+    /// </summary>
+    public bool IsOSReady { get; init; }
+
+    /// <summary>
+    /// OEM certificates are valid (not expired and not expiring soon)
+    /// </summary>
+    public bool AreOemCertificatesValid { get; init; }
+
+    /// <summary>
+    /// Windows UEFI CA 2023 is present in db
+    /// </summary>
+    public bool HasWindowsUEFICA2023 { get; init; }
+
+    /// <summary>
+    /// Indicates if no OEM certificates were found (VM, consumer device, or read error)
+    /// </summary>
+    public bool HasNoOemCertificates { get; init; }
+
+    /// <summary>
+    /// Number of expired OEM certificates
+    /// </summary>
+    public int ExpiredOemCertificateCount { get; init; }
+
+    /// <summary>
+    /// Number of OEM certificates expiring within critical threshold
+    /// </summary>
+    public int CriticalOemCertificateCount { get; init; }
+
+    /// <summary>
+    /// Number of OEM certificates expiring within warning threshold
+    /// </summary>
+    public int WarningOemCertificateCount { get; init; }
+
+    /// <summary>
+    /// Number of valid OEM certificates
+    /// </summary>
+    public int ValidOemCertificateCount { get; init; }
+
+    /// <summary>
+    /// Detailed OS evaluation message
+    /// </summary>
+    public string OSEvaluationDetails { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Detailed certificate evaluation message
+    /// </summary>
+    public string CertificateEvaluationDetails { get; init; } = string.Empty;
+}
 
 public sealed record ReportHistoryItem(
     Guid ReportId,

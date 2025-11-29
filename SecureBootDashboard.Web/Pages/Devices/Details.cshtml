@@ -184,6 +184,228 @@
             </div>
         </div>
 
+        <!-- Secure Boot Update Readiness Card -->
+        <div class="card mb-4">
+            <div class="card-header @(Model.Device.IsReadyToUpdate ? "bg-success text-white" : "bg-warning text-dark")">
+                <h5 class="mb-0">
+                    <i class="fas fa-clipboard-check"></i> Stato di Readiness per Aggiornamento Secure Boot
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Overall Status -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="alert @(Model.Device.IsReadyToUpdate ? "alert-success" : "alert-warning") mb-0">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    @if (Model.Device.IsReadyToUpdate)
+                                    {
+                                        <i class="fas fa-check-circle fa-3x"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-exclamation-triangle fa-3x"></i>
+                                    }
+                                </div>
+                                <div>
+                                    <h4 class="mb-1">
+                                        @if (Model.Device.IsReadyToUpdate)
+                                        {
+                                            <text>? Dispositivo Pronto per l'Aggiornamento</text>
+                                        }
+                                        else
+                                        {
+                                            <text>?? Dispositivo Non Pronto per l'Aggiornamento</text>
+                                        }
+                                    </h4>
+                                    <p class="mb-0">
+                                        @if (Model.Device.IsReadyToUpdate)
+                                        {
+                                            <text>Tutti i criteri di readiness sono soddisfatti. Il dispositivo può ricevere l'aggiornamento del certificato UEFI CA 2023.</text>
+                                        }
+                                        else
+                                        {
+                                            <text>Uno o più criteri di readiness non sono soddisfatti. Verifica i dettagli qui sotto.</text>
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Readiness Criteria -->
+                <h6 class="mb-3"><i class="fas fa-list-check"></i> Criteri di Readiness</h6>
+                
+                <div class="row">
+                    <!-- OS Readiness -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card @(Model.Device.IsOSReady ? "border-success" : "border-danger")">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-windows"></i> Versione Sistema Operativo
+                                    </h6>
+                                    @if (Model.Device.IsOSReady)
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check"></i> OK
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times"></i> Non OK
+                                        </span>
+                                    }
+                                </div>
+                                <p class="mb-0 small">@Model.Device.OSEvaluationDetails</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Windows UEFI CA 2023 -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card @(Model.Device.HasWindowsUEFICA2023 ? "border-success" : "border-danger")">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-certificate"></i> Windows UEFI CA 2023
+                                    </h6>
+                                    @if (Model.Device.HasWindowsUEFICA2023)
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check"></i> Presente
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times"></i> Mancante
+                                        </span>
+                                    }
+                                </div>
+                                <p class="mb-0 small">
+                                    @if (Model.Device.HasWindowsUEFICA2023)
+                                    {
+                                        <text>Il certificato Windows UEFI CA 2023 è presente nel database delle firme (db).</text>
+                                    }
+                                    else
+                                    {
+                                        <text>Il certificato Windows UEFI CA 2023 non è stato trovato nel database delle firme (db).</text>
+                                    }
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- OEM Certificates -->
+                    <div class="col-md-12 mb-3">
+                        <div class="card @(Model.Device.AreOemCertificatesValid ? "border-success" : "border-danger")">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-industry"></i> Certificati OEM
+                                    </h6>
+                                    @if (Model.Device.AreOemCertificatesValid)
+                                    {
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check"></i> Validi
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times"></i> Problemi Rilevati
+                                        </span>
+                                    }
+                                </div>
+                                <p class="mb-2 small">@Model.Device.CertificateEvaluationDetails</p>
+                                
+                                @if (Model.Device.ExpiredOemCertificateCount > 0 || 
+                                     Model.Device.CriticalOemCertificateCount > 0 || 
+                                     Model.Device.WarningOemCertificateCount > 0 || 
+                                     Model.Device.ValidOemCertificateCount > 0)
+                                {
+                                    <div class="row mt-3">
+                                        @if (Model.Device.ExpiredOemCertificateCount > 0)
+                                        {
+                                            <div class="col-6 col-md-3">
+                                                <div class="text-center p-2 bg-danger bg-opacity-10 rounded">
+                                                    <div class="h4 mb-0 text-danger">@Model.Device.ExpiredOemCertificateCount</div>
+                                                    <small class="text-muted">Scaduti</small>
+                                                </div>
+                                            </div>
+                                        }
+                                        @if (Model.Device.CriticalOemCertificateCount > 0)
+                                        {
+                                            <div class="col-6 col-md-3">
+                                                <div class="text-center p-2 bg-warning bg-opacity-10 rounded">
+                                                    <div class="h4 mb-0 text-warning">@Model.Device.CriticalOemCertificateCount</div>
+                                                    <small class="text-muted">Critici (&lt;90gg)</small>
+                                                </div>
+                                            </div>
+                                        }
+                                        @if (Model.Device.WarningOemCertificateCount > 0)
+                                        {
+                                            <div class="col-6 col-md-3">
+                                                <div class="text-center p-2 bg-warning bg-opacity-10 rounded">
+                                                    <div class="h4 mb-0 text-warning">@Model.Device.WarningOemCertificateCount</div>
+                                                    <small class="text-muted">Attenzione (&lt;180gg)</small>
+                                                </div>
+                                            </div>
+                                        }
+                                        @if (Model.Device.ValidOemCertificateCount > 0)
+                                        {
+                                            <div class="col-6 col-md-3">
+                                                <div class="text-center p-2 bg-success bg-opacity-10 rounded">
+                                                    <div class="h4 mb-0 text-success">@Model.Device.ValidOemCertificateCount</div>
+                                                    <small class="text-muted">Validi</small>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                @if (!Model.Device.IsReadyToUpdate)
+                {
+                    <div class="alert alert-info mt-3">
+                        <h6><i class="fas fa-lightbulb"></i> Azioni Consigliate</h6>
+                        <ul class="mb-0">
+                            @if (!Model.Device.IsOSReady)
+                            {
+                                <li>Aggiorna il sistema operativo alla versione minima richiesta</li>
+                            }
+                            @if (!Model.Device.HasWindowsUEFICA2023)
+                            {
+                                <li>Esegui il deployment del certificato Windows UEFI CA 2023</li>
+                            }
+                            @if (!Model.Device.AreOemCertificatesValid)
+                            {
+                                @if (Model.Device.HasNoOemCertificates)
+                                {
+                                    <li>Verifica che il dispositivo sia una VM, un dispositivo consumer, o controlla se c'è un errore di lettura del firmware UEFI</li>
+                                }
+                                else if (Model.Device.ExpiredOemCertificateCount > 0)
+                                {
+                                    <li>Aggiorna i certificati OEM scaduti tramite firmware update</li>
+                                }
+                                else if (Model.Device.CriticalOemCertificateCount > 0)
+                                {
+                                    <li>Pianifica l'aggiornamento dei certificati OEM in scadenza critica (&lt;90 giorni)</li>
+                                }
+                            }
+                        </ul>
+                    </div>
+                }
+            </div>
+        </div>
+
         var registryState = Model.GetLatestRegistryState();
         var certificates = Model.GetLatestCertificates();
 
