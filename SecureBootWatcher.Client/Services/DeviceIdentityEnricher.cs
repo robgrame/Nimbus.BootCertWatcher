@@ -12,7 +12,7 @@ namespace SecureBootWatcher.Client.Services
     internal static class DeviceIdentityEnricher
     {
         /// <summary>
-        /// Enriches DeviceIdentity with OS information from WMI.
+        /// Enriches DeviceIdentity with OS information from WMI and Registry.
         /// </summary>
         public static void EnrichWithOSInfo(DeviceIdentity identity, ILogger logger)
         {
@@ -27,26 +27,45 @@ namespace SecureBootWatcher.Client.Services
                     {
                         identity.OperatingSystem = os["Caption"]?.ToString();
                         
-                        // Get full version with UBR (Update Build Revision)
-                        // Format: "10.0.19045.5131" (Major.Minor.Build.UBR)
-                        identity.OSVersion = os["Version"]?.ToString();
+                        // Get version from WMI (may have 3 or 4 parts depending on Windows version)
+                        var wmiVersion = os["Version"]?.ToString();
                         
-                        // Extract build number with UBR from OSVersion
-                        // Example: "10.0.19045.5131" -> "19045.5131"
-                        if (!string.IsNullOrEmpty(identity.OSVersion))
+                        // Get UBR (Update Build Revision) from Registry
+                        // WMI Version property is unreliable - sometimes returns only 3 parts
+                        // Registry is the authoritative source for UBR
+                        var ubr = GetUBRFromRegistry(logger);
+                        
+                        if (!string.IsNullOrEmpty(wmiVersion))
                         {
-                            var versionParts = identity.OSVersion.Split('.');
-                            if (versionParts.Length >= 3)
+                            var versionParts = wmiVersion.Split('.');
+                            
+                            // If WMI already has 4 parts, use it
+                            if (versionParts.Length >= 4)
                             {
-                                // Build.UBR format (e.g., "19045.5131")
-                                if (versionParts.Length >= 4)
+                                identity.OSVersion = wmiVersion;
+                                identity.OSBuildNumber = $"{versionParts[2]}.{versionParts[3]}";
+                            }
+                            // If WMI has 3 parts, append UBR from Registry
+                            else if (versionParts.Length == 3 && ubr.HasValue)
+                            {
+                                identity.OSVersion = $"{wmiVersion}.{ubr.Value}";
+                                identity.OSBuildNumber = $"{versionParts[2]}.{ubr.Value}";
+                                
+                                logger.LogDebug(
+                                    "WMI Version incomplete ({WmiVersion}), appended UBR from Registry: {FullVersion}",
+                                    wmiVersion, identity.OSVersion);
+                            }
+                            // Fallback: just use what WMI gives us
+                            else
+                            {
+                                identity.OSVersion = wmiVersion;
+                                identity.OSBuildNumber = versionParts.Length >= 3 ? versionParts[2] : null;
+                                
+                                if (!ubr.HasValue)
                                 {
-                                    identity.OSBuildNumber = $"{versionParts[2]}.{versionParts[3]}";
-                                }
-                                else
-                                {
-                                    // Fallback: just Build if UBR not available
-                                    identity.OSBuildNumber = versionParts[2];
+                                    logger.LogWarning(
+                                        "Could not read UBR from Registry. OS version may be incomplete: {Version}",
+                                        wmiVersion);
                                 }
                             }
                         }
@@ -75,6 +94,36 @@ namespace SecureBootWatcher.Client.Services
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "Unexpected error querying Win32_OperatingSystem.");
+            }
+        }
+
+        /// <summary>
+        /// Reads the UBR (Update Build Revision) from Windows Registry.
+        /// This is the authoritative source for the 4th part of the Windows version.
+        /// </summary>
+        /// <returns>UBR value if found, null otherwise</returns>
+        private static int? GetUBRFromRegistry(ILogger logger)
+        {
+            try
+            {
+                using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
+                if (key != null)
+                {
+                    var ubrValue = key.GetValue("UBR");
+                    if (ubrValue != null && int.TryParse(ubrValue.ToString(), out int ubr))
+                    {
+                        logger.LogDebug("UBR from Registry: {UBR}", ubr);
+                        return ubr;
+                    }
+                }
+                
+                logger.LogDebug("UBR not found in Registry");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Failed to read UBR from Registry");
+                return null;
             }
         }
 

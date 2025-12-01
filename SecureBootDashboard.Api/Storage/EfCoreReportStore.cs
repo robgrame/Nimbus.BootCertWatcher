@@ -93,8 +93,8 @@ namespace SecureBootDashboard.Api.Storage
                 RegistryStateJson = Serialize(report.Registry),
                 CertificatesJson = report.Certificates != null ? Serialize(report.Certificates) : null,
                 AlertsJson = Serialize(report.Alerts ?? Array.Empty<string>()),
-                // Use InferredDeploymentState for smarter state detection based on AvailableUpdates
-                DeploymentState = report.Registry?.InferredDeploymentState.ToString(),
+                // Determine deployment state by combining registry state and certificate presence
+                DeploymentState = DetermineDeploymentState(report.Registry, report.Certificates),
                 ClientVersion = report.ClientVersion,
                 CorrelationId = report.CorrelationId,
                 CreatedAtUtc = report.CreatedAtUtc == default ? utcNow : report.CreatedAtUtc
@@ -181,6 +181,77 @@ namespace SecureBootDashboard.Api.Storage
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Determines the deployment state by checking both registry flags and certificate presence.
+        /// This prevents false "Updated" status when AvailableUpdates=0 but certificate was never deployed.
+        /// </summary>
+        private static string DetermineDeploymentState(
+            SecureBootRegistrySnapshot? registry, 
+            SecureBootCertificateCollection? certificates)
+        {
+            // If no registry data, we can't determine state
+            if (registry == null)
+                return SecureBootDeploymentState.Unknown.ToString();
+
+            // Check for explicit error condition
+            if (registry.UefiCa2023Error.HasValue && registry.UefiCa2023Error.Value != 0)
+                return SecureBootDeploymentState.Error.ToString();
+
+            // Check if Windows UEFI CA 2023 certificate is actually present
+            const string windowsUefiCa2023Thumbprint = "45a0fa32604773c82433c3b7d59e7466b3ac0c67";
+            var hasWindowsUefiCa2023 = false;
+
+            if (certificates?.SignatureDatabase != null)
+            {
+                hasWindowsUefiCa2023 = certificates.SignatureDatabase.Any(cert =>
+                    cert.Thumbprint?.Equals(windowsUefiCa2023Thumbprint, StringComparison.OrdinalIgnoreCase) == true ||
+                    cert.Subject?.Contains("Windows UEFI CA 2023", StringComparison.OrdinalIgnoreCase) == true);
+            }
+
+            // Use AvailableUpdates if present for accurate state detection
+            if (registry.AvailableUpdates.HasValue)
+            {
+                var availableUpdates = registry.AvailableUpdates.Value;
+
+                switch (availableUpdates)
+                {
+                    // All updates completed - but only if certificate is actually present
+                    case 0x0000:
+                        return hasWindowsUefiCa2023 
+                            ? SecureBootDeploymentState.Updated.ToString()
+                            : SecureBootDeploymentState.NotStarted.ToString();
+
+                    // Deployment complete (conditional flag remains) - verify certificate presence
+                    case 0x4000:
+                        return hasWindowsUefiCa2023
+                            ? SecureBootDeploymentState.Updated.ToString()
+                            : SecureBootDeploymentState.NotStarted.ToString();
+
+                    // Initial state - not started
+                    case 0x5944:
+                        return SecureBootDeploymentState.NotStarted.ToString();
+
+                    // Any other value with pending updates
+                    default:
+                        var completionPercentage = SecureBootUpdateFlagsExtensions.GetCompletionPercentage(availableUpdates);
+                        return completionPercentage > 0 && completionPercentage < 100
+                            ? SecureBootDeploymentState.InProgress.ToString()
+                            : SecureBootDeploymentState.Unknown.ToString();
+                }
+            }
+
+            // Fallback to UefiCa2023Status if AvailableUpdates not present
+            // But still verify certificate presence for "Updated" state
+            if (registry.UefiCa2023Status == SecureBootDeploymentState.Updated)
+            {
+                return hasWindowsUefiCa2023
+                    ? SecureBootDeploymentState.Updated.ToString()
+                    : SecureBootDeploymentState.NotStarted.ToString();
+            }
+
+            return registry.UefiCa2023Status.ToString();
         }
 
         private static ReportDetail Map(SecureBootReportEntity entity)
