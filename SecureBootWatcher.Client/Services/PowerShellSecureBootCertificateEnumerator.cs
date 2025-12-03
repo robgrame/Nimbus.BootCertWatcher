@@ -27,6 +27,8 @@ namespace SecureBootWatcher.Client.Services
 
         public async Task<SecureBootCertificateCollection> EnumerateAsync(CancellationToken cancellationToken)
         {
+            _logger.LogDebug("PowerShellSecureBootCertificateEnumerator: Starting certificate enumeration");
+            
             var collection = new SecureBootCertificateCollection
             {
                 CollectedAtUtc = DateTimeOffset.UtcNow
@@ -35,17 +37,29 @@ namespace SecureBootWatcher.Client.Services
             try
             {
                 // Check if Secure Boot is enabled
+                _logger.LogTrace("PowerShellSecureBootCertificateEnumerator: Checking Secure Boot enabled status");
                 collection.SecureBootEnabled = await CheckSecureBootEnabledAsync(cancellationToken);
 
                 if (collection.SecureBootEnabled != true)
                 {
-                    _logger.LogInformation("Secure Boot is not enabled on this device. Certificate enumeration will proceed to inventory firmware databases.");
+                    _logger.LogInformation("PowerShellSecureBootCertificateEnumerator: Secure Boot is not enabled on this device. Certificate enumeration will proceed to inventory firmware databases.");
+                }
+                else
+                {
+                    _logger.LogDebug("PowerShellSecureBootCertificateEnumerator: Secure Boot is enabled");
                 }
 
                 // Enumerate each database
+                _logger.LogTrace("PowerShellSecureBootCertificateEnumerator: Enumerating db (Signature Database)");
                 await EnumerateDatabaseAsync("db", collection.SignatureDatabase, cancellationToken);
+                
+                _logger.LogTrace("PowerShellSecureBootCertificateEnumerator: Enumerating dbx (Forbidden Database)");
                 await EnumerateDatabaseAsync("dbx", collection.ForbiddenDatabase, cancellationToken);
+                
+                _logger.LogTrace("PowerShellSecureBootCertificateEnumerator: Enumerating KEK (Key Exchange Keys)");
                 await EnumerateDatabaseAsync("KEK", collection.KeyExchangeKeys, cancellationToken);
+                
+                _logger.LogTrace("PowerShellSecureBootCertificateEnumerator: Enumerating PK (Platform Keys)");
                 await EnumerateDatabaseAsync("PK", collection.PlatformKeys, cancellationToken);
 
                 // Calculate statistics
@@ -64,17 +78,20 @@ namespace SecureBootWatcher.Client.Services
                  );
 
                 _logger.LogInformation(
-                    "Enumerated {TotalCount} certificates: db={DbCount}, dbx={DbxCount}, KEK={KekCount}, PK={PkCount}, Expired={ExpiredCount}",
+                    "PowerShellSecureBootCertificateEnumerator: Enumerated {TotalCount} certificates: db={DbCount}, dbx={DbxCount}, KEK={KekCount}, PK={PkCount}, Expired={ExpiredCount}, Expiring={ExpiringCount}",
                     collection.TotalCertificateCount,
                     collection.SignatureDatabase.Count,
                     collection.ForbiddenDatabase.Count,
                     collection.KeyExchangeKeys.Count,
                     collection.PlatformKeys.Count,
-                    collection.ExpiredCertificateCount);
+                    collection.ExpiredCertificateCount,
+                    collection.ExpiringCertificateCount);
+                    
+                _logger.LogDebug("PowerShellSecureBootCertificateEnumerator: Certificate enumeration completed successfully");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to enumerate Secure Boot certificates");
+                _logger.LogError(ex, "PowerShellSecureBootCertificateEnumerator: Failed to enumerate Secure Boot certificates");
                 collection.ErrorMessage = ex.Message;
             }
 
@@ -85,23 +102,29 @@ namespace SecureBootWatcher.Client.Services
         {
             try
             {
+                _logger.LogTrace("PowerShellSecureBootCertificateEnumerator.CheckSecureBootEnabledAsync: Executing Confirm-SecureBootUEFI");
                 var script = "Confirm-SecureBootUEFI";
                 var result = await ExecutePowerShellAsync(script, cancellationToken);
 
+                _logger.LogTrace("PowerShellSecureBootCertificateEnumerator.CheckSecureBootEnabledAsync: Result={Result}", result);
+
                 if (result.IndexOf("True", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
+                    _logger.LogDebug("PowerShellSecureBootCertificateEnumerator.CheckSecureBootEnabledAsync: Secure Boot is enabled");
                     return true;
                 }
                 else if (result.IndexOf("False", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
+                    _logger.LogDebug("PowerShellSecureBootCertificateEnumerator.CheckSecureBootEnabledAsync: Secure Boot is disabled");
                     return false;
                 }
 
+                _logger.LogWarning("PowerShellSecureBootCertificateEnumerator.CheckSecureBootEnabledAsync: Unable to determine Secure Boot status from result: {Result}", result);
                 return null;
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to check Secure Boot enabled state via PowerShell");
+                _logger.LogWarning(ex, "PowerShellSecureBootCertificateEnumerator.CheckSecureBootEnabledAsync: Failed to check Secure Boot enabled state via PowerShell");
                 return null;
             }
         }
@@ -110,6 +133,8 @@ namespace SecureBootWatcher.Client.Services
         {
             try
             {
+                _logger.LogDebug("PowerShellSecureBootCertificateEnumerator.EnumerateDatabaseAsync: Retrieving {Database} data via PowerShell", databaseName);
+                
                 // Get the UEFI variable bytes
                 var script = $@"
                     try {{
@@ -126,12 +151,17 @@ namespace SecureBootWatcher.Client.Services
 
                 if (string.IsNullOrWhiteSpace(base64Data) || base64Data.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
-                    _logger.LogDebug("No data returned for {Database}", databaseName);
+                    _logger.LogDebug("PowerShellSecureBootCertificateEnumerator.EnumerateDatabaseAsync: No data returned for {Database}", databaseName);
                     return;
                 }
 
+                _logger.LogTrace("PowerShellSecureBootCertificateEnumerator.EnumerateDatabaseAsync: Retrieved {ByteCount} bytes (base64) for {Database}", 
+                    base64Data.Length, databaseName);
+
                 // Convert from base64
                 var rawData = Convert.FromBase64String(base64Data.Trim());
+                _logger.LogTrace("PowerShellSecureBootCertificateEnumerator.EnumerateDatabaseAsync: Decoded {RawByteCount} raw bytes for {Database}", 
+                    rawData.Length, databaseName);
 
                 // Parse the EFI signature list format
                 var certificates = ParseEfiSignatureList(rawData, databaseName);
@@ -141,11 +171,12 @@ namespace SecureBootWatcher.Client.Services
                     targetList.Add(cert);
                 }
 
-                _logger.LogDebug("Found {Count} certificates in {Database}", certificates.Count, databaseName);
+                _logger.LogDebug("PowerShellSecureBootCertificateEnumerator.EnumerateDatabaseAsync: Found {Count} certificates in {Database}", 
+                    certificates.Count, databaseName);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to enumerate {Database} via PowerShell", databaseName);
+                _logger.LogWarning(ex, "PowerShellSecureBootCertificateEnumerator.EnumerateDatabaseAsync: Failed to enumerate {Database} via PowerShell", databaseName);
             }
         }
 

@@ -184,43 +184,64 @@ namespace SecureBootDashboard.Api.Services
 
             if (messages == null || messages.Length == 0)
             {
+                _logger.LogTrace("QueueProcessorService.ProcessMessagesAsync: No messages in queue, waiting {Interval} before next poll", 
+                    options.EmptyQueuePollInterval);
                 // Queue is empty, wait longer before next poll
                 await Task.Delay(options.EmptyQueuePollInterval, cancellationToken);
                 return;
             }
 
-            _logger.LogInformation("Received {MessageCount} message(s) from queue {QueueName}",
+            _logger.LogInformation("QueueProcessorService.ProcessMessagesAsync: Received {MessageCount} message(s) from queue {QueueName}",
                 messages.Length, options.QueueName);
+            _logger.LogDebug("QueueProcessorService.ProcessMessagesAsync: Processing batch of {MessageCount} messages", messages.Length);
 
             // Process each message
+            int successCount = 0;
+            int failureCount = 0;
             foreach (var message in messages)
             {
                 try
                 {
+                    _logger.LogTrace("QueueProcessorService.ProcessMessagesAsync: Processing message {MessageId}, DequeueCount={DequeueCount}", 
+                        message.MessageId, message.DequeueCount);
+                    
                     await ProcessSingleMessageAsync(message, cancellationToken);
 
                     // Delete message after successful processing
+                    _logger.LogTrace("QueueProcessorService.ProcessMessagesAsync: Deleting successfully processed message {MessageId}", 
+                        message.MessageId);
                     await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
-                    _logger.LogInformation("Successfully processed and deleted message {MessageId}", message.MessageId);
+                    
+                    successCount++;
+                    _logger.LogInformation("QueueProcessorService.ProcessMessagesAsync: Successfully processed and deleted message {MessageId}", message.MessageId);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to process message {MessageId}. DequeueCount: {DequeueCount}",
+                    failureCount++;
+                    _logger.LogError(ex, "QueueProcessorService.ProcessMessagesAsync: Failed to process message {MessageId}. DequeueCount: {DequeueCount}",
                         message.MessageId, message.DequeueCount);
 
                     // Check if message has exceeded max dequeue count
                     if (message.DequeueCount >= options.MaxDequeueCount)
                     {
-                        _logger.LogWarning("Message {MessageId} exceeded max dequeue count ({MaxCount}). Consider moving to poison queue.",
+                        _logger.LogWarning("QueueProcessorService.ProcessMessagesAsync: Message {MessageId} exceeded max dequeue count ({MaxCount}). Deleting message to prevent infinite retries.",
                             message.MessageId, options.MaxDequeueCount);
 
                         // Optionally: Move to poison queue or delete
                         // For now, we'll delete it to prevent infinite retries
                         await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
                     }
+                    else
+                    {
+                        _logger.LogDebug("QueueProcessorService.ProcessMessagesAsync: Message {MessageId} will be retried (DequeueCount={DequeueCount}/{MaxCount})", 
+                            message.MessageId, message.DequeueCount, options.MaxDequeueCount);
+                    }
                     // Otherwise, message will become visible again after VisibilityTimeout
                 }
             }
+            
+            _logger.LogInformation("QueueProcessorService.ProcessMessagesAsync: Batch complete - {SuccessCount} successful, {FailureCount} failed", 
+                successCount, failureCount);
 
             // If we processed messages, poll again immediately
             await Task.Delay(options.ProcessingInterval, cancellationToken);

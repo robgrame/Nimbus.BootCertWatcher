@@ -39,20 +39,29 @@ namespace SecureBootWatcher.Client.Services
 
         public async Task<SecureBootStatusReport> BuildAsync(CancellationToken cancellationToken)
         {
+            _logger.LogDebug("ReportBuilder.BuildAsync: Starting report build process");
+            
+            _logger.LogTrace("ReportBuilder.BuildAsync: Capturing registry snapshots");
             var registrySnapshot = await _registrySnapshotProvider.CaptureAsync(cancellationToken).ConfigureAwait(false);
             var deviceAttributesSnapshot = await _registrySnapshotProvider.CaptureDeviceAttributesAsync(cancellationToken).ConfigureAwait(false);
             var telemetryPolicySnapshot = await _registrySnapshotProvider.CaptureTelemetryPolicyAsync(cancellationToken).ConfigureAwait(false);
+            
+            _logger.LogTrace("ReportBuilder.BuildAsync: Reading recent events");
             var recentEvents = await _eventLogReader.ReadRecentEventsAsync(cancellationToken).ConfigureAwait(false);
+            _logger.LogDebug("ReportBuilder.BuildAsync: Captured {EventCount} recent events", recentEvents.Count);
 
             // Enumerate certificates
             SecureBootCertificateCollection? certificates = null;
             try
             {
+                _logger.LogTrace("ReportBuilder.BuildAsync: Enumerating Secure Boot certificates");
                 certificates = await _certificateEnumerator.EnumerateAsync(cancellationToken).ConfigureAwait(false);
+                _logger.LogDebug("ReportBuilder.BuildAsync: Successfully enumerated {CertCount} certificates", 
+                    certificates?.TotalCertificateCount ?? 0);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to enumerate Secure Boot certificates. Report will continue without certificate details.");
+                _logger.LogWarning(ex, "ReportBuilder.BuildAsync: Failed to enumerate Secure Boot certificates. Report will continue without certificate details.");
             }
 
             // Check for client updates
@@ -61,17 +70,31 @@ namespace SecureBootWatcher.Client.Services
             {
                 try
                 {
+                    _logger.LogTrace("ReportBuilder.BuildAsync: Checking for client updates");
                     updateCheck = await _updateService.CheckForUpdateAsync(cancellationToken).ConfigureAwait(false);
+                    
+                    if (updateCheck?.UpdateAvailable == true)
+                    {
+                        _logger.LogDebug("ReportBuilder.BuildAsync: Update available - Current: {CurrentVersion}, Latest: {LatestVersion}", 
+                            updateCheck.CurrentVersion, updateCheck.LatestVersion);
+                    }
+                    else
+                    {
+                        _logger.LogTrace("ReportBuilder.BuildAsync: Client is up to date");
+                    }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to check for client updates");
+                    _logger.LogWarning(ex, "ReportBuilder.BuildAsync: Failed to check for client updates");
                 }
             }
 
+            _logger.LogTrace("ReportBuilder.BuildAsync: Building device identity");
+            var deviceIdentity = BuildDeviceIdentity();
+            
             var report = new SecureBootStatusReport
             {
-                Device = BuildDeviceIdentity(),
+                Device = deviceIdentity,
                 Registry = registrySnapshot,
                 DeviceAttributes = deviceAttributesSnapshot,
                 TelemetryPolicy = telemetryPolicySnapshot,
@@ -82,16 +105,24 @@ namespace SecureBootWatcher.Client.Services
                 CorrelationId = Guid.NewGuid().ToString("N")
             };
 
+            _logger.LogTrace("ReportBuilder.BuildAsync: Populating alerts");
             PopulateAlerts(report, updateCheck);
+            
+            _logger.LogDebug("ReportBuilder.BuildAsync: Report built - CorrelationId={CorrelationId}, Alerts={AlertCount}, Events={EventCount}, Certificates={CertCount}",
+                report.CorrelationId, report.Alerts?.Count ?? 0, report.Events?.Count ?? 0, certificates?.TotalCertificateCount ?? 0);
 
             // Handle auto-download if enabled
             if (updateCheck?.UpdateAvailable == true && 
                 _options.CurrentValue.ClientUpdate.AutoDownloadEnabled &&
                 _updateService != null)
             {
+                _logger.LogDebug("ReportBuilder.BuildAsync: Auto-download enabled, initiating update download");
                 await HandleAutoDownloadAsync(updateCheck, cancellationToken);
             }
 
+            _logger.LogInformation("ReportBuilder.BuildAsync: Successfully built report for device {MachineName}", 
+                deviceIdentity.MachineName);
+            
             return report;
         }
 

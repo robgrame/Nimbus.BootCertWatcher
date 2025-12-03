@@ -38,11 +38,15 @@ namespace SecureBootDashboard.Api.Controllers
         [HttpGet]
         public async Task<IReadOnlyCollection<DeviceSummaryResponse>> GetDevicesAsync(CancellationToken cancellationToken)
         {
+            _logger.LogDebug("GetDevicesAsync: Retrieving all devices with latest report summaries");
+            
             var devices = await _dbContext.Devices
                 .AsNoTracking()
                 .Include(d => d.Reports.OrderByDescending(r => r.CreatedAtUtc).Take(1))
                 .OrderByDescending(d => d.LastSeenUtc)
                 .ToListAsync(cancellationToken);
+
+            _logger.LogTrace("GetDevicesAsync: Retrieved {DeviceCount} devices from database", devices.Count);
 
             return devices.Select(d =>
             {
@@ -74,7 +78,9 @@ namespace SecureBootDashboard.Api.Controllers
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Failed to deserialize registry state for device {DeviceId}", d.Id);
+                        _logger.LogDebug("GetDevicesAsync: Failed to deserialize registry state for device {DeviceId} ({MachineName})", 
+                            d.Id, d.MachineName);
+                        _logger.LogTrace(ex, "GetDevicesAsync: Registry deserialization exception details for device {DeviceId}", d.Id);
                     }
                 }
                 
@@ -88,11 +94,14 @@ namespace SecureBootDashboard.Api.Controllers
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Failed to deserialize certificates for device {DeviceId}", d.Id);
+                        _logger.LogDebug("GetDevicesAsync: Failed to deserialize certificates for device {DeviceId} ({MachineName})", 
+                            d.Id, d.MachineName);
+                        _logger.LogTrace(ex, "GetDevicesAsync: Certificates deserialization exception details for device {DeviceId}", d.Id);
                     }
                 }
                 
                 // Evaluate readiness using the service
+                _logger.LogTrace("GetDevicesAsync: Evaluating readiness for device {DeviceId} ({MachineName})", d.Id, d.MachineName);
                 var readinessEvaluation = _readinessService.EvaluateReadiness(
                     certificates,
                     d.OSVersion,
@@ -148,7 +157,8 @@ namespace SecureBootDashboard.Api.Controllers
         {
             try
             {
-                _logger.LogInformation("Exporting devices to Excel");
+                _logger.LogInformation("ExportDevicesToExcelAsync: Starting device export to Excel");
+                _logger.LogDebug("ExportDevicesToExcelAsync: Querying database for device data");
 
                 // Get devices from database
                 var devices = await _dbContext.Devices
@@ -156,6 +166,8 @@ namespace SecureBootDashboard.Api.Controllers
                     .Include(d => d.Reports.OrderByDescending(r => r.CreatedAtUtc).Take(1))
                     .OrderByDescending(d => d.LastSeenUtc)
                     .ToListAsync(cancellationToken);
+
+                _logger.LogDebug("ExportDevicesToExcelAsync: Retrieved {DeviceCount} devices", devices.Count);
 
                 // Map to ExportDeviceSummary
                 var deviceSummaries = devices.Select(d =>
@@ -175,15 +187,21 @@ namespace SecureBootDashboard.Api.Controllers
                     );
                 }).ToList();
 
+                _logger.LogTrace("ExportDevicesToExcelAsync: Mapped {Count} device summaries", deviceSummaries.Count);
+
                 // Export to Excel
+                _logger.LogDebug("ExportDevicesToExcelAsync: Calling export service to generate Excel file");
                 var excelBytes = await _exportService.ExportDevicesToExcelAsync(deviceSummaries, cancellationToken);
 
                 var fileName = $"SecureBoot_Devices_{DateTime.UtcNow:yyyyMMdd_HHmmss}.xlsx";
+                _logger.LogInformation("ExportDevicesToExcelAsync: Successfully exported {DeviceCount} devices to Excel file {FileName} ({SizeKB} KB)", 
+                    deviceSummaries.Count, fileName, excelBytes.Length / 1024);
+                
                 return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to export devices to Excel");
+                _logger.LogError(ex, "ExportDevicesToExcelAsync: Failed to export devices to Excel");
                 return StatusCode(500, new { Error = "Failed to export devices to Excel" });
             }
         }
@@ -196,7 +214,8 @@ namespace SecureBootDashboard.Api.Controllers
         {
             try
             {
-                _logger.LogInformation("Exporting devices to CSV");
+                _logger.LogInformation("ExportDevicesToCsvAsync: Starting device export to CSV");
+                _logger.LogDebug("ExportDevicesToCsvAsync: Querying database for device data");
 
                 // Get devices from database
                 var devices = await _dbContext.Devices
@@ -204,6 +223,8 @@ namespace SecureBootDashboard.Api.Controllers
                     .Include(d => d.Reports.OrderByDescending(r => r.CreatedAtUtc).Take(1))
                     .OrderByDescending(d => d.LastSeenUtc)
                     .ToListAsync(cancellationToken);
+
+                _logger.LogDebug("ExportDevicesToCsvAsync: Retrieved {DeviceCount} devices", devices.Count);
 
                 // Map to ExportDeviceSummary
                 var deviceSummaries = devices.Select(d =>
@@ -223,15 +244,21 @@ namespace SecureBootDashboard.Api.Controllers
                     );
                 }).ToList();
 
+                _logger.LogTrace("ExportDevicesToCsvAsync: Mapped {Count} device summaries", deviceSummaries.Count);
+
                 // Export to CSV
+                _logger.LogDebug("ExportDevicesToCsvAsync: Calling export service to generate CSV file");
                 var csvBytes = await _exportService.ExportDevicesToCsvAsync(deviceSummaries, cancellationToken);
 
                 var fileName = $"SecureBoot_Devices_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv";
+                _logger.LogInformation("ExportDevicesToCsvAsync: Successfully exported {DeviceCount} devices to CSV file {FileName} ({SizeKB} KB)", 
+                    deviceSummaries.Count, fileName, csvBytes.Length / 1024);
+                
                 return File(csvBytes, "text/csv", fileName);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to export devices to CSV");
+                _logger.LogError(ex, "ExportDevicesToCsvAsync: Failed to export devices to CSV");
                 return StatusCode(500, new { Error = "Failed to export devices to CSV" });
             }
         }

@@ -39,17 +39,19 @@ namespace SecureBootWatcher.Client.Services
 
         public async Task<IReadOnlyList<DeviceConfigurationCommand>> FetchPendingCommandsAsync(CancellationToken cancellationToken)
         {
+            _logger.LogTrace("CommandProcessor.FetchPendingCommandsAsync: Checking command processing configuration");
+            
             // Check if command processing is enabled
             if (!_options.CurrentValue.Commands.EnableCommandProcessing)
             {
-                _logger.LogDebug("Command processing is disabled in configuration");
+                _logger.LogDebug("CommandProcessor.FetchPendingCommandsAsync: Command processing is disabled in configuration");
                 return Array.Empty<DeviceConfigurationCommand>();
             }
 
             var apiBaseUrl = _options.CurrentValue.Sinks.WebApi.BaseAddress;
             if (apiBaseUrl == null || string.IsNullOrEmpty(apiBaseUrl.ToString()))
             {
-                _logger.LogWarning("WebApi BaseAddress not configured, cannot fetch commands");
+                _logger.LogWarning("CommandProcessor.FetchPendingCommandsAsync: WebApi BaseAddress not configured, cannot fetch commands");
                 return Array.Empty<DeviceConfigurationCommand>();
             }
 
@@ -62,27 +64,37 @@ namespace SecureBootWatcher.Client.Services
                 
                 var requestUri = $"{apiBaseUrl.ToString().TrimEnd('/')}/api/ClientCommands/pending?deviceId={deviceId}";
                 
-                _logger.LogDebug("Fetching pending commands from: {Uri}", requestUri);
+                _logger.LogDebug("CommandProcessor.FetchPendingCommandsAsync: Fetching pending commands from {Uri} for device {DeviceId}", 
+                    requestUri, deviceId);
                 
                 var response = await httpClient.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
                 
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogWarning("Failed to fetch pending commands. Status: {StatusCode}", response.StatusCode);
+                    _logger.LogWarning("CommandProcessor.FetchPendingCommandsAsync: Failed to fetch pending commands. Status: {StatusCode}, Reason: {ReasonPhrase}", 
+                        response.StatusCode, response.ReasonPhrase);
                     return Array.Empty<DeviceConfigurationCommand>();
                 }
                 
                 var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                _logger.LogTrace("CommandProcessor.FetchPendingCommandsAsync: Received response, deserializing commands");
+                
                 var commands = JsonSerializer.Deserialize<List<DeviceConfigurationCommand>>(json) 
                                ?? new List<DeviceConfigurationCommand>();
                 
-                _logger.LogInformation("Fetched {Count} pending command(s)", commands.Count);
+                _logger.LogInformation("CommandProcessor.FetchPendingCommandsAsync: Fetched {Count} pending command(s)", commands.Count);
+                
+                if (commands.Count > 0)
+                {
+                    _logger.LogDebug("CommandProcessor.FetchPendingCommandsAsync: Command types: {Types}", 
+                        string.Join(", ", commands.Select(c => c.ConfigurationType)));
+                }
                 
                 return commands;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to fetch pending commands from API");
+                _logger.LogError(ex, "CommandProcessor.FetchPendingCommandsAsync: Failed to fetch pending commands from API");
                 return Array.Empty<DeviceConfigurationCommand>();
             }
         }
@@ -92,21 +104,28 @@ namespace SecureBootWatcher.Client.Services
             CancellationToken cancellationToken)
         {
             _logger.LogInformation(
-                "Executing command {CommandId} of type {Type}", 
+                "CommandProcessor.ExecuteCommandAsync: Executing command {CommandId} of type {Type}", 
                 command.CommandId, 
                 command.ConfigurationType);
+            _logger.LogTrace("CommandProcessor.ExecuteCommandAsync: Command details - Priority={Priority}, CreatedAt={CreatedAt}", 
+                command.Priority, command.CreatedAtUtc);
 
             try
             {
                 DeviceConfigurationResult result;
 
+                _logger.LogDebug("CommandProcessor.ExecuteCommandAsync: Routing command to handler for type {Type}", 
+                    command.ConfigurationType);
+
                 switch (command.ConfigurationType)
                 {
                     case DeviceConfigurationType.CertificateUpdate:
+                        _logger.LogTrace("CommandProcessor.ExecuteCommandAsync: Executing CertificateUpdate command");
                         result = await ExecuteCertificateUpdateAsync((CertificateUpdateCommand)command, cancellationToken);
                         break;
 
                     case DeviceConfigurationType.MicrosoftUpdateOptIn:
+                        _logger.LogTrace("CommandProcessor.ExecuteCommandAsync: Executing MicrosoftUpdateOptIn command");
                         result = await ExecuteMicrosoftUpdateOptInAsync((MicrosoftUpdateOptInCommand)command, cancellationToken);
                         break;
 

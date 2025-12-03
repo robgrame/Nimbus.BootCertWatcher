@@ -33,26 +33,45 @@ namespace SecureBootDashboard.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> IngestAsync([FromBody] SecureBootStatusReport? report)
         {
+            _logger.LogDebug("IngestAsync: Received report ingestion request from {RemoteIp}", HttpContext.Connection.RemoteIpAddress);
+            
             if (report is null)
             {
+                _logger.LogWarning("IngestAsync: Report payload is null, rejecting request");
                 return BadRequest(new { Errors = new[] { "Report payload is null." } });
             }
 
+            _logger.LogTrace("IngestAsync: Validating report from device {MachineName}, CorrelationId={CorrelationId}, ClientVersion={ClientVersion}", 
+                report.Device?.MachineName ?? "Unknown", report.CorrelationId ?? "None", report.ClientVersion ?? "Unknown");
+
             if (!ReportValidator.TryValidate(report, out var errors))
             {
+                _logger.LogWarning("IngestAsync: Report validation failed for device {MachineName}. Errors: {Errors}", 
+                    report.Device?.MachineName ?? "Unknown", string.Join("; ", errors));
                 return BadRequest(new { Errors = errors });
             }
 
+            _logger.LogDebug("IngestAsync: Report validation successful for device {MachineName}, proceeding to save", 
+                report.Device.MachineName);
+
             try
             {
+                _logger.LogTrace("IngestAsync: Saving report to store for device {MachineName}", report.Device.MachineName);
                 var id = await _reportStore.SaveAsync(report, HttpContext.RequestAborted).ConfigureAwait(false);
                 
-                _logger.LogInformation("Successfully ingested report {ReportId} for device {MachineName}", 
-                    id, report.Device.MachineName);
+                _logger.LogInformation("Successfully ingested report {ReportId} for device {MachineName} (Domain: {DomainName})", 
+                    id, report.Device.MachineName, report.Device.DomainName ?? "None");
                 
+                _logger.LogDebug("IngestAsync: Report details - Events: {EventCount}, Certificates: {HasCertificates}, UefiCa2023Status: {Status}", 
+                    report.Events?.Count ?? 0, 
+                    report.Certificates != null ? "Yes" : "No",
+                    report.Registry?.UefiCa2023Status ?? SecureBootWatcher.Shared.Models.SecureBootDeploymentState.Unknown);
+
                 // Broadcast new report notification via SignalR
                 try
                 {
+                    _logger.LogTrace("IngestAsync: Broadcasting SignalR notification for device {MachineName}", report.Device.MachineName);
+                    
                     // Generate a consistent device identifier from machine name using MD5 hash
                     var hashBytes = System.Security.Cryptography.MD5.HashData(
                         System.Text.Encoding.UTF8.GetBytes(report.Device.MachineName.ToLowerInvariant()));
@@ -63,21 +82,23 @@ namespace SecureBootDashboard.Api.Controllers
                         id,
                         report.Device.MachineName);
                     
-                    _logger.LogDebug("Broadcasted new report notification via SignalR for device {MachineName}", 
-                        report.Device.MachineName);
+                    _logger.LogDebug("IngestAsync: Successfully broadcasted SignalR notification for device {MachineName}, DeviceId={DeviceId}", 
+                        report.Device.MachineName, deviceIdentifier);
                 }
                 catch (Exception signalREx)
                 {
                     // Log but don't fail the request if SignalR broadcast fails
-                    _logger.LogWarning(signalREx, "Failed to broadcast SignalR notification for report {ReportId}", id);
+                    _logger.LogWarning(signalREx, "IngestAsync: Failed to broadcast SignalR notification for report {ReportId}", id);
                 }
                 
+                _logger.LogTrace("IngestAsync: Returning CreatedAtRoute response for report {ReportId}", id);
                 // Usa CreatedAtRoute invece di CreatedAtAction per evitare problemi di routing
                 return CreatedAtRoute("GetReport", new { id }, new { id });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to ingest secure boot report for machine {Machine}", report.Device.MachineName);
+                _logger.LogError(ex, "IngestAsync: Failed to ingest secure boot report for machine {Machine}, CorrelationId={CorrelationId}", 
+                    report.Device.MachineName, report.CorrelationId ?? "None");
                 return StatusCode(500, new { Error = "Failed to persist report." });
             }
         }
@@ -85,20 +106,29 @@ namespace SecureBootDashboard.Api.Controllers
         [HttpGet("{id:guid}", Name = "GetReport")]
         public async Task<IActionResult> GetReportAsync(Guid id)
         {
+            _logger.LogDebug("GetReportAsync: Retrieving report {ReportId}", id);
+            
             var report = await _reportStore.GetAsync(id, HttpContext.RequestAborted).ConfigureAwait(false);
 
             if (report == null)
             {
+                _logger.LogDebug("GetReportAsync: Report {ReportId} not found", id);
                 return NotFound();
             }
 
+            _logger.LogTrace("GetReportAsync: Found report {ReportId} for device {MachineName}, returning details", 
+                id, report.Device?.MachineName ?? "Unknown");
             return Ok(new ReportDetailResponse(report));
         }
 
         [HttpGet("recent")]
         public async Task<IReadOnlyCollection<ReportSummaryResponse>> GetRecentAsync([FromQuery] int limit = 50)
         {
+            _logger.LogDebug("GetRecentAsync: Retrieving recent reports with limit={Limit}", limit);
+            
             var reports = await _reportStore.GetRecentAsync(limit, HttpContext.RequestAborted).ConfigureAwait(false);
+            
+            _logger.LogTrace("GetRecentAsync: Found {Count} recent reports", reports.Count);
             return reports.Select(r => new ReportSummaryResponse(r)).ToArray();
         }
 
