@@ -159,7 +159,15 @@ try
         }
     });
 
-    builder.Services.AddHealthChecks();
+    // Configure Health Checks with database connectivity
+    Log.Information("Configuring Health Checks...");
+    builder.Services.AddHealthChecks()
+        .AddSqlServer(
+            connectionString: connectionString ?? throw new InvalidOperationException("SQL Server connection string is required"),
+            name: "database",
+            timeout: TimeSpan.FromSeconds(5),
+            tags: new[] { "db", "sql", "sqlserver" });
+    Log.Information("Health checks configured with SQL Server connectivity check");
 
     // Configure Response Compression
     if (perfConfig?.Compression?.Enabled == true)
