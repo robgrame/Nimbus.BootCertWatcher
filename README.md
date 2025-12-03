@@ -302,6 +302,19 @@ The dashboard now includes powerful remote command processing capabilities:
   - **Azure Queue**: enqueues messages via Azure Storage Queues (managed identity or certificate auth)
   - **Web API**: HTTP POST directly to the dashboard ingestion endpoint
 - Configured via `appsettings.json` with fleet-specific settings
+- **NEW**: PowerShell alternative available - see **SecureBootWatcher PowerShell Client** below
+
+### 1b. **SecureBootWatcher PowerShell Client** (PowerShell 5.0+)
+- **Pure PowerShell implementation** for easier device management deployment
+- Same inventory features as .NET Framework client (no client auto-update)
+- Ideal for Intune, SCCM, or other MDM solutions
+- Supports two reporting sinks:
+  - **File Share**: writes JSON payloads to a network share
+  - **Web API**: HTTP POST directly to the dashboard ingestion endpoint
+- Simple script-based deployment without compiled binaries
+- Configured via `appsettings.json` (same format as .NET client)
+- Complete Intune Win32 App deployment scripts included
+- See [PowerShell Client Documentation](docs/POWERSHELL_CLIENT.md) for details
 
 ### 2. **SecureBootWatcher.Shared** (netstandard2.0)
 - Shared models, configuration, validation, and storage contracts
@@ -801,6 +814,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 - **[Host Aborted Issues](docs/HOSTABORTED_TROUBLESHOOTING.md)** - Fix cancellation errors
 
 ### Client Deployment
+- **[PowerShell Client Guide](docs/POWERSHELL_CLIENT.md)** - PowerShell client deployment and configuration *(NEW)*
 - **[Client Run Mode Configuration](docs/CLIENT_RUNMODE_CONFIGURATION.md)** - Single-shot vs continuous execution modes
 - **[Client Deployment Scripts](docs/CLIENT_DEPLOYMENT_SCRIPTS.md)** - PowerShell automation
 - **[Startup Logging](docs/STARTUP_LOGGING.md)** - Client initialization diagnostics
