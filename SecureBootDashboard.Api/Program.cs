@@ -2,12 +2,15 @@ using Microsoft.EntityFrameworkCore;
 using SecureBootDashboard.Api.Configuration;
 using SecureBootDashboard.Api.Data;
 using SecureBootDashboard.Api.Hubs;
+using SecureBootDashboard.Api.Middleware;
 using SecureBootDashboard.Api.Services;
 using SecureBootDashboard.Api.Storage;
 using SecureBootWatcher.Shared.Storage;
 using Serilog;
 using Serilog.Events;
 using System.Reflection;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
 
 // Configure Serilog before building the app
 var workspaceRoot = Directory.GetParent(AppContext.BaseDirectory)?.Parent?.Parent?.Parent?.Parent?.FullName ?? AppContext.BaseDirectory;
@@ -54,6 +57,39 @@ try
     foreach (var source in builder.Configuration.Sources)
     {
         Log.Information("  - {Source}", source.ToString());
+    }
+
+    // Configure Client Certificate Authentication
+    Log.Information("Configuring Client Certificate Authentication...");
+    builder.Services.Configure<ClientCertificateAuthenticationOptions>(
+        builder.Configuration.GetSection("ClientCertificateAuthentication"));
+    var certAuthConfig = builder.Configuration.GetSection("ClientCertificateAuthentication")
+        .Get<ClientCertificateAuthenticationOptions>();
+    if (certAuthConfig != null)
+    {
+        Log.Information("Client Certificate Authentication:");
+        Log.Information("  Enabled: {Enabled}", certAuthConfig.Enabled);
+        Log.Information("  Require Certificate: {Required}", certAuthConfig.RequireClientCertificate);
+        Log.Information("  Validate Validity Period: {Validate}", certAuthConfig.ValidateValidityPeriod);
+        Log.Information("  Validate Chain: {Validate}", certAuthConfig.ValidateCertificateChain);
+        Log.Information("  Allowed Thumbprints: {Count}", certAuthConfig.AllowedCertificateThumbprints?.Count ?? 0);
+        
+        if (certAuthConfig.Enabled)
+        {
+            // Configure Kestrel to accept client certificates
+            builder.WebHost.ConfigureKestrel(serverOptions =>
+            {
+                serverOptions.ConfigureHttpsDefaults(httpsOptions =>
+                {
+                    httpsOptions.ClientCertificateMode = certAuthConfig.RequireClientCertificate
+                        ? ClientCertificateMode.RequireCertificate
+                        : ClientCertificateMode.AllowCertificate;
+                    
+                    Log.Information("Kestrel configured to {Mode} client certificates",
+                        certAuthConfig.RequireClientCertificate ? "require" : "allow");
+                });
+            });
+        }
     }
 
     builder.Services.AddControllers();
@@ -243,6 +279,9 @@ try
     }
 
     app.UseHttpsRedirection();
+
+    // Enable client certificate authentication middleware
+    app.UseMiddleware<ClientCertificateAuthenticationMiddleware>();
 
     // Enable CORS before routing
     app.UseCors("AllowWebApp");

@@ -122,8 +122,52 @@ using System.Reflection;
             Log.Warning("API Base URL not configured!");
         }
 
-        // Register HttpClient for API communication
-        builder.Services.AddHttpClient<ISecureBootApiClient, SecureBootApiClient>();
+        // Log client certificate configuration
+        var useClientCert = builder.Configuration.GetValue<bool>("ApiSettings:UseClientCertificate");
+        if (useClientCert)
+        {
+            Log.Information("Client certificate authentication enabled for API calls");
+            var thumbprint = builder.Configuration["ApiSettings:ClientCertificateThumbprint"];
+            var certPath = builder.Configuration["ApiSettings:ClientCertificatePath"];
+            
+            if (!string.IsNullOrEmpty(thumbprint))
+            {
+                Log.Information("  Using certificate from store with thumbprint: {Thumbprint}", thumbprint);
+            }
+            else if (!string.IsNullOrEmpty(certPath))
+            {
+                Log.Information("  Using certificate from file: {Path}", certPath);
+            }
+            else
+            {
+                Log.Warning("  Client certificate enabled but no thumbprint or path configured!");
+            }
+        }
+
+        // Register HttpClient for API communication with client certificate support
+        builder.Services.AddHttpClient<ISecureBootApiClient, SecureBootApiClient>()
+            .ConfigurePrimaryHttpMessageHandler(sp =>
+            {
+                var apiSettings = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ApiSettings>>().Value;
+                var handler = new HttpClientHandler();
+                
+                // Configure client certificate if enabled
+                if (apiSettings.UseClientCertificate)
+                {
+                    var cert = LoadClientCertificate(apiSettings);
+                    if (cert != null)
+                    {
+                        handler.ClientCertificates.Add(cert);
+                        Log.Information("Client certificate configured for API client (Thumbprint: {Thumbprint})", cert.Thumbprint);
+                    }
+                    else
+                    {
+                        Log.Warning("Client certificate authentication enabled but certificate could not be loaded");
+                    }
+                }
+                
+                return handler;
+            });
 
         var app = builder.Build();
 
@@ -194,3 +238,66 @@ using System.Reflection;
         Log.Information("Application shutting down...");
         Log.CloseAndFlush();
     }
+
+static System.Security.Cryptography.X509Certificates.X509Certificate2? LoadClientCertificate(ApiSettings settings)
+{
+    try
+    {
+        // Try loading from certificate store first (preferred method)
+        if (!string.IsNullOrEmpty(settings.ClientCertificateThumbprint))
+        {
+            var storeLocation = settings.ClientCertificateStoreLocation.Equals("LocalMachine", StringComparison.OrdinalIgnoreCase)
+                ? System.Security.Cryptography.X509Certificates.StoreLocation.LocalMachine
+                : System.Security.Cryptography.X509Certificates.StoreLocation.CurrentUser;
+
+            var storeName = Enum.TryParse<System.Security.Cryptography.X509Certificates.StoreName>(settings.ClientCertificateStoreName, true, out var parsedStoreName)
+                ? parsedStoreName
+                : System.Security.Cryptography.X509Certificates.StoreName.My;
+
+            using (var store = new System.Security.Cryptography.X509Certificates.X509Store(storeName, storeLocation))
+            {
+                store.Open(System.Security.Cryptography.X509Certificates.OpenFlags.ReadOnly);
+                var certs = store.Certificates.Find(
+                    System.Security.Cryptography.X509Certificates.X509FindType.FindByThumbprint,
+                    settings.ClientCertificateThumbprint.Replace(" ", "").Replace(":", ""),
+                    validOnly: false);
+
+                if (certs.Count > 0)
+                {
+                    Log.Information("Client certificate loaded from store: {StoreLocation}\\{StoreName}", storeLocation, storeName);
+                    return certs[0];
+                }
+                else
+                {
+                    Log.Warning("Certificate with thumbprint {Thumbprint} not found in {StoreLocation}\\{StoreName}",
+                        settings.ClientCertificateThumbprint, storeLocation, storeName);
+                }
+            }
+        }
+
+        // Try loading from file path as fallback
+        if (!string.IsNullOrEmpty(settings.ClientCertificatePath))
+        {
+            if (System.IO.File.Exists(settings.ClientCertificatePath))
+            {
+                var cert = string.IsNullOrEmpty(settings.ClientCertificatePassword)
+                    ? new System.Security.Cryptography.X509Certificates.X509Certificate2(settings.ClientCertificatePath)
+                    : new System.Security.Cryptography.X509Certificates.X509Certificate2(settings.ClientCertificatePath, settings.ClientCertificatePassword);
+
+                Log.Information("Client certificate loaded from file: {Path}", settings.ClientCertificatePath);
+                return cert;
+            }
+            else
+            {
+                Log.Warning("Certificate file not found: {Path}", settings.ClientCertificatePath);
+            }
+        }
+
+        return null;
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Error loading client certificate");
+        return null;
+    }
+}

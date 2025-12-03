@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -260,7 +261,30 @@ namespace SecureBootWatcher.Client
 				builder.AddSerilog(dispose: false);
 			});
 
-			services.AddHttpClient("SecureBootIngestion");
+			// Configure HttpClient with client certificate support
+			services.AddHttpClient("SecureBootIngestion")
+				.ConfigurePrimaryHttpMessageHandler(sp =>
+				{
+					var options = sp.GetRequiredService<IOptionsMonitor<SecureBootWatcherOptions>>().CurrentValue;
+					var handler = new HttpClientHandler();
+					
+					// Configure client certificate if enabled
+					if (options.Sinks.WebApi.UseClientCertificate)
+					{
+						var cert = LoadClientCertificate(options.Sinks.WebApi);
+						if (cert != null)
+						{
+							handler.ClientCertificates.Add(cert);
+							Log.Information("Client certificate configured for API authentication (Thumbprint: {Thumbprint})", cert.Thumbprint);
+						}
+						else
+						{
+							Log.Warning("Client certificate authentication enabled but certificate could not be loaded");
+						}
+					}
+					
+					return handler;
+				});
 
 			services.AddSecureBootWatcherOptions(configuration);
 
@@ -300,6 +324,69 @@ namespace SecureBootWatcher.Client
 			});
 
 			return services.BuildServiceProvider();
+		}
+
+		private static System.Security.Cryptography.X509Certificates.X509Certificate2? LoadClientCertificate(WebApiSinkOptions options)
+		{
+			try
+			{
+				// Try loading from certificate store first (preferred method)
+				if (!string.IsNullOrEmpty(options.ClientCertificateThumbprint))
+				{
+					var storeLocation = options.ClientCertificateStoreLocation.Equals("LocalMachine", StringComparison.OrdinalIgnoreCase)
+						? System.Security.Cryptography.X509Certificates.StoreLocation.LocalMachine
+						: System.Security.Cryptography.X509Certificates.StoreLocation.CurrentUser;
+
+					var storeName = Enum.TryParse<System.Security.Cryptography.X509Certificates.StoreName>(options.ClientCertificateStoreName, true, out var parsedStoreName)
+						? parsedStoreName
+						: System.Security.Cryptography.X509Certificates.StoreName.My;
+
+					using (var store = new System.Security.Cryptography.X509Certificates.X509Store(storeName, storeLocation))
+					{
+						store.Open(System.Security.Cryptography.X509Certificates.OpenFlags.ReadOnly);
+						var certs = store.Certificates.Find(
+							System.Security.Cryptography.X509Certificates.X509FindType.FindByThumbprint,
+							options.ClientCertificateThumbprint.Replace(" ", "").Replace(":", ""),
+							validOnly: false);
+
+						if (certs.Count > 0)
+						{
+							Log.Information("Client certificate loaded from store: {StoreLocation}\\{StoreName}", storeLocation, storeName);
+							return certs[0];
+						}
+						else
+						{
+							Log.Warning("Certificate with thumbprint {Thumbprint} not found in {StoreLocation}\\{StoreName}",
+								options.ClientCertificateThumbprint, storeLocation, storeName);
+						}
+					}
+				}
+
+				// Try loading from file path as fallback
+				if (!string.IsNullOrEmpty(options.ClientCertificatePath))
+				{
+					if (System.IO.File.Exists(options.ClientCertificatePath))
+					{
+						var cert = string.IsNullOrEmpty(options.ClientCertificatePassword)
+							? new System.Security.Cryptography.X509Certificates.X509Certificate2(options.ClientCertificatePath)
+							: new System.Security.Cryptography.X509Certificates.X509Certificate2(options.ClientCertificatePath, options.ClientCertificatePassword);
+
+						Log.Information("Client certificate loaded from file: {Path}", options.ClientCertificatePath);
+						return cert;
+					}
+					else
+					{
+						Log.Warning("Certificate file not found: {Path}", options.ClientCertificatePath);
+					}
+				}
+
+				return null;
+			}
+			catch (Exception ex)
+			{
+				Log.Error(ex, "Error loading client certificate");
+				return null;
+			}
 		}
 
 		private static void LogConfiguration(SecureBootWatcherOptions options)
