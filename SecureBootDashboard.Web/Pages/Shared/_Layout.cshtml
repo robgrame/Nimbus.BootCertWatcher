@@ -3,10 +3,33 @@
 @inject IOptions<SecureBootDashboard.Web.Services.ApiSettings> ApiSettings
 @{
     var assembly = Assembly.GetExecutingAssembly();
-    var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion 
-                  ?? assembly.GetName().Version?.ToString() 
-                  ?? "Unknown";
-    var shortVersion = version.Split('+')[0]; // Get version without commit hash
+    
+    // Ottieni la versione dall'assembly con fallback a "1.0.0"
+    var fullVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion 
+                      ?? assembly.GetName().Version?.ToString() 
+                      ?? "1.0.0";
+    
+    // Estrai solo la versione principale (rimuovi commit hash e pre-release)
+    // Formato possibili: "1.11.0", "1.11.0+abc123", "1.11.0-alpha.0", "1.11.0-alpha.0+abc123"
+    var shortVersion = fullVersion;
+    
+    // Rimuovi commit hash (tutto dopo '+')
+    if (shortVersion.Contains('+'))
+    {
+        shortVersion = shortVersion.Substring(0, shortVersion.IndexOf('+'));
+    }
+    
+    // Rimuovi suffisso pre-release (tutto dopo '-')
+    if (shortVersion.Contains('-'))
+    {
+        shortVersion = shortVersion.Substring(0, shortVersion.IndexOf('-'));
+    }
+    
+    // Assicurati che non sia vuoto
+    if (string.IsNullOrWhiteSpace(shortVersion))
+    {
+        shortVersion = "1.0.0";
+    }
 }
 <!DOCTYPE html>
 <html lang="en">
