@@ -20,6 +20,8 @@ namespace SecureBootWatcher.Client.Services
 
         public Task<SecureBootRegistrySnapshot> CaptureAsync(CancellationToken cancellationToken)
         {
+            _logger.LogDebug("RegistrySnapshotProvider.CaptureAsync: Starting Secure Boot registry snapshot capture");
+            
             var snapshot = new SecureBootRegistrySnapshot
             {
                 CollectedAtUtc = DateTimeOffset.UtcNow
@@ -27,49 +29,65 @@ namespace SecureBootWatcher.Client.Services
 
             try
             {
+                _logger.LogTrace("RegistrySnapshotProvider.CaptureAsync: Opening registry key at {Path}", SecureBootRegistrySnapshot.RegistryRootPath);
                 using var baseKey = Registry.LocalMachine.OpenSubKey(SecureBootRegistrySnapshot.RegistryRootPath, false);
                 if (baseKey == null)
                 {
-                    _logger.LogDebug("Secure Boot base registry path not found at {Path}. This is normal for devices without Secure Boot servicing configured.", SecureBootRegistrySnapshot.RegistryRootPath);
+                    _logger.LogDebug("RegistrySnapshotProvider.CaptureAsync: Secure Boot base registry path not found at {Path}. This is normal for devices without Secure Boot servicing configured.", SecureBootRegistrySnapshot.RegistryRootPath);
                     return Task.FromResult(snapshot);
                 }
 
+                _logger.LogTrace("RegistrySnapshotProvider.CaptureAsync: Reading base key values");
                 snapshot.AvailableUpdates = ReadUInt(baseKey, "AvailableUpdates");
                 snapshot.UpdateType = ReadUInt(baseKey, "UpdateType");
                 snapshot.HighConfidenceOptOut = ReadBool(baseKey, "HighConfidenceOptOut");
                 snapshot.MicrosoftUpdateManagedOptIn = ReadBool(baseKey, "MicrosoftUpdateManagedOptIn");
+                
+                _logger.LogTrace("RegistrySnapshotProvider.CaptureAsync: Base values - AvailableUpdates={AvailableUpdates}, UpdateType={UpdateType}, MicrosoftUpdateManagedOptIn={OptIn}",
+                    snapshot.AvailableUpdates, snapshot.UpdateType, snapshot.MicrosoftUpdateManagedOptIn);
 
                 using var servicingKey = baseKey.OpenSubKey("Servicing", false);
                 if (servicingKey != null)
                 {
+                    _logger.LogTrace("RegistrySnapshotProvider.CaptureAsync: Reading Servicing subkey");
                     snapshot.UefiCa2023Status = (SecureBootDeploymentState?)ReadUInt(servicingKey, "UEFICA2023Status") ?? SecureBootDeploymentState.Unknown;
                     snapshot.UefiCa2023Error = ReadUInt(servicingKey, "UefiCa2023Error");
                     snapshot.WindowsUEFICA2023CapableCode = ReadUInt(servicingKey, "WindowsUEFICA2023CapableCode");
+                    
+                    _logger.LogDebug("RegistrySnapshotProvider.CaptureAsync: Servicing values - UefiCa2023Status={Status}, WindowsUEFICA2023CapableCode={Capable}",
+                        snapshot.UefiCa2023Status, snapshot.WindowsUEFICA2023CapableCode);
                 }
                 else
                 {
-                    _logger.LogDebug("Servicing subkey not found. Device may not have Secure Boot servicing registry keys.");
+                    _logger.LogDebug("RegistrySnapshotProvider.CaptureAsync: Servicing subkey not found. Device may not have Secure Boot servicing registry keys.");
                 }
 
                 using var stateKey = baseKey.OpenSubKey("State", false);
                 if (stateKey != null)
                 {
+                    _logger.LogTrace("RegistrySnapshotProvider.CaptureAsync: Reading State subkey");
                     snapshot.PolicyPublisher = ReadString(stateKey, "PolicyPublisher");
                     snapshot.PolicyVersion = ReadUInt(stateKey, "PolicyVersion");
                     snapshot.UEFISecureBootEnabled = ReadBool(stateKey, "UEFISecureBootEnabled");
+                    
+                    _logger.LogDebug("RegistrySnapshotProvider.CaptureAsync: State values - UEFISecureBootEnabled={Enabled}, PolicyPublisher={Publisher}",
+                        snapshot.UEFISecureBootEnabled, snapshot.PolicyPublisher);
                 }
                 else
                 {
-                    _logger.LogDebug("State subkey not found. UEFI Secure Boot status will be unavailable.");
+                    _logger.LogDebug("RegistrySnapshotProvider.CaptureAsync: State subkey not found. UEFI Secure Boot status will be unavailable.");
                 }
+                
+                _logger.LogInformation("RegistrySnapshotProvider.CaptureAsync: Successfully captured Secure Boot registry snapshot - DeploymentState={State}", 
+                    snapshot.DeploymentState);
             }
             catch (SecurityException ex)
             {
-                _logger.LogError(ex, "Access denied reading Secure Boot registry keys. Run as Administrator or check permissions.");
+                _logger.LogError(ex, "RegistrySnapshotProvider.CaptureAsync: Access denied reading Secure Boot registry keys. Run as Administrator or check permissions.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error while reading Secure Boot registry keys.");
+                _logger.LogError(ex, "RegistrySnapshotProvider.CaptureAsync: Unexpected error while reading Secure Boot registry keys.");
             }
 
             return Task.FromResult(snapshot);
