@@ -216,6 +216,10 @@ try
     builder.Services.Configure<QueueProcessorOptions>(queueConfig);
     builder.Services.AddHostedService<QueueProcessorService>();
 
+    // Configure Device Cleanup Service
+    Log.Information("Configuring Device Cleanup Service...");
+    builder.Services.AddHostedService<DeviceCleanupService>();
+
     Log.Information("Building WebApplication...");
     var app = builder.Build();
 

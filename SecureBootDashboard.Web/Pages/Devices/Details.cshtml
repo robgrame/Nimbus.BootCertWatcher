@@ -188,7 +188,7 @@
         <div class="card mb-4">
             <div class="card-header @(Model.Device.IsReadyToUpdate ? "bg-success text-white" : "bg-warning text-dark")">
                 <h5 class="mb-0">
-                    <i class="fas fa-clipboard-check"></i> Stato di Readiness per Aggiornamento Secure Boot
+                    <i class="fas fa-clipboard-check"></i> Secure Boot Update Readiness Status
                 </h5>
             </div>
             <div class="card-body">
@@ -211,21 +211,21 @@
                                     <h4 class="mb-1">
                                         @if (Model.Device.IsReadyToUpdate)
                                         {
-                                            <text>? Dispositivo Pronto per l'Aggiornamento</text>
+                                            <text>Device Ready for Update</text>
                                         }
                                         else
                                         {
-                                            <text>?? Dispositivo Non Pronto per l'Aggiornamento</text>
+                                            <text>Device Not Ready for Update</text>
                                         }
                                     </h4>
                                     <p class="mb-0">
                                         @if (Model.Device.IsReadyToUpdate)
                                         {
-                                            <text>Tutti i criteri di readiness sono soddisfatti. Il dispositivo può ricevere l'aggiornamento del certificato UEFI CA 2023.</text>
+                                            <text>All readiness criteria are satisfied. The device can receive the UEFI CA 2023 certificate update.</text>
                                         }
                                         else
                                         {
-                                            <text>Uno o più criteri di readiness non sono soddisfatti. Verifica i dettagli qui sotto.</text>
+                                            <text>One or more readiness criteria are not met. Check the details below.</text>
                                         }
                                     </p>
                                 </div>
@@ -235,7 +235,7 @@
                 </div>
 
                 <!-- Readiness Criteria -->
-                <h6 class="mb-3"><i class="fas fa-list-check"></i> Criteri di Readiness</h6>
+                <h6 class="mb-3"><i class="fas fa-list-check"></i> Readiness Criteria</h6>
                 
                 <div class="row">
                     <!-- OS Readiness -->
@@ -244,7 +244,7 @@
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <h6 class="mb-0">
-                                        <i class="fas fa-windows"></i> Versione Sistema Operativo
+                                        <i class="fas fa-windows"></i> Operating System Version
                                     </h6>
                                     @if (Model.Device.IsOSReady)
                                     {
@@ -255,7 +255,7 @@
                                     else
                                     {
                                         <span class="badge bg-danger">
-                                            <i class="fas fa-times"></i> Non OK
+                                            <i class="fas fa-times"></i> Not OK
                                         </span>
                                     }
                                 </div>
@@ -275,24 +275,24 @@
                                     @if (Model.Device.HasWindowsUEFICA2023)
                                     {
                                         <span class="badge bg-success">
-                                            <i class="fas fa-check"></i> Presente
+                                            <i class="fas fa-check"></i> Present
                                         </span>
                                     }
                                     else
                                     {
                                         <span class="badge bg-danger">
-                                            <i class="fas fa-times"></i> Mancante
+                                            <i class="fas fa-times"></i> Missing
                                         </span>
                                     }
                                 </div>
                                 <p class="mb-0 small">
                                     @if (Model.Device.HasWindowsUEFICA2023)
                                     {
-                                        <text>Il certificato Windows UEFI CA 2023 è presente nel database delle firme (db).</text>
+                                        <text>The Windows UEFI CA 2023 certificate is present in the signature database (db).</text>
                                     }
                                     else
                                     {
-                                        <text>Il certificato Windows UEFI CA 2023 non è stato trovato nel database delle firme (db).</text>
+                                        <text>The Windows UEFI CA 2023 certificate was not found in the signature database (db).</text>
                                     }
                                 </p>
                             </div>
@@ -305,18 +305,18 @@
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <h6 class="mb-0">
-                                        <i class="fas fa-industry"></i> Certificati OEM
+                                        <i class="fas fa-industry"></i> OEM Certificates
                                     </h6>
                                     @if (Model.Device.AreOemCertificatesValid)
                                     {
                                         <span class="badge bg-success">
-                                            <i class="fas fa-check"></i> Validi
+                                            <i class="fas fa-check"></i> Valid
                                         </span>
                                     }
                                     else
                                     {
                                         <span class="badge bg-danger">
-                                            <i class="fas fa-times"></i> Problemi Rilevati
+                                            <i class="fas fa-times"></i> Issues Detected
                                         </span>
                                     }
                                 </div>
@@ -333,7 +333,7 @@
                                             <div class="col-6 col-md-3">
                                                 <div class="text-center p-2 bg-danger bg-opacity-10 rounded">
                                                     <div class="h4 mb-0 text-danger">@Model.Device.ExpiredOemCertificateCount</div>
-                                                    <small class="text-muted">Scaduti</small>
+                                                    <small class="text-muted">Expired</small>
                                                 </div>
                                             </div>
                                         }
@@ -342,7 +342,7 @@
                                             <div class="col-6 col-md-3">
                                                 <div class="text-center p-2 bg-warning bg-opacity-10 rounded">
                                                     <div class="h4 mb-0 text-warning">@Model.Device.CriticalOemCertificateCount</div>
-                                                    <small class="text-muted">Critici (&lt;90gg)</small>
+                                                    <small class="text-muted">Critical (&lt;90d)</small>
                                                 </div>
                                             </div>
                                         }
@@ -351,7 +351,7 @@
                                             <div class="col-6 col-md-3">
                                                 <div class="text-center p-2 bg-warning bg-opacity-10 rounded">
                                                     <div class="h4 mb-0 text-warning">@Model.Device.WarningOemCertificateCount</div>
-                                                    <small class="text-muted">Attenzione (&lt;180gg)</small>
+                                                    <small class="text-muted">Warning (&lt;180d)</small>
                                                 </div>
                                             </div>
                                         }
@@ -360,7 +360,7 @@
                                             <div class="col-6 col-md-3">
                                                 <div class="text-center p-2 bg-success bg-opacity-10 rounded">
                                                     <div class="h4 mb-0 text-success">@Model.Device.ValidOemCertificateCount</div>
-                                                    <small class="text-muted">Validi</small>
+                                                    <small class="text-muted">Valid</small>
                                                 </div>
                                             </div>
                                         }
@@ -375,29 +375,29 @@
                 @if (!Model.Device.IsReadyToUpdate)
                 {
                     <div class="alert alert-info mt-3">
-                        <h6><i class="fas fa-lightbulb"></i> Azioni Consigliate</h6>
+                        <h6><i class="fas fa-lightbulb"></i> Recommended Actions</h6>
                         <ul class="mb-0">
                             @if (!Model.Device.IsOSReady)
                             {
-                                <li>Aggiorna il sistema operativo alla versione minima richiesta</li>
+                                <li>Update the operating system to the minimum required version</li>
                             }
                             @if (!Model.Device.HasWindowsUEFICA2023)
                             {
-                                <li>Esegui il deployment del certificato Windows UEFI CA 2023</li>
+                                <li>Deploy the Windows UEFI CA 2023 certificate</li>
                             }
                             @if (!Model.Device.AreOemCertificatesValid)
                             {
                                 @if (Model.Device.HasNoOemCertificates)
                                 {
-                                    <li>Verifica che il dispositivo sia una VM, un dispositivo consumer, o controlla se c'è un errore di lettura del firmware UEFI</li>
+                                    <li>Verify that the device is a VM, consumer device, or check for UEFI firmware read errors</li>
                                 }
                                 else if (Model.Device.ExpiredOemCertificateCount > 0)
                                 {
-                                    <li>Aggiorna i certificati OEM scaduti tramite firmware update</li>
+                                    <li>Update expired OEM certificates via firmware update</li>
                                 }
                                 else if (Model.Device.CriticalOemCertificateCount > 0)
                                 {
-                                    <li>Pianifica l'aggiornamento dei certificati OEM in scadenza critica (&lt;90 giorni)</li>
+                                    <li>Schedule update for OEM certificates in critical expiration (&lt;90 days)</li>
                                 }
                             }
                         </ul>
@@ -519,7 +519,7 @@
             <!-- Certificates Card -->
             <div class="card mb-4">
                 <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="fas fa-certificate"></i> Certificati Secure Boot</h5>
+                    <h5 class="mb-0"><i class="fas fa-certificate"></i> Secure Boot Certificates</h5>
                 </div>
                 <div class="card-body">
                     <!-- Summary Statistics -->
@@ -528,7 +528,7 @@
                             <div class="card bg-light">
                                 <div class="card-body text-center">
                                     <h3 class="text-primary mb-0">@certificates.TotalCertificateCount</h3>
-                                    <small class="text-muted">Totale Certificati</small>
+                                    <small class="text-muted">Total Certificates</small>
                                 </div>
                             </div>
                         </div>
@@ -536,7 +536,7 @@
                             <div class="card bg-light">
                                 <div class="card-body text-center">
                                     <h3 class="text-danger mb-0">@certificates.ExpiredCertificateCount</h3>
-                                    <small class="text-muted">Scaduti</small>
+                                    <small class="text-muted">Expired</small>
                                 </div>
                             </div>
                         </div>
@@ -544,7 +544,7 @@
                             <div class="card bg-light">
                                 <div class="card-body text-center">
                                     <h3 class="text-warning mb-0">@certificates.ExpiringCertificateCount</h3>
-                                    <small class="text-muted">In Scadenza (90gg)</small>
+                                    <small class="text-muted">Expiring (90d)</small>
                                 </div>
                             </div>
                         </div>
@@ -555,8 +555,8 @@
                                         <i class="fas fa-shield-alt"></i>
                                     </h3>
                                     <small class="text-muted">
-                                        @(certificates.SecureBootEnabled == true ? "Abilitato" : 
-                                          certificates.SecureBootEnabled == false ? "Disabilitato" : "Sconosciuto")
+                                        @(certificates.SecureBootEnabled == true ? "Enabled" : 
+                                          certificates.SecureBootEnabled == false ? "Disabled" : "Unknown")
                                     </small>
                                 </div>
                             </div>
@@ -574,13 +574,13 @@
                                         <thead class="table-light">
                                             <tr>
                                                 <th style="width: 30px;">#</th>
-                                                <th>Nome Certificato (Subject)</th>
-                                                <th>Emesso Da (Issuer)</th>
-                                                <th>Inizio Validità</th>
-                                                <th>Fine Validità</th>
-                                                <th>Giorni Rimanenti</th>
-                                                <th>Stato</th>
-                                                <th>Dettagli</th>
+                                                <th>Certificate Name (Subject)</th>
+                                                <th>Issued By (Issuer)</th>
+                                                <th>Valid From</th>
+                                                <th>Valid Until</th>
+                                                <th>Days Remaining</th>
+                                                <th>Status</th>
+                                                <th>Details</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -632,11 +632,11 @@
                                                     <td>
                                                         @if (daysRemaining > 0)
                                                         {
-                                                            <span class="text-success">+@daysRemaining giorni</span>
+                                                            <span class="text-success">+@daysRemaining days</span>
                                                         }
                                                         else if (daysRemaining < 0)
                                                         {
-                                                            <span class="text-danger">@daysRemaining giorni</span>
+                                                            <span class="text-danger">@daysRemaining days</span>
                                                         }
                                                         else
                                                         {
@@ -647,19 +647,19 @@
                                                         @if (isExpired)
                                                         {
                                                             <span class="badge bg-danger">
-                                                                <i class="fas fa-times-circle"></i> Scaduto
+                                                                <i class="fas fa-times-circle"></i> Expired
                                                             </span>
                                                         }
                                                         else if (isExpiringSoon)
                                                         {
                                                             <span class="badge bg-warning text-dark">
-                                                                <i class="fas fa-exclamation-triangle"></i> In Scadenza
+                                                                <i class="fas fa-exclamation-triangle"></i> Expiring
                                                             </span>
                                                         }
                                                         else
                                                         {
                                                             <span class="badge bg-success">
-                                                                <i class="fas fa-check-circle"></i> Valido
+                                                                <i class="fas fa-check-circle"></i> Valid
                                                             </span>
                                                         }
                                                     </td>
@@ -675,29 +675,29 @@
                                                 <tr class="collapse" id="cert-@accordionId-@i">
                                                     <td colspan="8" class="bg-light">
                                                         <div class="p-3">
-                                                            <h6><i class="fas fa-file-certificate"></i> Dettagli Certificato</h6>
+                                                            <h6><i class="fas fa-file-certificate"></i> Certificate Details</h6>
                                                             <div class="row">
                                                                 <div class="col-md-6">
                                                                     <dl class="row mb-0">
                                                                         <dt class="col-sm-5">Thumbprint:</dt>
                                                                         <dd class="col-sm-7"><code class="small">@(cert.Thumbprint ?? "N/A")</code></dd>
                                                                         
-                                                                        <dt class="col-sm-5">Versione:</dt>
+                                                                        <dt class="col-sm-5">Version:</dt>
                                                                         <dd class="col-sm-7">@(cert.Version?.ToString() ?? "N/A")</dd>
                                                                         
-                                                                        <dt class="col-sm-5">Database UEFI:</dt>
+                                                                        <dt class="col-sm-5">UEFI Database:</dt>
                                                                         <dd class="col-sm-7"><span class="badge bg-secondary">@cert.Database</span></dd>
                                                                     </dl>
                                                                 </div>
                                                                 <div class="col-md-6">
                                                                     <dl class="row mb-0">
-                                                                        <dt class="col-sm-6">Algoritmo Firma:</dt>
+                                                                        <dt class="col-sm-6">Signature Algorithm:</dt>
                                                                         <dd class="col-sm-6">@(cert.SignatureAlgorithm ?? "N/A")</dd>
                                                                         
-                                                                        <dt class="col-sm-6">Algoritmo Chiave:</dt>
+                                                                        <dt class="col-sm-6">Key Algorithm:</dt>
                                                                         <dd class="col-sm-6">@(cert.PublicKeyAlgorithm ?? "N/A")</dd>
                                                                         
-                                                                        <dt class="col-sm-6">Dimensione Chiave:</dt>
+                                                                        <dt class="col-sm-6">Key Size:</dt>
                                                                         <dd class="col-sm-6">@(cert.KeySize?.ToString() ?? "N/A") bit</dd>
                                                                     </dl>
                                                                 </div>
@@ -713,7 +713,7 @@
                             else
                             {
                                 <div class="alert alert-info mb-0">
-                                    <i class="fas fa-info-circle"></i> Nessun certificato presente
+                                    <i class="fas fa-info-circle"></i> No certificates present
                                 </div>
                             }
                         }
@@ -726,13 +726,13 @@
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <h6 class="mb-0">
                                     <i class="fas fa-database text-success"></i> 
-                                    Signature Database (db) - @certificates.SignatureDatabase.Count certificati
+                                    Signature Database (db) - @certificates.SignatureDatabase.Count certificates
                                 </h6>
                                 <button class="btn btn-sm btn-outline-secondary" type="button" 
                                         data-bs-toggle="collapse" 
                                         data-bs-target="#db-collapse" 
                                         aria-expanded="true">
-                                    <i class="fas fa-chevron-down"></i> Mostra/Nascondi
+                                    <i class="fas fa-chevron-down"></i> Show/Hide
                                 </button>
                             </div>
                             <div class="collapse show" id="db-collapse">
@@ -748,13 +748,13 @@
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <h6 class="mb-0">
                                     <i class="fas fa-ban text-danger"></i> 
-                                    Forbidden Signature Database (dbx) - @certificates.ForbiddenDatabase.Count certificati
+                                    Forbidden Signature Database (dbx) - @certificates.ForbiddenDatabase.Count certificates
                                 </h6>
                                 <button class="btn btn-sm btn-outline-secondary" type="button" 
                                         data-bs-toggle="collapse" 
                                         data-bs-target="#dbx-collapse" 
                                         aria-expanded="false">
-                                    <i class="fas fa-chevron-down"></i> Mostra/Nascondi
+                                    <i class="fas fa-chevron-down"></i> Show/Hide
                                 </button>
                             </div>
                             <div class="collapse" id="dbx-collapse">
@@ -770,13 +770,13 @@
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <h6 class="mb-0">
                                     <i class="fas fa-key text-warning"></i> 
-                                    Key Exchange Keys (KEK) - @certificates.KeyExchangeKeys.Count certificati
+                                    Key Exchange Keys (KEK) - @certificates.KeyExchangeKeys.Count certificates
                                 </h6>
                                 <button class="btn btn-sm btn-outline-secondary" type="button" 
                                         data-bs-toggle="collapse" 
                                         data-bs-target="#kek-collapse" 
                                         aria-expanded="false">
-                                    <i class="fas fa-chevron-down"></i> Mostra/Nascondi
+                                    <i class="fas fa-chevron-down"></i> Show/Hide
                                 </button>
                             </div>
                             <div class="collapse" id="kek-collapse">
@@ -792,13 +792,13 @@
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <h6 class="mb-0">
                                     <i class="fas fa-lock text-primary"></i> 
-                                    Platform Key (PK) - @certificates.PlatformKeys.Count certificato
+                                    Platform Key (PK) - @certificates.PlatformKeys.Count certificate
                                 </h6>
                                 <button class="btn btn-sm btn-outline-secondary" type="button" 
                                         data-bs-toggle="collapse" 
                                         data-bs-target="#pk-collapse" 
                                         aria-expanded="false">
-                                    <i class="fas fa-chevron-down"></i> Mostra/Nascondi
+                                    <i class="fas fa-chevron-down"></i> Show/Hide
                                 </button>
                             </div>
                             <div class="collapse" id="pk-collapse">
@@ -811,7 +811,7 @@
                     {
                         <div class="alert alert-warning">
                             <i class="fas fa-exclamation-triangle"></i> 
-                            Nessun certificato Secure Boot trovato su questo dispositivo.
+                            No Secure Boot certificates found on this device.
                         </div>
                     }
                 </div>

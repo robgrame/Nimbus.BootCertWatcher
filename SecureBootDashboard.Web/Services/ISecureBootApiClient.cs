@@ -19,6 +19,11 @@ public interface ISecureBootApiClient
     Task<IReadOnlyList<DeviceSummary>> GetDevicesAsync(CancellationToken cancellationToken = default);
     Task<DeviceDetail?> GetDeviceAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ReportHistoryItem>> GetDeviceReportsAsync(Guid deviceId, int limit = 50, CancellationToken cancellationToken = default);
+
+    // Device Cleanup methods
+    Task<CleanupConfigResponse?> GetCleanupConfigAsync(CancellationToken cancellationToken = default);
+    Task<CleanupPreviewResponse?> GetCleanupPreviewAsync(int? daysThreshold = null, CancellationToken cancellationToken = default);
+    Task<bool> CheckHealthAsync(CancellationToken cancellationToken = default);
 }
 
 // DTOs for device endpoints
@@ -182,3 +187,37 @@ public sealed record ReportHistoryItem(
     DateTimeOffset CreatedAtUtc,
     string? DeploymentState,
     string? ClientVersion);
+
+// Device Cleanup response models
+public sealed record CleanupConfigResponse
+{
+    public int Id { get; init; }
+    public bool Enabled { get; init; }
+    public int InactiveDaysThreshold { get; init; }
+    public string? CleanupSchedule { get; init; }
+    public bool DeleteAssociatedData { get; init; }
+    public bool NotifyOnCleanup { get; init; }
+    public string? NotificationEmail { get; init; }
+    public DateTimeOffset? LastCleanupRunUtc { get; init; }
+    public int LastCleanupDeviceCount { get; init; }
+    public DateTimeOffset CreatedAtUtc { get; init; }
+    public DateTimeOffset UpdatedAtUtc { get; init; }
+}
+
+public sealed record CleanupPreviewResponse
+{
+    public int Threshold { get; init; }
+    public DateTimeOffset CutoffDate { get; init; }
+    public int DeviceCount { get; init; }
+    public List<InactiveDeviceInfo> Devices { get; init; } = new();
+}
+
+public sealed record InactiveDeviceInfo
+{
+    public Guid Id { get; init; }
+    public string MachineName { get; init; } = string.Empty;
+    public string? DomainName { get; init; }
+    public DateTimeOffset LastSeenUtc { get; init; }
+    public int DaysInactive { get; init; }
+    public int ReportCount { get; init; }
+}

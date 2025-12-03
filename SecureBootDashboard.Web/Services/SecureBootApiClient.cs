@@ -268,4 +268,63 @@ public sealed class SecureBootApiClient : ISecureBootApiClient
             return false;
         }
     }
+
+    public async Task<bool> CheckHealthAsync(CancellationToken cancellationToken = default)
+    {
+        return await IsHealthyAsync(cancellationToken);
+    }
+
+    public async Task<CleanupConfigResponse?> GetCleanupConfigAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching cleanup configuration");
+            
+            var response = await _httpClient.GetAsync("/api/DeviceCleanup/config", cancellationToken);
+            
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+
+            response.EnsureSuccessStatusCode();
+            
+            return await response.Content.ReadFromJsonAsync<CleanupConfigResponse>(cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to fetch cleanup configuration");
+            return null;
+        }
+    }
+
+    public async Task<CleanupPreviewResponse?> GetCleanupPreviewAsync(int? daysThreshold = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("Fetching cleanup preview (threshold: {Threshold})", daysThreshold);
+            
+            var url = "/api/DeviceCleanup/preview";
+            if (daysThreshold.HasValue)
+            {
+                url += $"?daysThreshold={daysThreshold.Value}";
+            }
+            
+            var response = await _httpClient.GetAsync(url, cancellationToken);
+            
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+
+            response.EnsureSuccessStatusCode();
+            
+            return await response.Content.ReadFromJsonAsync<CleanupPreviewResponse>(cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to fetch cleanup preview");
+            return null;
+        }
+    }
 }

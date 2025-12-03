@@ -20,3 +20,32 @@ html {
 body {
   margin-bottom: 60px;
 }
+
+/* Footer styling */
+.footer {
+  padding: 1rem 0;
+  background-color: #f8f9fa;
+}
+
+.footer .badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.35em 0.65em;
+}
+
+.footer .badge:hover {
+  background-color: #5a6268 !important;
+  cursor: help;
+}
+
+/* Responsive footer */
+@media (max-width: 768px) {
+  .footer .row > div {
+    text-align: center !important;
+    margin-bottom: 0.5rem;
+  }
+  
+  .footer .row > div:last-child {
+    margin-bottom: 0;
+  }
+}

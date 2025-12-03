@@ -1,7 +1,15 @@
 @using Microsoft.Extensions.Options
+@using System.Reflection
 @inject IOptions<SecureBootDashboard.Web.Services.ApiSettings> ApiSettings
+@{
+    var assembly = Assembly.GetExecutingAssembly();
+    var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion 
+                  ?? assembly.GetName().Version?.ToString() 
+                  ?? "Unknown";
+    var shortVersion = version.Split('+')[0]; // Get version without commit hash
+}
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -55,9 +63,9 @@
     <div id="splash-screen" class="splash-screen">
         <img src="~/images/LogoT.webp" alt="Secure Boot Dashboard" class="splash-logo">
         <h1 class="splash-title">Secure Boot Dashboard</h1>
-        <p class="splash-subtitle">Monitoraggio Certificati Secure Boot</p>
+        <p class="splash-subtitle">Secure Boot Certificate Monitoring</p>
         <div class="splash-loader"></div>
-        <p class="splash-loading-text">Caricamento in corso...</p>
+        <p class="splash-loading-text">Loading...</p>
     </div>
 
     <header>
@@ -80,7 +88,12 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link text-light" asp-area="" asp-page="/Devices/List">
-                                <i class="fas fa-laptop"></i> Dispositivi
+                                <i class="fas fa-laptop"></i> Devices
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-light" asp-area="" asp-page="/Devices/Cleanup">
+                                <i class="fas fa-trash-alt"></i> Device Cleanup
                             </a>
                         </li>
                         <li class="nav-item">
@@ -110,7 +123,7 @@
                         <li class="nav-item">
                             <span class="nav-link signalr-status-navbar" id="signalr-status-navbar">
                                 <i class="fas fa-circle-notch fa-spin me-1" id="signalr-icon"></i>
-                                <span id="signalr-text">Connessione...</span>
+                                <span id="signalr-text">Connecting...</span>
                             </span>
                         </li>
                     </ul>
@@ -139,13 +152,25 @@
     </div>
 
     <footer class="border-top footer text-muted mt-5">
-        <div class="container-fluid d-flex align-items-center">
-            <div>
-                &copy; 2025 - Secure Boot Dashboard - <a asp-area="" asp-page="/Privacy">Privacy</a> | <a asp-area="" asp-page="/About">About</a>
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <span>&copy; 2025 - Secure Boot Dashboard</span>
+                    <span class="mx-2">|</span>
+                    <a asp-area="" asp-page="/Privacy">Privacy</a>
+                    <span class="mx-2">|</span>
+                    <a asp-area="" asp-page="/About">About</a>
+                    <span class="mx-2">|</span>
+                    <span class="badge bg-secondary" title="Application Version">
+                        <i class="fas fa-code-branch"></i> v@shortVersion
+                    </span>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <small class="text-muted">
+                        <i class="fas fa-heart me-1 text-danger"></i> Made with passion for IT Community
+                    </small>
+                </div>
             </div>
-            <small class="text-muted ms-auto">
-                <i class="fas fa-heart me-1 text-danger"></i> Made with passion for IT Community
-            </small>
         </div>
     </footer>
 

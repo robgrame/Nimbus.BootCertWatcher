@@ -22,6 +22,9 @@ namespace SecureBootDashboard.Api.Data
 
         public DbSet<WindowsBuildEntity> WindowsBuilds => Set<WindowsBuildEntity>();
 
+        // Device Cleanup Configuration
+        public DbSet<DeviceCleanupConfigEntity> DeviceCleanupConfig => Set<DeviceCleanupConfigEntity>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -117,6 +120,31 @@ namespace SecureBootDashboard.Api.Data
                     .WithMany(v => v.Builds)
                     .HasForeignKey(e => e.WindowsVersionId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Device Cleanup Configuration
+            modelBuilder.Entity<DeviceCleanupConfigEntity>(entity =>
+            {
+                entity.ToTable("DeviceCleanupConfig");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CleanupSchedule).HasMaxLength(100);
+                entity.Property(e => e.NotificationEmail).HasMaxLength(256);
+                
+                // Seed default configuration with static timestamp
+                entity.HasData(new DeviceCleanupConfigEntity
+                {
+                    Id = 1,
+                    Enabled = false,
+                    InactiveDaysThreshold = 90,
+                    CleanupSchedule = "0 2 * * *", // Daily at 2 AM
+                    DeleteAssociatedData = true,
+                    NotifyOnCleanup = false,
+                    NotificationEmail = null,
+                    LastCleanupRunUtc = null,
+                    LastCleanupDeviceCount = 0,
+                    CreatedAtUtc = new DateTimeOffset(2025, 1, 14, 0, 0, 0, TimeSpan.Zero),
+                    UpdatedAtUtc = new DateTimeOffset(2025, 1, 14, 0, 0, 0, TimeSpan.Zero)
+                });
             });
         }
     }
