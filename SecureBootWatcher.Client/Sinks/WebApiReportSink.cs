@@ -65,7 +65,11 @@ namespace SecureBootWatcher.Client.Sinks
 
             _logger.LogInformation("WebApiReportSink: Successfully submitted report for device {MachineName} to API at {Endpoint} (Status={StatusCode})", 
                 report.Device?.MachineName ?? "Unknown", client.BaseAddress, (int)response.StatusCode);
-            _logger.LogDebug("WebApiReportSink: Response headers: {Headers}", response.Headers.ToString());
+            
+            if (_logger.IsEnabled(Microsoft.Extensions.Logging.LogLevel.Debug))
+            {
+                _logger.LogDebug("WebApiReportSink: Response headers: {Headers}", response.Headers.ToString());
+            }
         }
     }
 }
