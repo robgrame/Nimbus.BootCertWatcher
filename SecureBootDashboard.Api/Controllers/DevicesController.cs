@@ -310,6 +310,46 @@ namespace SecureBootDashboard.Api.Controllers
                 CertificateEvaluationDetails = readinessEvaluation.CertificateEvaluationDetails
             };
         }
+
+        /// <summary>
+        /// Get report history for a specific device
+        /// </summary>
+        [HttpGet("{id:guid}/reports")]
+        public async Task<ActionResult<IReadOnlyList<ReportHistoryItem>>> GetDeviceReportsAsync(
+            Guid id, 
+            [FromQuery] int limit = 50, 
+            CancellationToken cancellationToken = default)
+        {
+            _logger.LogDebug("Fetching reports for device {DeviceId} (limit: {Limit})", id, limit);
+
+            // Verify device exists
+            var deviceExists = await _dbContext.Devices
+                .AsNoTracking()
+                .AnyAsync(d => d.Id == id, cancellationToken);
+
+            if (!deviceExists)
+            {
+                _logger.LogWarning("Device {DeviceId} not found", id);
+                return NotFound(new { Error = $"Device with ID {id} not found" });
+            }
+
+            // Get reports for this device
+            var reports = await _dbContext.Reports
+                .AsNoTracking()
+                .Where(r => r.DeviceId == id)
+                .OrderByDescending(r => r.CreatedAtUtc)
+                .Take(limit)
+                .Select(r => new ReportHistoryItem(
+                    r.Id,
+                    r.CreatedAtUtc,
+                    r.DeploymentState,
+                    r.ClientVersion))
+                .ToListAsync(cancellationToken);
+
+            _logger.LogInformation("Found {Count} reports for device {DeviceId}", reports.Count, id);
+
+            return Ok(reports);
+        }
     }
 
     // Response DTOs
