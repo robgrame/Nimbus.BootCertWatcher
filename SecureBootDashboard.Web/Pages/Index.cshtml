@@ -1,42 +1,41 @@
 @page
 @model IndexModel
 @{
-    ViewData["Title"] = "Secure Boot Dashboard";
+    ViewData["Title"] = "Dashboard";
 }
 
-<!-- Hero Banner - Hidden on mobile (< 768px) -->
-<div class="hero-banner mb-4 d-none d-md-block">
-    <img src="~/images/banner.webp" 
-         alt="Secure Boot Dashboard Banner" 
-         class="img-fluid w-100 rounded shadow-sm"
-         loading="eager">
-</div>
-
-<div class="container-fluid mt-4">
-    <div class="row mb-4">
-        <div class="col">
-            <!-- Title - Only visible on mobile (< 768px) -->
-            <h1 class="display-4 d-md-none">
-                <i class="fas fa-shield-alt text-primary"></i> Secure Boot Dashboard
-            </h1>
-            <p class="lead text-muted d-none d-md-block">Secure Boot certificate monitoring on Windows devices</p>
-        </div>
-        <div class="col-auto">
-            @if (Model.ApiHealthy)
-            {
-                <span class="badge bg-success fs-6">
-                    <i class="fas fa-check-circle"></i> API Online
-                </span>
-            }
-            else
-            {
-                <span class="badge bg-danger fs-6">
-                    <i class="fas fa-times-circle"></i> API Offline
-                </span>
-            }
+<!-- Modern Hero Section with Logo -->
+<div class="modern-hero mb-5">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center mb-3">
+                    <img src="~/images/LogoT.webp" alt="Secure Boot Dashboard" class="hero-logo me-3">
+                    <div>
+                        <h1 class="hero-title mb-2">Secure Boot Dashboard</h1>
+                        <p class="hero-subtitle text-muted mb-0">Monitor and manage Secure Boot certificates across your Windows fleet</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                @if (Model.ApiHealthy)
+                {
+                    <div class="status-badge status-online">
+                        <i class="fas fa-check-circle"></i> System Online
+                    </div>
+                }
+                else
+                {
+                    <div class="status-badge status-offline">
+                        <i class="fas fa-exclamation-circle"></i> System Offline
+                    </div>
+                }
+            </div>
         </div>
     </div>
+</div>
 
+<div class="container-fluid">
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -47,333 +46,146 @@
 
     @if (Model.Devices.Any())
     {
-        <!-- Statistics Cards (Clickable) -->
-        <div class="row mb-4">
-            <div class="col-md-2">
-                <a asp-page="/Devices/List" class="card-link">
-                    <div class="card text-center bg-primary text-white stat-card">
-                        <div class="card-body">
-                            <h5 class="card-title"><i class="fas fa-desktop"></i> Total Devices</h5>
-                            <p class="display-4">@Model.TotalDevices</p>
+        <!-- Key Metrics - Simplified -->
+        <div class="row g-4 mb-5">
+            <div class="col-lg-3 col-md-6">
+                <a asp-page="/Devices/List" class="metric-card-link">
+                    <div class="metric-card">
+                        <div class="metric-icon bg-primary">
+                            <i class="fas fa-desktop"></i>
                         </div>
-                        <div class="card-footer bg-transparent border-0">
-                            <small><i class="fas fa-arrow-right"></i> View All</small>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            <div class="col-md-2">
-                <a asp-page="/Devices/List" class="card-link">
-                    <div class="card text-center bg-info text-white stat-card">
-                        <div class="card-body">
-                            <h5 class="card-title"><i class="fas fa-heartbeat"></i> Attivi (24h)</h5>
-                            <p class="display-4">@Model.ActiveDevices</p>
-                        </div>
-                        <div class="card-footer bg-transparent border-0">
-                            <small><i class="fas fa-arrow-right"></i> View Active</small>
+                        <div class="metric-content">
+                            <div class="metric-label">Total Devices</div>
+                            <div class="metric-value">@Model.TotalDevices</div>
                         </div>
                     </div>
                 </a>
             </div>
-            <div class="col-md-2">
-                <a asp-page="/Devices/List" class="card-link">
-                    <div class="card text-center bg-secondary text-white stat-card">
-                        <div class="card-body">
-                            <h5 class="card-title"><i class="fas fa-moon"></i> Inattivi (>7d)</h5>
-                            <p class="display-4">@Model.InactiveDevices</p>
+            <div class="col-lg-3 col-md-6">
+                <a asp-page="/Devices/List" asp-route-state="Deployed" class="metric-card-link">
+                    <div class="metric-card">
+                        <div class="metric-icon bg-success">
+                            <i class="fas fa-check-circle"></i>
                         </div>
-                        <div class="card-footer bg-transparent border-0">
-                            <small><i class="fas fa-arrow-right"></i> View Inactive</small>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            <div class="col-md-2">
-                <a asp-page="/Devices/List" asp-route-state="Deployed" class="card-link">
-                    <div class="card text-center bg-success text-white stat-card">
-                        <div class="card-body">
-                            <h5 class="card-title"><i class="fas fa-check"></i> Deployed</h5>
-                            <p class="display-4">@Model.DeployedDevices</p>
-                        </div>
-                        <div class="card-footer bg-transparent border-0">
-                            <small><i class="fas fa-arrow-right"></i> View Deployed</small>
+                        <div class="metric-content">
+                            <div class="metric-label">Deployed</div>
+                            <div class="metric-value">@Model.DeployedDevices</div>
+                            <div class="metric-trend">@Model.CompliancePercentage.ToString("F1")% compliant</div>
                         </div>
                     </div>
                 </a>
             </div>
-            <div class="col-md-2">
-                <a asp-page="/Devices/List" asp-route-state="Pending" class="card-link">
-                    <div class="card text-center bg-warning text-dark stat-card">
-                        <div class="card-body">
-                            <h5 class="card-title"><i class="fas fa-clock"></i> Pending</h5>
-                            <p class="display-4">@Model.PendingDevices</p>
+            <div class="col-lg-3 col-md-6">
+                <a asp-page="/Devices/List" asp-route-state="Pending" class="metric-card-link">
+                    <div class="metric-card">
+                        <div class="metric-icon bg-warning">
+                            <i class="fas fa-clock"></i>
                         </div>
-                        <div class="card-footer bg-transparent border-0">
-                            <small><i class="fas fa-arrow-right"></i> View Pending</small>
+                        <div class="metric-content">
+                            <div class="metric-label">Pending</div>
+                            <div class="metric-value">@Model.PendingDevices</div>
                         </div>
                     </div>
                 </a>
             </div>
-            <div class="col-md-2">
-                <a asp-page="/Devices/List" asp-route-state="Error" class="card-link">
-                    <div class="card text-center bg-danger text-white stat-card">
-                        <div class="card-body">
-                            <h5 class="card-title"><i class="fas fa-times"></i> Error</h5>
-                            <p class="display-4">@Model.ErrorDevices</p>
+            <div class="col-lg-3 col-md-6">
+                <a asp-page="/Devices/List" asp-route-state="Error" class="metric-card-link">
+                    <div class="metric-card">
+                        <div class="metric-icon bg-danger">
+                            <i class="fas fa-exclamation-triangle"></i>
                         </div>
-                        <div class="card-footer bg-transparent border-0">
-                            <small><i class="fas fa-arrow-right"></i> View Errors</small>
+                        <div class="metric-content">
+                            <div class="metric-label">Errors</div>
+                            <div class="metric-value">@Model.ErrorDevices</div>
                         </div>
                     </div>
                 </a>
             </div>
         </div>
 
-        <!-- Command Statistics Row (NEW) -->
-        @if (Model.CommandStats != null)
-        {
-            <div class="row mb-4">
-                <div class="col-md-3">
-                    <a asp-page="/Commands/History" class="card-link">
-                        <div class="card text-center bg-dark text-white stat-card">
-                            <div class="card-body">
-                                <h5 class="card-title"><i class="fas fa-terminal"></i> Total Commands</h5>
-                                <p class="display-4">@Model.CommandStats.TotalCommands</p>
-                            </div>
-                            <div class="card-footer bg-transparent border-0">
-                                <small><i class="fas fa-arrow-right"></i> View All</small>
-                            </div>
+        <!-- Activity Overview -->
+        <div class="row g-4 mb-5">
+            <div class="col-lg-4">
+                <div class="info-card">
+                    <div class="info-card-header">
+                        <h5><i class="fas fa-heartbeat text-info"></i> Activity Status</h5>
+                    </div>
+                    <div class="info-card-body">
+                        <div class="info-row">
+                            <span class="info-label">Active (24h)</span>
+                            <span class="info-value text-info">@Model.ActiveDevices</span>
                         </div>
-                    </a>
-                </div>
-                <div class="col-md-3">
-                    <a asp-page="/Commands/History" asp-route-status="Pending" class="card-link">
-                        <div class="card text-center bg-warning text-dark stat-card">
-                            <div class="card-body">
-                                <h5 class="card-title"><i class="fas fa-clock"></i> Pending Commands</h5>
-                                <p class="display-4">@Model.CommandStats.PendingCount</p>
-                            </div>
-                            <div class="card-footer bg-transparent border-0">
-                                <small><i class="fas fa-arrow-right"></i> View Pending</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-md-3">
-                    <a asp-page="/Commands/History" asp-route-status="Completed" class="card-link">
-                        <div class="card text-center bg-success text-white stat-card">
-                            <div class="card-body">
-                                <h5 class="card-title"><i class="fas fa-check-circle"></i> Completed</h5>
-                                <p class="display-4">@Model.CommandStats.CompletedCount</p>
-                            </div>
-                            <div class="card-footer bg-transparent border-0">
-                                <small><i class="fas fa-arrow-right"></i> View Completed</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-md-3">
-                    <a asp-page="/Commands/History" asp-route-status="Failed" class="card-link">
-                        <div class="card text-center bg-danger text-white stat-card">
-                            <div class="card-body">
-                                <h5 class="card-title"><i class="fas fa-times-circle"></i> Failed</h5>
-                                <p class="display-4">@Model.CommandStats.FailedCount</p>
-                            </div>
-                            <div class="card-footer bg-transparent border-0">
-                                <small><i class="fas fa-arrow-right"></i> View Failed</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-            </div>
-        }
-
-        <!-- Windows Build Security Statistics Row (NEW) -->
-        @if (Model.WindowsBuildStats != null && Model.WindowsBuildStats.TotalDevices > 0)
-        {
-            <div class="row mb-4">
-                <div class="col-12 mb-3">
-                    <h4 class="text-muted">
-                        <i class="fab fa-windows"></i> Windows Build Security
-                    </h4>
-                </div>
-                <div class="col-md-3">
-                    <a asp-page="/Windows/Versions" class="card-link">
-                        <div class="card text-center bg-primary text-white stat-card">
-                            <div class="card-body">
-                                <h5 class="card-title"><i class="fab fa-windows"></i> Tracked Devices</h5>
-                                <p class="display-4">@Model.WindowsBuildStats.TotalDevices</p>
-                            </div>
-                            <div class="card-footer bg-transparent border-0">
-                                <small><i class="fas fa-arrow-right"></i> View Versions</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-md-3">
-                    <a asp-page="/Windows/Versions" class="card-link">
-                        <div class="card text-center bg-success text-white stat-card">
-                            <div class="card-body">
-                                <h5 class="card-title"><i class="fas fa-shield-alt"></i> Secure Builds</h5>
-                                <p class="display-4">@Model.WindowsBuildStats.DevicesWithSecureBuilds</p>
-                                <small>@Model.WindowsBuildStats.SecureBuildPercentage.ToString("F1")%</small>
-                            </div>
-                            <div class="card-footer bg-transparent border-0">
-                                <small><i class="fas fa-arrow-right"></i> View Details</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-md-3">
-                    <a asp-page="/Windows/OutdatedDevices" class="card-link">
-                        <div class="card text-center bg-warning text-dark stat-card">
-                            <div class="card-body">
-                                <h5 class="card-title"><i class="fas fa-exclamation-triangle"></i> Outdated Builds</h5>
-                                <p class="display-4">@Model.WindowsBuildStats.DevicesWithOutdatedBuilds</p>
-                            </div>
-                            <div class="card-footer bg-transparent border-0">
-                                <small><i class="fas fa-arrow-right"></i> View Outdated</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-md-3">
-                    <a asp-page="/Windows/Versions" class="card-link">
-                        <div class="card text-center bg-secondary text-white stat-card">
-                            <div class="card-body">
-                                <h5 class="card-title"><i class="fas fa-question-circle"></i> Unknown Builds</h5>
-                                <p class="display-4">@Model.WindowsBuildStats.DevicesWithUnknownBuilds</p>
-                            </div>
-                            <div class="card-footer bg-transparent border-0">
-                                <small><i class="fas fa-arrow-right"></i> Sync Data</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-            </div>
-        }
-
-
-        <!-- Charts Section -->
-        <div class="row mb-4">
-            <!-- Compliance Pie Chart -->
-            <div class="col-lg-3 col-md-6 mb-4">
-                <a asp-page="/Devices/List" class="card-link">
-                    <div class="card h-100 shadow-sm chart-card">
-                        <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0">
-                                <i class="fas fa-chart-pie"></i> Compliance Status
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <canvas id="complianceChart"></canvas>
-                            <div class="text-center mt-3">
-                                <h4 class="text-primary">@Model.CompliancePercentage.ToString("F1")%</h4>
-                                <p class="text-muted mb-0">Compliant Devices</p>
-                            </div>
-                        </div>
-                        <div class="card-footer bg-light text-center">
-                            <small class="text-muted">
-                                <i class="fas fa-arrow-right"></i> Click for details
-                            </small>
+                        <div class="info-row">
+                            <span class="info-label">Inactive (>7d)</span>
+                            <span class="info-value text-secondary">@Model.InactiveDevices</span>
                         </div>
                     </div>
-                </a>
+                </div>
             </div>
 
-            <!-- Secure Boot Status Pie Chart (NEW) -->
-            <div class="col-lg-3 col-md-6 mb-4">
-                <a asp-page="/Devices/List" class="card-link">
-                    <div class="card h-100 shadow-sm chart-card">
-                        <div class="card-header bg-success text-white">
-                            <h5 class="mb-0">
-                                <i class="fas fa-shield-alt"></i> Secure Boot Status
-                            </h5>
+            <div class="col-lg-4">
+                <div class="info-card">
+                    <div class="info-card-header">
+                        <h5><i class="fas fa-shield-alt text-success"></i> Secure Boot</h5>
+                    </div>
+                    <div class="info-card-body">
+                        <div class="info-row">
+                            <span class="info-label">Enabled</span>
+                            <span class="info-value text-success">@Model.SecureBootEnabledDevices</span>
                         </div>
-                        <div class="card-body">
-                            <canvas id="secureBootChart"></canvas>
-                            <div class="text-center mt-3">
-                                <h4 class="text-success">@Model.SecureBootEnabledPercentage.ToString("F1")%</h4>
-                                <p class="text-muted mb-0">Secure Boot Abilitato</p>
-                            </div>
-                        </div>
-                        <div class="card-footer bg-light text-center">
-                            <small class="text-muted">
-                                <i class="fas fa-arrow-right"></i> Click for details
-                            </small>
+                        <div class="info-row">
+                            <span class="info-label">Disabled</span>
+                            <span class="info-value text-danger">@Model.SecureBootDisabledDevices</span>
                         </div>
                     </div>
-                </a>
+                </div>
             </div>
 
-            <!-- Deployment State Pie Chart -->
-            <div class="col-lg-3 col-md-6 mb-4">
-                <a asp-page="/Devices/List" class="card-link">
-                    <div class="card h-100 shadow-sm chart-card">
-                        <div class="card-header bg-info text-white">
-                            <h5 class="mb-0">
-                                <i class="fas fa-chart-pie"></i> Deployment States
-                            </h5>
+            @if (Model.CommandStats != null)
+            {
+                <div class="col-lg-4">
+                    <div class="info-card">
+                        <div class="info-card-header">
+                            <h5><i class="fas fa-terminal text-dark"></i> Commands</h5>
                         </div>
-                        <div class="card-body">
-                            <canvas id="deploymentStateChart"></canvas>
-                            <div class="text-center mt-3">
-                                <p class="text-muted mb-0">State Distribution</p>
+                        <div class="info-card-body">
+                            <div class="info-row">
+                                <span class="info-label">Total</span>
+                                <span class="info-value">@Model.CommandStats.TotalCommands</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Pending</span>
+                                <span class="info-value text-warning">@Model.CommandStats.PendingCount</span>
                             </div>
                         </div>
-                        <div class="card-footer bg-light text-center">
-                            <small class="text-muted">
-                                <i class="fas fa-arrow-right"></i> Click for details
-                            </small>
+                        <div class="info-card-footer">
+                            <a asp-page="/Commands/History" class="text-decoration-none small">
+                                View all <i class="fas fa-arrow-right"></i>
+                            </a>
                         </div>
                     </div>
-                </a>
-            </div>
-
-            <!-- Compliance Trend Line Chart -->
-            <div class="col-lg-3 col-md-12 mb-4">
-                <a asp-page="/Devices/List" class="card-link">
-                    <div class="card h-100 shadow-sm chart-card">
-                        <div class="card-header bg-warning text-dark">
-                            <h5 class="mb-0">
-                                <i class="fas fa-chart-line"></i> Compliance Trend (7 days)
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <canvas id="complianceTrendChart"></canvas>
-                            <div class="text-center mt-3">
-                                <p class="text-muted mb-0">Compliant Devices Growth</p>
-                            </div>
-                        </div>
-                        <div class="card-footer bg-light text-center">
-                            <small class="text-muted">
-                                <i class="fas fa-arrow-right"></i> Click for details
-                            </small>
-                        </div>
-                    </div>
-                </a>
-            </div>
+                </div>
+            }
         </div>
 
         <!-- Quick Actions -->
-        <div class="row mb-4">
-            <div class="col-md-12">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">
-                            <i class="fas fa-rocket"></i> Quick Actions
-                        </h5>
-                        <div class="d-flex justify-content-center gap-3 mt-3">
-                            <a asp-page="/Devices/List" class="btn btn-primary btn-lg">
-                                <i class="fas fa-list"></i> View All i Dispositivi
-                            </a>
-                            <a asp-page="/Devices/List" asp-route-state="Error" class="btn btn-danger btn-lg">
-                                <i class="fas fa-exclamation-triangle"></i> Manage Errors
-                            </a>
-                            <a asp-page="/Devices/List" asp-route-state="Pending" class="btn btn-warning btn-lg">
-                                <i class="fas fa-clock"></i> Monitor Pending
-                            </a>
-                        </div>
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="quick-actions">
+                    <h5 class="mb-4"><i class="fas fa-bolt"></i> Quick Actions</h5>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a asp-page="/Devices/List" class="btn btn-outline-primary">
+                            <i class="fas fa-list"></i> View All Devices
+                        </a>
+                        <a asp-page="/Devices/Cleanup" class="btn btn-outline-secondary">
+                            <i class="fas fa-trash-alt"></i> Device Cleanup
+                        </a>
+                        <a asp-page="/Windows/Versions" class="btn btn-outline-info">
+                            <i class="fab fa-windows"></i> Windows Versions
+                        </a>
+                        <a asp-page="/Commands/History" class="btn btn-outline-dark">
+                            <i class="fas fa-history"></i> Command History
+                        </a>
                     </div>
                 </div>
             </div>
@@ -381,454 +193,255 @@
     }
     else if (Model.ApiHealthy)
     {
-        <div class="alert alert-info">
-            <h4 class="alert-heading"><i class="fas fa-info-circle"></i> No Registered Devices</h4>
-            <p>Non ci sono dispositivi da visualizzare. I client devono ancora inviare i dati all'API.</p>
-            <hr>
-            <p class="mb-0">
-                <strong>Next steps:</strong>
-            </p>
-            <ol class="mb-0">
-                <li>Configure the SecureBootWatcher client on Windows devices</li>
-                <li>Verify that clients can reach the API</li>
-                <li>Wait for clients to send the first report</li>
-            </ol>
+        <div class="empty-state">
+            <img src="~/images/LogoT.webp" alt="Logo" class="empty-state-logo mb-4">
+            <h3>No Devices Registered</h3>
+            <p class="text-muted">Deploy the SecureBootWatcher client to start monitoring your Windows fleet</p>
+            <a asp-page="/About" class="btn btn-primary mt-3">
+                <i class="fas fa-info-circle"></i> Learn More
+            </a>
         </div>
     }
 </div>
 
 @section Styles {
     <style>
-        /* Hero banner styling */
-        .hero-banner {
-            max-height: 400px;
-            overflow: hidden;
-        }
-        
-        .hero-banner img {
-            object-fit: cover;
-            width: 100%;
-            height: auto;
-            max-height: 400px;
-        }
-        
-        /* Responsive hero banner */
-        @@media (max-width: 768px) {
-            .hero-banner {
-                max-height: 250px;
-            }
-            .hero-banner img {
-                max-height: 250px;
-            }
-        }
-        
-        @@media (max-width: 576px) {
-            .hero-banner {
-                max-height: 200px;
-            }
-            .hero-banner img {
-                max-height: 200px;
-            }
+        /* Modern Hero Section */
+        .modern-hero {
+            padding: 2rem 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 0 0 2rem 2rem;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
-        /* Clickable cards styling */
-        .card-link {
+        .hero-logo {
+            width: 80px;
+            height: 80px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        }
+
+        .hero-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .hero-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 2rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .status-online {
+            background: rgba(40, 167, 69, 0.2);
+            color: #fff;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .status-offline {
+            background: rgba(220, 53, 69, 0.2);
+            color: #fff;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* Metric Cards - Clean & Modern */
+        .metric-card-link {
             text-decoration: none;
             color: inherit;
-            display: block;
         }
 
-        .stat-card {
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-            cursor: pointer;
+        .metric-card {
+            display: flex;
+            align-items: center;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0,0,0,0.05);
         }
 
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.12);
         }
 
-        .stat-card .card-footer {
-            opacity: 0;
-            transition: opacity 0.2s ease-in-out;
+        .metric-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            margin-right: 1rem;
+            flex-shrink: 0;
         }
 
-        .stat-card:hover .card-footer {
-            opacity: 1;
+        .metric-content {
+            flex: 1;
         }
 
-        /* Chart cards */
-        .chart-card {
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-            cursor: pointer;
+        .metric-label {
+            font-size: 0.875rem;
+            color: #6c757d;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
         }
 
-        .chart-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #212529;
+            line-height: 1;
         }
 
-        .chart-card .card-footer {
-            opacity: 0;
-            transition: opacity 0.2s ease-in-out;
+        .metric-trend {
+            font-size: 0.75rem;
+            color: #28a745;
+            margin-top: 0.25rem;
         }
 
-        .chart-card:hover .card-footer {
-            opacity: 1;
+        /* Info Cards */
+        .info-card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            border: 1px solid rgba(0,0,0,0.05);
+            overflow: hidden;
         }
 
-        /* Chart containers */
-        .card-body canvas {
-            max-height: 250px;
+        .info-card-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
         }
 
-        /* Button gap utility (Bootstrap 5) */
-        .gap-3 {
-            gap: 1rem !important;
+        .info-card-header h5 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
         }
 
-        /* Responsive adjustments */
+        .info-card-body {
+            padding: 1.5rem;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+        }
+
+        .info-row:not(:last-child) {
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .info-label {
+            font-size: 0.95rem;
+            color: #6c757d;
+        }
+
+        .info-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .info-card-footer {
+            padding: 1rem 1.5rem;
+            background: rgba(0,0,0,0.02);
+            text-align: center;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            padding: 2rem;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .quick-actions h5 {
+            font-weight: 600;
+            color: #212529;
+        }
+
+        .quick-actions .btn {
+            font-weight: 500;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .empty-state-logo {
+            width: 120px;
+            height: 120px;
+            opacity: 0.7;
+        }
+
+        .empty-state h3 {
+            font-weight: 600;
+            color: #212529;
+            margin-bottom: 1rem;
+        }
+
+        /* Responsive */
         @@media (max-width: 768px) {
-            .d-flex.gap-3 {
-                flex-direction: column;
+            .hero-logo {
+                width: 60px;
+                height: 60px;
+            }
+
+            .hero-title {
+                font-size: 1.75rem;
+            }
+
+            .hero-subtitle {
+                font-size: 0.95rem;
+            }
+
+            .metric-value {
+                font-size: 1.5rem;
+            }
+
+            .status-badge {
+                padding: 0.5rem 1rem;
+                font-size: 0.875rem;
             }
         }
+
+        /* Animations */
+        @@keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .metric-card, .info-card, .quick-actions {
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .metric-card:nth-child(1) { animation-delay: 0.1s; }
+        .metric-card:nth-child(2) { animation-delay: 0.2s; }
+        .metric-card:nth-child(3) { animation-delay: 0.3s; }
+        .metric-card:nth-child(4) { animation-delay: 0.4s; }
     </style>
-}
-
-@section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script>
-        // Chart colors
-        const chartColors = {
-            compliant: 'rgba(40, 167, 69, 0.8)',
-            nonCompliant: 'rgba(220, 53, 69, 0.8)',
-            secureBootEnabled: 'rgba(40, 167, 69, 0.8)',
-            secureBootDisabled: 'rgba(220, 53, 69, 0.8)',
-            secureBootUnknown: 'rgba(108, 117, 125, 0.8)',
-            deployed: 'rgba(40, 167, 69, 0.8)',
-            pending: 'rgba(255, 193, 7, 0.8)',
-            error: 'rgba(220, 53, 69, 0.8)',
-            unknown: 'rgba(108, 117, 125, 0.8)',
-            trend: 'rgba(23, 162, 184, 0.8)'
-        };
-
-        // 1. Compliance Status Pie Chart
-        const complianceCtx = document.getElementById('complianceChart');
-        if (complianceCtx) {
-            new Chart(complianceCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Compliant (Deployed)', 'Non-Compliant'],
-                    datasets: [{
-                        data: [@Model.CompliantDevices, @Model.NonCompliantDevices],
-                        backgroundColor: [chartColors.compliant, chartColors.nonCompliant],
-                        borderWidth: 2,
-                        borderColor: '#fff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 15,
-                                font: {
-                                    size: 12
-                                }
-                            }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const label = context.label || '';
-                                    const value = context.parsed || 0;
-                                    const total = @Model.TotalDevices;
-                                    const percentage = ((value / total) * 100).toFixed(1);
-                                    return `${label}: ${value} (${percentage}%)`;
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // 2. Secure Boot Status Pie Chart (NEW)
-        const secureBootCtx = document.getElementById('secureBootChart');
-        if (secureBootCtx) {
-            new Chart(secureBootCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Enabled', 'Disabled', 'Unknown'],
-                    datasets: [{
-                        data: [
-                            @Model.SecureBootEnabledDevices,
-                            @Model.SecureBootDisabledDevices,
-                            @Model.SecureBootUnknownDevices
-                        ],
-                        backgroundColor: [
-                            chartColors.secureBootEnabled,
-                            chartColors.secureBootDisabled,
-                            chartColors.secureBootUnknown
-                        ],
-                        borderWidth: 2,
-                        borderColor: '#fff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 15,
-                                font: {
-                                    size: 12
-                                }
-                            }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const label = context.label || '';
-                                    const value = context.parsed || 0;
-                                    const total = @Model.TotalDevices;
-                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                    return `${label}: ${value} (${percentage}%)`;
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // 3. Deployment States Pie Chart
-        const deploymentStateCtx = document.getElementById('deploymentStateChart');
-        if (deploymentStateCtx) {
-            new Chart(deploymentStateCtx, {
-                type: 'pie',
-                data: {
-                    labels: ['Deployed', 'Pending', 'Error', 'Unknown'],
-                    datasets: [{
-                        data: [
-                            @Model.DeployedDevices,
-                            @Model.PendingDevices,
-                            @Model.ErrorDevices,
-                            @(Model.TotalDevices - Model.DeployedDevices - Model.PendingDevices - Model.ErrorDevices)
-                        ],
-                        backgroundColor: [
-                            chartColors.deployed,
-                            chartColors.pending,
-                            chartColors.error,
-                            chartColors.unknown
-                        ],
-                        borderWidth: 2,
-                        borderColor: '#fff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 15,
-                                font: {
-                                    size: 12
-                                }
-                            }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const label = context.label || '';
-                                    const value = context.parsed || 0;
-                                    const total = @Model.TotalDevices;
-                                    const percentage = ((value / total) * 100).toFixed(1);
-                                    return `${label}: ${value} (${percentage}%)`;
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // 4. Compliance Trend Line Chart
-        const complianceTrendCtx = document.getElementById('complianceTrendChart');
-        if (complianceTrendCtx) {
-            const trendData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ComplianceTrendData));
-            const labels = Object.keys(trendData).map(date => {
-                const d = new Date(date);
-                return d.toLocaleDateString('it-IT', { month: 'short', day: 'numeric' });
-            });
-            const data = Object.values(trendData);
-
-            new Chart(complianceTrendCtx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Compliant Devices',
-                        data: data,
-                        borderColor: chartColors.trend,
-                        backgroundColor: 'rgba(23, 162, 184, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 4,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: chartColors.trend,
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            callbacks: {
-                                title: function(context) {
-                                    const date = Object.keys(trendData)[context[0].dataIndex];
-                                    return new Date(date).toLocaleDateString('it-IT', { 
-                                        weekday: 'short', 
-                                        year: 'numeric', 
-                                        month: 'short', 
-                                        day: 'numeric' 
-                                    });
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                stepSize: 1
-                            },
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // === SignalR Real-time Updates ===
-        if (window.dashboardClient) {
-            // Subscribe to dashboard updates
-            window.dashboardClient.subscribeToDashboard();
-
-            // Handle new report received
-            window.dashboardClient.onNewReportReceived = function(data) {
-                console.log('[Dashboard] New report received from:', data.machineName);
-                
-                // Show toast notification (already handled by dashboard-realtime.js)
-                // Optionally reload page to show updated statistics
-                // Uncomment the following line if you want automatic page reload:
-                // setTimeout(() => location.reload(), 2000);
-            };
-
-            // Handle compliance updates
-            window.dashboardClient.onComplianceUpdated = function(data) {
-                console.log('[Dashboard] Compliance updated:', data);
-                
-                // Update statistics cards with animation
-                updateStatCards(data);
-                
-                // Update charts
-                updateCharts(data);
-            };
-
-            // Handle device count updates
-            window.dashboardClient.onDeviceCountUpdated = function(data) {
-                console.log('[Dashboard] Device count updated:', data.totalDevices);
-                
-                // Update total devices card
-                const totalDevicesCard = document.querySelector('.bg-primary .display-4');
-                if (totalDevicesCard) {
-                    animateValue(totalDevicesCard, parseInt(totalDevicesCard.textContent), data.totalDevices, 500);
-                }
-            };
-
-            // Function to update stat cards with animation
-            function updateStatCards(data) {
-                const cards = {
-                    total: document.querySelector('.bg-primary .display-4'),
-                    active: document.querySelector('.bg-info .display-4'),
-                    deployed: document.querySelector('.bg-success .display-4'),
-                    pending: document.querySelector('.bg-warning .display-4'),
-                    error: document.querySelector('.bg-danger .display-4')
-                };
-
-                if (cards.total) animateValue(cards.total, parseInt(cards.total.textContent), data.totalDevices, 500);
-                if (cards.active) animateValue(cards.active, parseInt(cards.active.textContent), data.activeDevices, 500);
-                if (cards.deployed) animateValue(cards.deployed, parseInt(cards.deployed.textContent), data.compliantDevices, 500);
-                if (cards.pending) animateValue(cards.pending, parseInt(cards.pending.textContent), data.pendingDevices, 500);
-                if (cards.error) animateValue(cards.error, parseInt(cards.error.textContent), data.errorDevices, 500);
-                
-                // Update compliance percentage
-                const compliancePercentage = document.querySelector('.text-primary h4');
-                if (compliancePercentage) {
-                    compliancePercentage.textContent = data.compliancePercentage.toFixed(1) + '%';
-                    compliancePercentage.classList.add('realtime-updated');
-                    setTimeout(() => compliancePercentage.classList.remove('realtime-updated'), 800);
-                }
-            }
-
-            // Function to animate number changes
-            function animateValue(element, start, end, duration) {
-                const range = end - start;
-                const increment = range / (duration / 16); // 60fps
-                let current = start;
-
-                element.classList.add('realtime-updated');
-                
-                const timer = setInterval(() => {
-                    current += increment;
-                    if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
-                        element.textContent = Math.round(end);
-                        clearInterval(timer);
-                        setTimeout(() => element.classList.remove('realtime-updated'), 800);
-                    } else {
-                        element.textContent = Math.round(current);
-                    }
-                }, 16);
-            }
-
-            // Function to update charts (simplified - full update would require Chart.js update methods)
-            function updateCharts(data) {
-                // For now, just add a visual indicator that charts need refresh
-                const chartCards = document.querySelectorAll('.chart-card');
-                chartCards.forEach(card => {
-                    card.classList.add('realtime-updated');
-                    setTimeout(() => card.classList.remove('realtime-updated'), 800);
-                });
-                
-                // In a full implementation, you would update Chart.js data:
-                // complianceChart.data.datasets[0].data = [data.compliantDevices, data.totalDevices - data.compliantDevices];
-                // complianceChart.update();
-            }
-        } else {
-            console.warn('[Dashboard] SignalR client not available');
-        }
-    </script>
 }
