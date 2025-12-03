@@ -327,4 +327,75 @@ public sealed class SecureBootApiClient : ISecureBootApiClient
             return null;
         }
     }
+
+    // Generic HTTP methods
+    public async Task<T?> GetAsync<T>(string requestUri, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("GET {RequestUri}", requestUri);
+            
+            var response = await _httpClient.GetAsync(requestUri, cancellationToken);
+            
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return default;
+            }
+
+            response.EnsureSuccessStatusCode();
+            
+            return await response.Content.ReadFromJsonAsync<T>(cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "GET request failed: {RequestUri}", requestUri);
+            return default;
+        }
+    }
+
+    public async Task<T?> PostAsync<T>(string requestUri, object? content, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("POST {RequestUri}", requestUri);
+            
+            HttpResponseMessage response;
+            if (content == null)
+            {
+                response = await _httpClient.PostAsync(requestUri, null, cancellationToken);
+            }
+            else
+            {
+                response = await _httpClient.PostAsJsonAsync(requestUri, content, cancellationToken);
+            }
+
+            response.EnsureSuccessStatusCode();
+            
+            return await response.Content.ReadFromJsonAsync<T>(cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "POST request failed: {RequestUri}", requestUri);
+            return default;
+        }
+    }
+
+    public async Task<T?> PutAsync<T>(string requestUri, object content, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("PUT {RequestUri}", requestUri);
+            
+            var response = await _httpClient.PutAsJsonAsync(requestUri, content, cancellationToken);
+
+            response.EnsureSuccessStatusCode();
+            
+            return await response.Content.ReadFromJsonAsync<T>(cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "PUT request failed: {RequestUri}", requestUri);
+            return default;
+        }
+    }
 }

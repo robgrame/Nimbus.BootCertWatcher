@@ -1,0 +1,314 @@
+@page
+@model EditModel
+@{
+    ViewData["Title"] = "Edit Setting";
+}
+
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-page="/Index"><i class="fas fa-home"></i> Dashboard</a></li>
+            <li class="breadcrumb-item"><a asp-page="./Index">Settings</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Edit</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-5">
+                <i class="fas fa-edit text-primary"></i> Edit Setting
+            </h1>
+            @if (Model.Setting != null)
+            {
+                <p class="text-muted">
+                    Category: <span class="badge bg-@Model.Setting.CategoryBadgeColor">@Model.Setting.Category</span>
+                </p>
+            }
+        </div>
+        <div class="col-auto">
+            <a asp-page="./Index" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Settings
+            </a>
+        </div>
+    </div>
+
+    <!-- Error Message -->
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle"></i> @Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (Model.Setting != null)
+    {
+        <!-- Edit Form -->
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-cog"></i> Setting Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post">
+                            <input type="hidden" asp-for="Input.Id" />
+                            <input type="hidden" asp-for="Input.Key" />
+                            <input type="hidden" asp-for="Input.Category" />
+                            <input type="hidden" asp-for="Input.ValueType" />
+                            <input type="hidden" asp-for="Input.Description" />
+                            <input type="hidden" asp-for="Input.IsSensitive" />
+                            <input type="hidden" asp-for="Input.RequiresRestart" />
+
+                            <!-- Key (Read-only) -->
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-key"></i> Key
+                                </label>
+                                <input type="text" class="form-control" value="@Model.Setting.Key" disabled>
+                                <small class="form-text text-muted">
+                                    The setting key cannot be changed.
+                                </small>
+                            </div>
+
+                            <!-- Description (Read-only) -->
+                            @if (!string.IsNullOrEmpty(Model.Setting.Description))
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-info-circle"></i> Description
+                                    </label>
+                                    <div class="alert alert-info mb-0">
+                                        @Model.Setting.Description
+                                    </div>
+                                </div>
+                            }
+
+                            <!-- Value Type (Read-only) -->
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-code"></i> Value Type
+                                </label>
+                                <div>
+                                    <span class="badge bg-secondary">@Model.Setting.ValueType</span>
+                                    <small class="text-muted ms-2">
+                                        @switch (Model.Setting.ValueType.ToLowerInvariant())
+                                        {
+                                            case "string":
+                                                <text>Format: "text" (with quotes for JSON strings)</text>
+                                                break;
+                                            case "int":
+                                                <text>Format: 123</text>
+                                                break;
+                                            case "bool":
+                                                <text>Format: true or false</text>
+                                                break;
+                                            case "timespan":
+                                                <text>Format: 00:00:30 (hours:minutes:seconds)</text>
+                                                break;
+                                            case "datetime":
+                                            case "datetimeoffset":
+                                                <text>Format: 2025-01-14T12:00:00Z</text>
+                                                break;
+                                            case "json":
+                                                <text>Format: Valid JSON object or array</text>
+                                                break;
+                                        }
+                                    </small>
+                                </div>
+                            </div>
+
+                            <!-- Value (Editable) -->
+                            <div class="mb-3">
+                                <label asp-for="Input.Value" class="form-label">
+                                    <i class="fas fa-edit"></i> Value *
+                                </label>
+                                
+                                @if (Model.Setting.ValueType.ToLowerInvariant() == "bool")
+                                {
+                                    <!-- Boolean dropdown -->
+                                    <select asp-for="Input.Value" class="form-select">
+                                        <option value="true">true</option>
+                                        <option value="false">false</option>
+                                    </select>
+                                }
+                                else if (Model.Setting.IsSensitive)
+                                {
+                                    <!-- Password field for sensitive values -->
+                                    <input asp-for="Input.Value" type="password" class="form-control font-monospace" />
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-lock"></i> This is a sensitive value. It will be masked in logs and UI.
+                                    </small>
+                                }
+                                else
+                                {
+                                    <!-- Text input -->
+                                    <input asp-for="Input.Value" type="text" class="form-control font-monospace" />
+                                }
+                                
+                                <span asp-validation-for="Input.Value" class="text-danger"></span>
+                            </div>
+
+                            <!-- Flags -->
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-flag"></i> Flags
+                                </label>
+                                <div>
+                                    @if (Model.Setting.RequiresRestart)
+                                    {
+                                        <div class="alert alert-warning mb-2">
+                                            <i class="fas fa-power-off"></i> 
+                                            <strong>Requires Restart:</strong> Application must be restarted for changes to take effect.
+                                        </div>
+                                    }
+                                    @if (Model.Setting.IsSensitive)
+                                    {
+                                        <div class="alert alert-danger mb-2">
+                                            <i class="fas fa-lock"></i> 
+                                            <strong>Sensitive:</strong> This value contains sensitive information and will be masked.
+                                        </div>
+                                    }
+                                    @if (!Model.Setting.RequiresRestart && !Model.Setting.IsSensitive)
+                                    {
+                                        <div class="alert alert-success mb-2">
+                                            <i class="fas fa-check"></i> 
+                                            <strong>Dynamic:</strong> Changes apply immediately through cache refresh (5 min max).
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Last Updated Info -->
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-history"></i> Last Updated
+                                </label>
+                                <div class="alert alert-secondary mb-0">
+                                    <strong>When:</strong> @Model.Setting.UpdatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss UTC")
+                                    @if (!string.IsNullOrEmpty(Model.Setting.UpdatedBy))
+                                    {
+                                        <br />
+                                        <strong>By:</strong> @Model.Setting.UpdatedBy
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <a asp-page="./Index" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> Cancel
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <!-- Help Card -->
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-lightbulb"></i> Tips</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>Value Formatting</h6>
+                        <ul class="small">
+                            <li><strong>String:</strong> Use JSON format: "value" (with quotes)</li>
+                            <li><strong>Integer:</strong> Plain number: 123</li>
+                            <li><strong>Boolean:</strong> true or false (lowercase)</li>
+                            <li><strong>TimeSpan:</strong> Format: HH:mm:ss</li>
+                            <li><strong>DateTime:</strong> ISO 8601: 2025-01-14T12:00:00Z</li>
+                            <li><strong>JSON:</strong> Valid JSON syntax</li>
+                        </ul>
+
+                        <h6 class="mt-3">Examples</h6>
+                        <ul class="small">
+                            <li><code>"1.5.0.0"</code> - String version</li>
+                            <li><code>10</code> - Integer max messages</li>
+                            <li><code>true</code> - Boolean enabled</li>
+                            <li><code>00:00:30</code> - 30 second interval</li>
+                        </ul>
+
+                        <h6 class="mt-3">Cache Behavior</h6>
+                        <p class="small">
+                            Settings are cached for 5 minutes. Your change will be applied immediately
+                            to the database, but may take up to 5 minutes to appear in running instances.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Category Info -->
+                <div class="card mt-3">
+                    <div class="card-header bg-@Model.Setting.CategoryBadgeColor text-white">
+                        <h5 class="mb-0"><i class="fas fa-folder"></i> Category</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>@Model.Setting.Category</h6>
+                        <p class="small mb-0">
+                            @switch (Model.Setting.Category)
+                            {
+                                case "QueueProcessor":
+                                    <text>Settings for Azure Queue processor background service</text>
+                                    break;
+                                case "ClientUpdate":
+                                    <text>Settings for client update management</text>
+                                    break;
+                                case "SecureBootReadiness":
+                                    <text>Settings for Secure Boot readiness evaluation</text>
+                                    break;
+                                default:
+                                    <text>Application configuration setting</text>
+                                    break;
+                            }
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i> Setting not found.
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    
+    <script>
+        // Auto-dismiss alerts after 5 seconds
+        setTimeout(function() {
+            var alerts = document.querySelectorAll('.alert-dismissible');
+            alerts.forEach(function(alert) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+
+        // Warn before leaving if form is dirty
+        var formChanged = false;
+        document.querySelectorAll('input, select, textarea').forEach(function(element) {
+            element.addEventListener('change', function() {
+                formChanged = true;
+            });
+        });
+
+        window.addEventListener('beforeunload', function(e) {
+            if (formChanged) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        document.querySelector('form').addEventListener('submit', function() {
+            formChanged = false;
+        });
+    </script>
+}

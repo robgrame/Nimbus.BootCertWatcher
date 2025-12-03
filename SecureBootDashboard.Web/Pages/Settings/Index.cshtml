@@ -1,0 +1,295 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Application Settings";
+}
+
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-page="/Index"><i class="fas fa-home"></i> Dashboard</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Application Settings</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-5">
+                <i class="fas fa-cog text-primary"></i> Application Settings
+            </h1>
+            <p class="text-muted">
+                Manage database-driven configuration settings. Most changes apply immediately without restart.
+            </p>
+        </div>
+        <div class="col-auto">
+            <form method="post" asp-page-handler="RefreshCache">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="fas fa-sync-alt"></i> Refresh Cache
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alerts -->
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle"></i> @Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle"></i> @Model.SuccessMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-filter"></i> Filters</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="category" class="form-label">Category</label>
+                    <select name="category" id="category" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Categories</option>
+                        @foreach (var cat in Model.Categories)
+                        {
+                            <option value="@cat" selected="@(cat == Model.SelectedCategory)">@cat</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="search" class="form-label">Search</label>
+                    <input type="text" name="search" id="search" class="form-control" 
+                           placeholder="Search by key or description..." 
+                           value="@Model.SearchQuery">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Total Settings</h6>
+                            <h2 class="mb-0">@Model.Settings.Count</h2>
+                        </div>
+                        <i class="fas fa-cog fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Categories</h6>
+                            <h2 class="mb-0">@Model.Categories.Count</h2>
+                        </div>
+                        <i class="fas fa-folder fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Require Restart</h6>
+                            <h2 class="mb-0">@Model.Settings.Count(s => s.RequiresRestart)</h2>
+                        </div>
+                        <i class="fas fa-power-off fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Sensitive</h6>
+                            <h2 class="mb-0">@Model.Settings.Count(s => s.IsSensitive)</h2>
+                        </div>
+                        <i class="fas fa-lock fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-list"></i> Settings 
+                @if (!string.IsNullOrEmpty(Model.SelectedCategory))
+                {
+                    <span class="badge bg-@(Model.Settings.FirstOrDefault()?.CategoryBadgeColor ?? "secondary")">
+                        @Model.SelectedCategory
+                    </span>
+                }
+            </h5>
+        </div>
+        <div class="card-body">
+            @if (Model.Settings.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Key</th>
+                                <th>Value</th>
+                                <th>Category</th>
+                                <th>Type</th>
+                                <th>Flags</th>
+                                <th>Last Updated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var setting in Model.Settings.OrderBy(s => s.Category).ThenBy(s => s.Key))
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@setting.Key</strong>
+                                        @if (!string.IsNullOrEmpty(setting.Description))
+                                        {
+                                            <br />
+                                            <small class="text-muted">@setting.Description</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        <code>@setting.DisplayValue</code>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@setting.CategoryBadgeColor">
+                                            @setting.Category
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">@setting.ValueType</span>
+                                    </td>
+                                    <td>
+                                        @if (setting.RequiresRestart)
+                                        {
+                                            <span class="badge bg-warning text-dark" title="Requires application restart">
+                                                <i class="fas fa-power-off"></i> Restart
+                                            </span>
+                                        }
+                                        @if (setting.IsSensitive)
+                                        {
+                                            <span class="badge bg-danger" title="Sensitive setting">
+                                                <i class="fas fa-lock"></i> Sensitive
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <small>
+                                            @setting.UpdatedAtUtc.ToString("yyyy-MM-dd HH:mm")
+                                            @if (!string.IsNullOrEmpty(setting.UpdatedBy))
+                                            {
+                                                <br />
+                                                <text>by @setting.UpdatedBy</text>
+                                            }
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <a asp-page="./Edit" asp-route-id="@setting.Id" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle"></i> 
+                    @if (!string.IsNullOrEmpty(Model.SelectedCategory) || !string.IsNullOrEmpty(Model.SearchQuery))
+                    {
+                        <text>No settings match your filters. Try adjusting the filters above.</text>
+                    }
+                    else
+                    {
+                        <text>No settings configured in the database.</text>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Help Card -->
+    <div class="card mt-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fas fa-question-circle"></i> Help</h5>
+        </div>
+        <div class="card-body">
+            <h6>About Application Settings</h6>
+            <p>
+                Application settings are stored in the database and can be modified without editing configuration files.
+                Most settings apply immediately through an in-memory cache with 5-minute expiration.
+            </p>
+            <h6>Setting Flags</h6>
+            <ul>
+                <li><strong><i class="fas fa-power-off"></i> Requires Restart:</strong> Application must be restarted for changes to take effect</li>
+                <li><strong><i class="fas fa-lock"></i> Sensitive:</strong> Values are masked in UI and logs for security</li>
+            </ul>
+            <h6>Cache Management</h6>
+            <p>
+                Settings are cached for 5 minutes to improve performance. Use the "Refresh Cache" button to force
+                an immediate reload if needed.
+            </p>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .opacity-50 {
+            opacity: 0.5;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        // Auto-submit search on Enter key
+        document.getElementById('search').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.form.submit();
+            }
+        });
+        
+        // Auto-dismiss alerts after 5 seconds
+        setTimeout(function() {
+            var alerts = document.querySelectorAll('.alert-dismissible');
+            alerts.forEach(function(alert) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+    </script>
+}

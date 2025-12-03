@@ -196,6 +196,11 @@ try
     // Register Secure Boot Readiness Service
     builder.Services.AddScoped<ISecureBootReadinessService, SecureBootReadinessService>();
 
+    // Configure Application Settings Service (database-driven configuration)
+    Log.Information("Configuring Application Settings Service...");
+    builder.Services.AddMemoryCache();
+    builder.Services.AddScoped<IApplicationSettingsService, ApplicationSettingsService>();
+
     // Configure Azure Queue Processor
     Log.Information("Configuring Queue Processor...");
     var queueConfig = builder.Configuration.GetSection("QueueProcessor");

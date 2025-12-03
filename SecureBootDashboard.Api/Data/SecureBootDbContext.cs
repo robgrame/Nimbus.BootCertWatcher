@@ -25,6 +25,9 @@ namespace SecureBootDashboard.Api.Data
         // Device Cleanup Configuration
         public DbSet<DeviceCleanupConfigEntity> DeviceCleanupConfig => Set<DeviceCleanupConfigEntity>();
 
+        // Application Settings
+        public DbSet<ApplicationSettingEntity> ApplicationSettings => Set<ApplicationSettingEntity>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -145,6 +148,188 @@ namespace SecureBootDashboard.Api.Data
                     CreatedAtUtc = new DateTimeOffset(2025, 1, 14, 0, 0, 0, TimeSpan.Zero),
                     UpdatedAtUtc = new DateTimeOffset(2025, 1, 14, 0, 0, 0, TimeSpan.Zero)
                 });
+            });
+
+            // Application Settings
+            modelBuilder.Entity<ApplicationSettingEntity>(entity =>
+            {
+                entity.ToTable("ApplicationSettings");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Key).HasMaxLength(200).IsRequired();
+                entity.Property(e => e.Value).HasColumnType("nvarchar(max)").IsRequired();
+                entity.Property(e => e.Category).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.ValueType).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.UpdatedBy).HasMaxLength(256);
+                entity.HasIndex(e => e.Key).IsUnique();
+                entity.HasIndex(e => e.Category);
+                
+                // Seed default settings from appsettings.json
+                var now = new DateTimeOffset(2025, 1, 14, 12, 0, 0, TimeSpan.Zero);
+                
+                entity.HasData(
+                    // QueueProcessor settings
+                    new ApplicationSettingEntity
+                    {
+                        Id = 1,
+                        Key = "QueueProcessor:Enabled",
+                        Value = "true",
+                        Category = "QueueProcessor",
+                        ValueType = "bool",
+                        Description = "Enable or disable the queue processor background service",
+                        IsSensitive = false,
+                        RequiresRestart = true,
+                        CreatedAtUtc = now,
+                        UpdatedAtUtc = now
+                    },
+                    new ApplicationSettingEntity
+                    {
+                        Id = 2,
+                        Key = "QueueProcessor:MaxMessages",
+                        Value = "10",
+                        Category = "QueueProcessor",
+                        ValueType = "int",
+                        Description = "Maximum number of messages to process in each batch",
+                        IsSensitive = false,
+                        RequiresRestart = false,
+                        CreatedAtUtc = now,
+                        UpdatedAtUtc = now
+                    },
+                    new ApplicationSettingEntity
+                    {
+                        Id = 3,
+                        Key = "QueueProcessor:ProcessingInterval",
+                        Value = "00:00:02",
+                        Category = "QueueProcessor",
+                        ValueType = "timespan",
+                        Description = "Interval between queue processing cycles when messages are present",
+                        IsSensitive = false,
+                        RequiresRestart = false,
+                        CreatedAtUtc = now,
+                        UpdatedAtUtc = now
+                    },
+                    new ApplicationSettingEntity
+                    {
+                        Id = 4,
+                        Key = "QueueProcessor:EmptyQueuePollInterval",
+                        Value = "00:00:10",
+                        Category = "QueueProcessor",
+                        ValueType = "timespan",
+                        Description = "Interval to check queue when it was previously empty",
+                        IsSensitive = false,
+                        RequiresRestart = false,
+                        CreatedAtUtc = now,
+                        UpdatedAtUtc = now
+                    },
+                    
+                    // ClientUpdate settings
+                    new ApplicationSettingEntity
+                    {
+                        Id = 5,
+                        Key = "ClientUpdate:LatestVersion",
+                        Value = "\"1.5.0.0\"",
+                        Category = "ClientUpdate",
+                        ValueType = "string",
+                        Description = "Latest available client version",
+                        IsSensitive = false,
+                        RequiresRestart = false,
+                        CreatedAtUtc = now,
+                        UpdatedAtUtc = now
+                    },
+                    new ApplicationSettingEntity
+                    {
+                        Id = 6,
+                        Key = "ClientUpdate:MinimumVersion",
+                        Value = "\"1.3.0.0\"",
+                        Category = "ClientUpdate",
+                        ValueType = "string",
+                        Description = "Minimum supported client version",
+                        IsSensitive = false,
+                        RequiresRestart = false,
+                        CreatedAtUtc = now,
+                        UpdatedAtUtc = now
+                    },
+                    new ApplicationSettingEntity
+                    {
+                        Id = 7,
+                        Key = "ClientUpdate:IsUpdateRequired",
+                        Value = "false",
+                        Category = "ClientUpdate",
+                        ValueType = "bool",
+                        Description = "Whether client update is mandatory",
+                        IsSensitive = false,
+                        RequiresRestart = false,
+                        CreatedAtUtc = now,
+                        UpdatedAtUtc = now
+                    },
+                    new ApplicationSettingEntity
+                    {
+                        Id = 8,
+                        Key = "ClientUpdate:DownloadUrl",
+                        Value = "\"https://secbootcert.queue.core.windows.net/client-packages/SecureBootWatcher-Client-latest.zip\"",
+                        Category = "ClientUpdate",
+                        ValueType = "string",
+                        Description = "URL to download the latest client package",
+                        IsSensitive = false,
+                        RequiresRestart = false,
+                        CreatedAtUtc = now,
+                        UpdatedAtUtc = now
+                    },
+                    
+                    // SecureBootReadiness settings
+                    new ApplicationSettingEntity
+                    {
+                        Id = 9,
+                        Key = "SecureBootReadiness:CertificateExpirationWarningDays",
+                        Value = "1095",
+                        Category = "SecureBootReadiness",
+                        ValueType = "int",
+                        Description = "Days before expiration to show warning (3 years)",
+                        IsSensitive = false,
+                        RequiresRestart = false,
+                        CreatedAtUtc = now,
+                        UpdatedAtUtc = now
+                    },
+                    new ApplicationSettingEntity
+                    {
+                        Id = 10,
+                        Key = "SecureBootReadiness:CertificateExpirationCriticalDays",
+                        Value = "365",
+                        Category = "SecureBootReadiness",
+                        ValueType = "int",
+                        Description = "Days before expiration to show critical alert (1 year)",
+                        IsSensitive = false,
+                        RequiresRestart = false,
+                        CreatedAtUtc = now,
+                        UpdatedAtUtc = now
+                    },
+                    new ApplicationSettingEntity
+                    {
+                        Id = 11,
+                        Key = "SecureBootReadiness:RequireWindowsUEFICA2023",
+                        Value = "true",
+                        Category = "SecureBootReadiness",
+                        ValueType = "bool",
+                        Description = "Require Windows UEFI CA 2023 certificate for readiness",
+                        IsSensitive = false,
+                        RequiresRestart = false,
+                        CreatedAtUtc = now,
+                        UpdatedAtUtc = now
+                    },
+                    new ApplicationSettingEntity
+                    {
+                        Id = 12,
+                        Key = "SecureBootReadiness:RequireOemCertificatesValid",
+                        Value = "true",
+                        Category = "SecureBootReadiness",
+                        ValueType = "bool",
+                        Description = "Require OEM certificates to be valid (not expired)",
+                        IsSensitive = false,
+                        RequiresRestart = false,
+                        CreatedAtUtc = now,
+                        UpdatedAtUtc = now
+                    }
+                );
             });
         }
     }

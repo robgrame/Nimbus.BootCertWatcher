@@ -24,6 +24,11 @@ public interface ISecureBootApiClient
     Task<CleanupConfigResponse?> GetCleanupConfigAsync(CancellationToken cancellationToken = default);
     Task<CleanupPreviewResponse?> GetCleanupPreviewAsync(int? daysThreshold = null, CancellationToken cancellationToken = default);
     Task<bool> CheckHealthAsync(CancellationToken cancellationToken = default);
+    
+    // Generic HTTP methods for any API endpoint
+    Task<T?> GetAsync<T>(string requestUri, CancellationToken cancellationToken = default);
+    Task<T?> PostAsync<T>(string requestUri, object? content, CancellationToken cancellationToken = default);
+    Task<T?> PutAsync<T>(string requestUri, object content, CancellationToken cancellationToken = default);
 }
 
 // DTOs for device endpoints
