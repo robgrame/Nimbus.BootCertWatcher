@@ -32,6 +32,14 @@ namespace SecureBootDashboard.Api.Configuration
         public bool ValidateCertificateChain { get; set; } = true;
 
         /// <summary>
+        /// Check certificate revocation status (requires network access to CRL/OCSP).
+        /// When true, validates if certificates have been revoked.
+        /// When false, revocation status is not checked (faster but less secure).
+        /// Default: false (for compatibility with self-signed certificates and air-gapped environments)
+        /// </summary>
+        public bool CheckCertificateRevocation { get; set; } = false;
+
+        /// <summary>
         /// Require client certificate for all API requests.
         /// If false, certificate authentication is optional (401 if invalid, but allowed if missing).
         /// If true, requests without certificates are rejected (401).

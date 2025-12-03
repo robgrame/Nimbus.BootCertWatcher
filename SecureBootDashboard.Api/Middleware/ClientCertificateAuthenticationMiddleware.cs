@@ -92,7 +92,12 @@ namespace SecureBootDashboard.Api.Middleware
                 if (_options.ValidateCertificateChain)
                 {
                     using var chain = new X509Chain();
-                    chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck; // Can be adjusted based on requirements
+                    
+                    // Configure revocation checking based on options
+                    chain.ChainPolicy.RevocationMode = _options.CheckCertificateRevocation 
+                        ? X509RevocationMode.Online 
+                        : X509RevocationMode.NoCheck;
+                    
                     chain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority;
 
                     if (!chain.Build(certificate))

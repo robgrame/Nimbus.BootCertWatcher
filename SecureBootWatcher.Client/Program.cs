@@ -271,7 +271,14 @@ namespace SecureBootWatcher.Client
 					// Configure client certificate if enabled
 					if (options.Sinks.WebApi.UseClientCertificate)
 					{
-						var cert = LoadClientCertificate(options.Sinks.WebApi);
+						var cert = SecureBootWatcher.Shared.Security.CertificateLoader.LoadCertificate(
+							thumbprint: options.Sinks.WebApi.ClientCertificateThumbprint,
+							storeLocation: options.Sinks.WebApi.ClientCertificateStoreLocation,
+							storeName: options.Sinks.WebApi.ClientCertificateStoreName,
+							certificatePath: options.Sinks.WebApi.ClientCertificatePath,
+							certificatePassword: options.Sinks.WebApi.ClientCertificatePassword,
+							logger: msg => Log.Information(msg));
+							
 						if (cert != null)
 						{
 							handler.ClientCertificates.Add(cert);
@@ -324,69 +331,6 @@ namespace SecureBootWatcher.Client
 			});
 
 			return services.BuildServiceProvider();
-		}
-
-		private static System.Security.Cryptography.X509Certificates.X509Certificate2? LoadClientCertificate(WebApiSinkOptions options)
-		{
-			try
-			{
-				// Try loading from certificate store first (preferred method)
-				if (!string.IsNullOrEmpty(options.ClientCertificateThumbprint))
-				{
-					var storeLocation = options.ClientCertificateStoreLocation.Equals("LocalMachine", StringComparison.OrdinalIgnoreCase)
-						? System.Security.Cryptography.X509Certificates.StoreLocation.LocalMachine
-						: System.Security.Cryptography.X509Certificates.StoreLocation.CurrentUser;
-
-					var storeName = Enum.TryParse<System.Security.Cryptography.X509Certificates.StoreName>(options.ClientCertificateStoreName, true, out var parsedStoreName)
-						? parsedStoreName
-						: System.Security.Cryptography.X509Certificates.StoreName.My;
-
-					using (var store = new System.Security.Cryptography.X509Certificates.X509Store(storeName, storeLocation))
-					{
-						store.Open(System.Security.Cryptography.X509Certificates.OpenFlags.ReadOnly);
-						var certs = store.Certificates.Find(
-							System.Security.Cryptography.X509Certificates.X509FindType.FindByThumbprint,
-							options.ClientCertificateThumbprint.Replace(" ", "").Replace(":", ""),
-							validOnly: false);
-
-						if (certs.Count > 0)
-						{
-							Log.Information("Client certificate loaded from store: {StoreLocation}\\{StoreName}", storeLocation, storeName);
-							return certs[0];
-						}
-						else
-						{
-							Log.Warning("Certificate with thumbprint {Thumbprint} not found in {StoreLocation}\\{StoreName}",
-								options.ClientCertificateThumbprint, storeLocation, storeName);
-						}
-					}
-				}
-
-				// Try loading from file path as fallback
-				if (!string.IsNullOrEmpty(options.ClientCertificatePath))
-				{
-					if (System.IO.File.Exists(options.ClientCertificatePath))
-					{
-						var cert = string.IsNullOrEmpty(options.ClientCertificatePassword)
-							? new System.Security.Cryptography.X509Certificates.X509Certificate2(options.ClientCertificatePath)
-							: new System.Security.Cryptography.X509Certificates.X509Certificate2(options.ClientCertificatePath, options.ClientCertificatePassword);
-
-						Log.Information("Client certificate loaded from file: {Path}", options.ClientCertificatePath);
-						return cert;
-					}
-					else
-					{
-						Log.Warning("Certificate file not found: {Path}", options.ClientCertificatePath);
-					}
-				}
-
-				return null;
-			}
-			catch (Exception ex)
-			{
-				Log.Error(ex, "Error loading client certificate");
-				return null;
-			}
 		}
 
 		private static void LogConfiguration(SecureBootWatcherOptions options)
