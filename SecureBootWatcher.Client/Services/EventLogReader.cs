@@ -37,15 +37,30 @@ namespace SecureBootWatcher.Client.Services
 
         public async Task<IReadOnlyList<SecureBootEventRecord>> ReadRecentEventsAsync(CancellationToken cancellationToken)
         {
+            _logger.LogDebug("EventLogReader.ReadRecentEventsAsync: Starting event log query");
+            
             var options = _options.CurrentValue;
             var records = new List<SecureBootEventRecord>();
             var since = DateTimeOffset.UtcNow - options.EventLookbackPeriod;
 
+            _logger.LogTrace("EventLogReader.ReadRecentEventsAsync: Base lookback period={Period}, since={Since}", 
+                options.EventLookbackPeriod, since);
+
             var checkpoint = await _checkpointStore.GetLastCheckpointAsync(cancellationToken).ConfigureAwait(false);
             if (checkpoint.HasValue && checkpoint.Value > since)
             {
+                _logger.LogDebug("EventLogReader.ReadRecentEventsAsync: Using checkpoint {Checkpoint} (more recent than lookback)", 
+                    checkpoint.Value);
                 since = checkpoint.Value;
             }
+            else if (checkpoint.HasValue)
+            {
+                _logger.LogTrace("EventLogReader.ReadRecentEventsAsync: Checkpoint {Checkpoint} is older than lookback, using lookback", 
+                    checkpoint.Value);
+            }
+
+            _logger.LogDebug("EventLogReader.ReadRecentEventsAsync: Querying {ChannelCount} event channels since {Since}", 
+                options.EventChannels?.Length ?? 0, since);
 
             foreach (var channel in options.EventChannels ?? Array.Empty<string>())
             {
@@ -56,24 +71,34 @@ namespace SecureBootWatcher.Client.Services
 
                 try
                 {
+                    _logger.LogTrace("EventLogReader.ReadRecentEventsAsync: Querying channel '{Channel}'", channel);
+                    int channelEventCount = 0;
+                    
                     foreach (var record in QueryChannel(channel, since))
                     {
                         records.Add(record);
+                        channelEventCount++;
                     }
+                    
+                    _logger.LogDebug("EventLogReader.ReadRecentEventsAsync: Found {Count} events in channel '{Channel}'", 
+                        channelEventCount, channel);
                 }
                 catch (EventLogNotFoundException ex)
                 {
-                    _logger.LogWarning(ex, "Secure Boot event channel '{Channel}' was not found on this device.", channel);
+                    _logger.LogWarning(ex, "EventLogReader.ReadRecentEventsAsync: Secure Boot event channel '{Channel}' was not found on this device.", channel);
                 }
                 catch (UnauthorizedAccessException ex)
                 {
-                    _logger.LogError(ex, "Access denied while reading Secure Boot events from channel '{Channel}'.", channel);
+                    _logger.LogError(ex, "EventLogReader.ReadRecentEventsAsync: Access denied while reading Secure Boot events from channel '{Channel}'.", channel);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Unexpected error while reading Secure Boot events from channel '{Channel}'.", channel);
+                    _logger.LogError(ex, "EventLogReader.ReadRecentEventsAsync: Unexpected error while reading Secure Boot events from channel '{Channel}'.", channel);
                 }
             }
+
+            _logger.LogInformation("EventLogReader.ReadRecentEventsAsync: Retrieved {TotalCount} total Secure Boot events across all channels", 
+                records.Count);
 
             if (records.Count > 0)
             {
@@ -88,8 +113,13 @@ namespace SecureBootWatcher.Client.Services
 
                 if (newest > DateTimeOffset.MinValue)
                 {
+                    _logger.LogDebug("EventLogReader.ReadRecentEventsAsync: Updating checkpoint to {NewCheckpoint}", newest);
                     await _checkpointStore.SetCheckpointAsync(newest, cancellationToken).ConfigureAwait(false);
                 }
+            }
+            else
+            {
+                _logger.LogDebug("EventLogReader.ReadRecentEventsAsync: No new events found");
             }
 
             return records;
