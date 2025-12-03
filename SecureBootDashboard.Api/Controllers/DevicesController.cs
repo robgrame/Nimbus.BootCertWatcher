@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SecureBootDashboard.Api.Data;
@@ -36,6 +38,8 @@ namespace SecureBootDashboard.Api.Controllers
         /// Get all devices with their latest report summary
         /// </summary>
         [HttpGet]
+        [OutputCache(PolicyName = "DeviceList")]
+        [EnableRateLimiting("api")]
         public async Task<IReadOnlyCollection<DeviceSummaryResponse>> GetDevicesAsync(CancellationToken cancellationToken)
         {
             _logger.LogDebug("GetDevicesAsync: Retrieving all devices with latest report summaries");
@@ -267,6 +271,8 @@ namespace SecureBootDashboard.Api.Controllers
         /// Get device details by ID
         /// </summary>
         [HttpGet("{id:guid}")]
+        [OutputCache(PolicyName = "DeviceDetails")]
+        [EnableRateLimiting("api")]
         public async Task<ActionResult<DeviceDetailResponse>> GetDeviceAsync(Guid id, CancellationToken cancellationToken)
         {
             var device = await _dbContext.Devices

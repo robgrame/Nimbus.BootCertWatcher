@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using SecureBootDashboard.Api.Hubs;
@@ -31,6 +32,7 @@ namespace SecureBootDashboard.Api.Controllers
         }
 
         [HttpPost]
+        [EnableRateLimiting("concurrent")]
         public async Task<IActionResult> IngestAsync([FromBody] SecureBootStatusReport? report)
         {
             _logger.LogDebug("IngestAsync: Received report ingestion request from {RemoteIp}", HttpContext.Connection.RemoteIpAddress);

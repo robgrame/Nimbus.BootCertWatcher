@@ -8,6 +8,12 @@ using SecureBootWatcher.Shared.Storage;
 using Serilog;
 using Serilog.Events;
 using System.Reflection;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
+using System.IO.Compression;
+using Microsoft.AspNetCore.ResponseCompression;
+using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 // Configure Serilog before building the app
 var workspaceRoot = Directory.GetParent(AppContext.BaseDirectory)?.Parent?.Parent?.Parent?.Parent?.FullName ?? AppContext.BaseDirectory;
@@ -113,9 +119,39 @@ try
     }
 
     Log.Information("Configuring DbContext...");
+    
+    // Configure Performance Options
+    Log.Information("Configuring Performance Options...");
+    builder.Services.Configure<PerformanceOptions>(builder.Configuration.GetSection("Performance"));
+    var perfConfig = builder.Configuration.GetSection("Performance").Get<PerformanceOptions>();
+    
+    // Build connection string with performance settings
+    var connectionStringBuilder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(connectionString);
+    if (perfConfig?.Database != null)
+    {
+        connectionStringBuilder.MaxPoolSize = perfConfig.Database.MaxPoolSize;
+        connectionStringBuilder.MinPoolSize = perfConfig.Database.MinPoolSize;
+        connectionStringBuilder.ConnectTimeout = perfConfig.Database.CommandTimeout;
+        connectionStringBuilder.MultipleActiveResultSets = true;
+        connectionString = connectionStringBuilder.ConnectionString;
+        
+        Log.Information("Database Performance Settings:");
+        Log.Information("  Max Pool Size: {MaxPoolSize}", perfConfig.Database.MaxPoolSize);
+        Log.Information("  Min Pool Size: {MinPoolSize}", perfConfig.Database.MinPoolSize);
+        Log.Information("  Command Timeout: {CommandTimeout}s", perfConfig.Database.CommandTimeout);
+    }
+    
     builder.Services.AddDbContext<SecureBootDbContext>(options =>
     {
-        options.UseSqlServer(connectionString);
+        options.UseSqlServer(connectionString, sqlOptions =>
+        {
+            sqlOptions.CommandTimeout(perfConfig?.Database?.CommandTimeout ?? 30);
+            if (perfConfig?.Database?.EnableQuerySplitting == true)
+            {
+                sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+            }
+        });
+        
         // Disable sensitive data logging in production
         if (builder.Environment.IsDevelopment())
         {
@@ -123,7 +159,138 @@ try
         }
     });
 
-    builder.Services.AddHealthChecks();
+    // Configure Health Checks with database connectivity
+    Log.Information("Configuring Health Checks...");
+    builder.Services.AddHealthChecks()
+        .AddSqlServer(
+            connectionString: connectionString ?? throw new InvalidOperationException("SQL Server connection string is required"),
+            name: "database",
+            timeout: TimeSpan.FromSeconds(5),
+            tags: new[] { "db", "sql", "sqlserver" });
+    Log.Information("Health checks configured with SQL Server connectivity check");
+
+    // Configure Response Compression
+    if (perfConfig?.Compression?.Enabled == true)
+    {
+        Log.Information("Configuring Response Compression...");
+        builder.Services.AddResponseCompression(options =>
+        {
+            options.EnableForHttps = true;
+            options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
+            options.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+        });
+        
+        builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+        {
+            options.Level = perfConfig.Compression.Level switch
+            {
+                "Fastest" => CompressionLevel.Fastest,
+                "SmallestSize" => CompressionLevel.SmallestSize,
+                _ => CompressionLevel.Optimal
+            };
+        });
+        
+        builder.Services.Configure<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProviderOptions>(options =>
+        {
+            options.Level = perfConfig.Compression.Level switch
+            {
+                "Fastest" => CompressionLevel.Fastest,
+                "SmallestSize" => CompressionLevel.SmallestSize,
+                _ => CompressionLevel.Optimal
+            };
+        });
+        
+        Log.Information("  Compression Level: {Level}", perfConfig.Compression.Level);
+    }
+
+    // Configure Output Caching
+    if (perfConfig?.OutputCaching?.Enabled == true)
+    {
+        Log.Information("Configuring Output Caching...");
+        if (perfConfig.OutputCaching.UseRedis && !string.IsNullOrEmpty(perfConfig.OutputCaching.RedisConnectionString))
+        {
+            Log.Information("  Using Redis distributed cache");
+            builder.Services.AddStackExchangeRedisOutputCache(options =>
+            {
+                options.Configuration = perfConfig.OutputCaching.RedisConnectionString;
+            });
+        }
+        else
+        {
+            Log.Information("  Using in-memory cache");
+            builder.Services.AddOutputCache(options =>
+            {
+                // Default policy for most endpoints
+                options.AddBasePolicy(builder =>
+                {
+                    builder.Expire(TimeSpan.FromSeconds(30));
+                });
+                
+                // Device list policy
+                options.AddPolicy("DeviceList", builder =>
+                {
+                    builder.Expire(TimeSpan.FromSeconds(perfConfig.OutputCaching.DeviceListCacheDuration))
+                           .SetVaryByQuery("*");
+                });
+                
+                // Device details policy
+                options.AddPolicy("DeviceDetails", builder =>
+                {
+                    builder.Expire(TimeSpan.FromSeconds(perfConfig.OutputCaching.DeviceDetailsCacheDuration))
+                           .SetVaryByRouteValue("id");
+                });
+                
+                // Statistics policy
+                options.AddPolicy("Statistics", builder =>
+                {
+                    builder.Expire(TimeSpan.FromSeconds(perfConfig.OutputCaching.StatisticsCacheDuration));
+                });
+            });
+        }
+    }
+
+    // Configure Rate Limiting
+    if (perfConfig?.RateLimiting?.Enabled == true)
+    {
+        Log.Information("Configuring Rate Limiting...");
+        builder.Services.AddRateLimiter(options =>
+        {
+            // Sliding window rate limiter for API endpoints
+            options.AddSlidingWindowLimiter("api", limiterOptions =>
+            {
+                limiterOptions.PermitLimit = perfConfig.RateLimiting.PermitLimit;
+                limiterOptions.Window = TimeSpan.FromSeconds(perfConfig.RateLimiting.WindowSeconds);
+                limiterOptions.SegmentsPerWindow = 4;
+                limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                limiterOptions.QueueLimit = perfConfig.RateLimiting.QueueLimit;
+            });
+            
+            // Concurrency limiter for expensive operations
+            options.AddConcurrencyLimiter("concurrent", limiterOptions =>
+            {
+                limiterOptions.PermitLimit = perfConfig.RateLimiting.ConcurrencyLimit;
+                limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                limiterOptions.QueueLimit = perfConfig.RateLimiting.QueueLimit;
+            });
+            
+            // Higher limits for health checks
+            options.AddFixedWindowLimiter("health", limiterOptions =>
+            {
+                limiterOptions.PermitLimit = 100;
+                limiterOptions.Window = TimeSpan.FromSeconds(1);
+            });
+            
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        });
+        
+        Log.Information("  Permit Limit: {PermitLimit} per {WindowSeconds}s", 
+            perfConfig.RateLimiting.PermitLimit, 
+            perfConfig.RateLimiting.WindowSeconds);
+        Log.Information("  Concurrency Limit: {ConcurrencyLimit}", 
+            perfConfig.RateLimiting.ConcurrencyLimit);
+        Log.Information("  Queue Limit: {QueueLimit}", 
+            perfConfig.RateLimiting.QueueLimit);
+    }
 
     Log.Information("Configuring Storage services...");
     builder.Services.Configure<FileReportStoreOptions>(builder.Configuration.GetSection("Storage:File"));
@@ -243,13 +410,39 @@ try
     }
 
     app.UseHttpsRedirection();
+    
+    // Enable Response Compression (before CORS and routing)
+    if (perfConfig?.Compression?.Enabled == true)
+    {
+        app.UseResponseCompression();
+        Log.Information("Response Compression middleware enabled");
+    }
 
     // Enable CORS before routing
     app.UseCors("AllowWebApp");
     Log.Information("CORS middleware enabled");
+    
+    // Enable Rate Limiting
+    if (perfConfig?.RateLimiting?.Enabled == true)
+    {
+        app.UseRateLimiter();
+        Log.Information("Rate Limiting middleware enabled");
+    }
+    
+    // Enable Output Caching
+    if (perfConfig?.OutputCaching?.Enabled == true)
+    {
+        app.UseOutputCache();
+        Log.Information("Output Caching middleware enabled");
+    }
 
     app.MapControllers();
-    app.MapHealthChecks("/health");
+    
+    // Enhanced health checks with details
+    app.MapHealthChecks("/health", new HealthCheckOptions
+    {
+        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+    });
     
     // Map SignalR hub
     app.MapHub<DashboardHub>("/dashboardHub");
