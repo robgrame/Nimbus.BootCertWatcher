@@ -122,8 +122,59 @@ using System.Reflection;
             Log.Warning("API Base URL not configured!");
         }
 
-        // Register HttpClient for API communication
-        builder.Services.AddHttpClient<ISecureBootApiClient, SecureBootApiClient>();
+        // Log client certificate configuration
+        var useClientCert = builder.Configuration.GetValue<bool>("ApiSettings:UseClientCertificate");
+        if (useClientCert)
+        {
+            Log.Information("Client certificate authentication enabled for API calls");
+            var thumbprint = builder.Configuration["ApiSettings:ClientCertificateThumbprint"];
+            var certPath = builder.Configuration["ApiSettings:ClientCertificatePath"];
+            
+            if (!string.IsNullOrEmpty(thumbprint))
+            {
+                Log.Information("  Using certificate from store with thumbprint: {Thumbprint}", thumbprint);
+            }
+            else if (!string.IsNullOrEmpty(certPath))
+            {
+                Log.Information("  Using certificate from file: {Path}", certPath);
+            }
+            else
+            {
+                Log.Warning("  Client certificate enabled but no thumbprint or path configured!");
+            }
+        }
+
+        // Register HttpClient for API communication with client certificate support
+        builder.Services.AddHttpClient<ISecureBootApiClient, SecureBootApiClient>()
+            .ConfigurePrimaryHttpMessageHandler(sp =>
+            {
+                var apiSettings = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ApiSettings>>().Value;
+                var handler = new HttpClientHandler();
+                
+                // Configure client certificate if enabled
+                if (apiSettings.UseClientCertificate)
+                {
+                    var cert = SecureBootWatcher.Shared.Security.CertificateLoader.LoadCertificate(
+                        thumbprint: apiSettings.ClientCertificateThumbprint,
+                        storeLocation: apiSettings.ClientCertificateStoreLocation,
+                        storeName: apiSettings.ClientCertificateStoreName,
+                        certificatePath: apiSettings.ClientCertificatePath,
+                        certificatePassword: apiSettings.ClientCertificatePassword,
+                        logger: msg => Log.Information(msg));
+                        
+                    if (cert != null)
+                    {
+                        handler.ClientCertificates.Add(cert);
+                        Log.Information("Client certificate configured for API client (Thumbprint: {Thumbprint})", cert.Thumbprint);
+                    }
+                    else
+                    {
+                        Log.Warning("Client certificate authentication enabled but certificate could not be loaded");
+                    }
+                }
+                
+                return handler;
+            });
 
         var app = builder.Build();
 

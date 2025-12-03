@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -260,7 +261,37 @@ namespace SecureBootWatcher.Client
 				builder.AddSerilog(dispose: false);
 			});
 
-			services.AddHttpClient("SecureBootIngestion");
+			// Configure HttpClient with client certificate support
+			services.AddHttpClient("SecureBootIngestion")
+				.ConfigurePrimaryHttpMessageHandler(sp =>
+				{
+					var options = sp.GetRequiredService<IOptionsMonitor<SecureBootWatcherOptions>>().CurrentValue;
+					var handler = new HttpClientHandler();
+					
+					// Configure client certificate if enabled
+					if (options.Sinks.WebApi.UseClientCertificate)
+					{
+						var cert = SecureBootWatcher.Shared.Security.CertificateLoader.LoadCertificate(
+							thumbprint: options.Sinks.WebApi.ClientCertificateThumbprint,
+							storeLocation: options.Sinks.WebApi.ClientCertificateStoreLocation,
+							storeName: options.Sinks.WebApi.ClientCertificateStoreName,
+							certificatePath: options.Sinks.WebApi.ClientCertificatePath,
+							certificatePassword: options.Sinks.WebApi.ClientCertificatePassword,
+							logger: msg => Log.Information(msg));
+							
+						if (cert != null)
+						{
+							handler.ClientCertificates.Add(cert);
+							Log.Information("Client certificate configured for API authentication (Thumbprint: {Thumbprint})", cert.Thumbprint);
+						}
+						else
+						{
+							Log.Warning("Client certificate authentication enabled but certificate could not be loaded");
+						}
+					}
+					
+					return handler;
+				});
 
 			services.AddSecureBootWatcherOptions(configuration);
 
