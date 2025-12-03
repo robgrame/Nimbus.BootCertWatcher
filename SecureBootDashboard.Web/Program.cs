@@ -113,17 +113,104 @@ using System.Reflection;
         
         // Log API Base URL
         var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"];
+        var useCertAuth = builder.Configuration.GetValue<bool>("ApiSettings:UseCertificateAuth");
         if (!string.IsNullOrEmpty(apiBaseUrl))
         {
             Log.Information("API Base URL: {ApiBaseUrl}", apiBaseUrl);
+            Log.Information("API Certificate Authentication: {Enabled}", useCertAuth ? "Enabled" : "Disabled");
         }
         else
         {
             Log.Warning("API Base URL not configured!");
         }
 
-        // Register HttpClient for API communication
-        builder.Services.AddHttpClient<ISecureBootApiClient, SecureBootApiClient>();
+        // Register HttpClient for API communication with certificate support
+        builder.Services.AddHttpClient<ISecureBootApiClient, SecureBootApiClient>()
+            .ConfigurePrimaryHttpMessageHandler(sp =>
+            {
+                var apiSettings = builder.Configuration.GetSection("ApiSettings").Get<ApiSettings>();
+                var handler = new HttpClientHandler();
+                
+                // Configure certificate authentication if enabled
+                if (apiSettings?.UseCertificateAuth == true)
+                {
+                    System.Security.Cryptography.X509Certificates.X509Certificate2? certificate = null;
+                    
+                    try
+                    {
+                        // Try to load from certificate store first
+                        if (!string.IsNullOrEmpty(apiSettings.CertificateThumbprint))
+                        {
+                            Log.Information("Loading API client certificate from store: {Thumbprint}", apiSettings.CertificateThumbprint);
+                            
+                            var storeLocation = apiSettings.CertificateStoreLocation.Equals("LocalMachine", StringComparison.OrdinalIgnoreCase)
+                                ? System.Security.Cryptography.X509Certificates.StoreLocation.LocalMachine
+                                : System.Security.Cryptography.X509Certificates.StoreLocation.CurrentUser;
+                            
+                            var storeName = apiSettings.CertificateStoreName.Equals("Root", StringComparison.OrdinalIgnoreCase)
+                                ? System.Security.Cryptography.X509Certificates.StoreName.Root
+                                : System.Security.Cryptography.X509Certificates.StoreName.My;
+                            
+                            using (var store = new System.Security.Cryptography.X509Certificates.X509Store(storeName, storeLocation))
+                            {
+                                store.Open(System.Security.Cryptography.X509Certificates.OpenFlags.ReadOnly);
+                                var certificates = store.Certificates.Find(
+                                    System.Security.Cryptography.X509Certificates.X509FindType.FindByThumbprint,
+                                    apiSettings.CertificateThumbprint,
+                                    false);
+                                
+                                if (certificates.Count > 0)
+                                {
+                                    certificate = certificates[0];
+                                    Log.Information("API client certificate loaded from store: Subject={Subject}, Issuer={Issuer}", 
+                                        certificate.Subject, certificate.Issuer);
+                                }
+                                else
+                                {
+                                    Log.Error("API client certificate not found in store with thumbprint: {Thumbprint}", 
+                                        apiSettings.CertificateThumbprint);
+                                }
+                            }
+                        }
+                        // Otherwise try to load from file
+                        else if (!string.IsNullOrEmpty(apiSettings.CertificatePath))
+                        {
+                            Log.Information("Loading API client certificate from file: {Path}", apiSettings.CertificatePath);
+                            
+                            if (!string.IsNullOrEmpty(apiSettings.CertificatePassword))
+                            {
+                                certificate = new System.Security.Cryptography.X509Certificates.X509Certificate2(
+                                    apiSettings.CertificatePath,
+                                    apiSettings.CertificatePassword);
+                            }
+                            else
+                            {
+                                certificate = new System.Security.Cryptography.X509Certificates.X509Certificate2(
+                                    apiSettings.CertificatePath);
+                            }
+                            
+                            Log.Information("API client certificate loaded from file: Subject={Subject}, Issuer={Issuer}", 
+                                certificate.Subject, certificate.Issuer);
+                        }
+                        
+                        if (certificate != null)
+                        {
+                            handler.ClientCertificates.Add(certificate);
+                            Log.Information("API client certificate added to HttpClient handler");
+                        }
+                        else
+                        {
+                            Log.Warning("Certificate authentication enabled but no certificate could be loaded");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "Failed to load API client certificate for mutual TLS");
+                    }
+                }
+                
+                return handler;
+            });
 
         var app = builder.Build();
 
