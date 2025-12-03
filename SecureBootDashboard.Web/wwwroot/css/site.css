@@ -49,3 +49,72 @@ body {
     margin-bottom: 0;
   }
 }
+
+/* Admin Dropdown Menu Styling */
+.navbar-dark .dropdown-menu {
+  background-color: #343a40;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.navbar-dark .dropdown-menu .dropdown-item {
+  color: rgba(255, 255, 255, 0.85);
+  padding: 0.5rem 1.5rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.navbar-dark .dropdown-menu .dropdown-item:hover,
+.navbar-dark .dropdown-menu .dropdown-item:focus {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.navbar-dark .dropdown-menu .dropdown-item i {
+  width: 20px;
+  margin-right: 8px;
+  text-align: center;
+}
+
+.navbar-dark .dropdown-menu .dropdown-header {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0.5rem 1.5rem;
+  margin-top: 0.25rem;
+}
+
+.navbar-dark .dropdown-menu .dropdown-divider {
+  border-color: rgba(255, 255, 255, 0.15);
+  margin: 0.5rem 0;
+}
+
+/* Dropdown menu animation */
+.dropdown-menu {
+  animation: slideDown 0.3s ease-out;
+  transform-origin: top;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Admin menu icon */
+.nav-item.dropdown .nav-link i.fa-tools {
+  color: #ffc107;
+  margin-right: 5px;
+}
+
+/* Active page highlighting in dropdown */
+.dropdown-menu .dropdown-item.active {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-weight: 500;
+}

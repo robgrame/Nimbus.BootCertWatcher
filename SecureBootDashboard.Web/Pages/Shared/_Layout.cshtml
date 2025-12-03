@@ -115,11 +115,6 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-light" asp-area="" asp-page="/Devices/Cleanup">
-                                <i class="fas fa-trash-alt"></i> Device Cleanup
-                            </a>
-                        </li>
-                        <li class="nav-item">
                             <a class="nav-link text-light" asp-area="" asp-page="/Windows/Versions">
                                 <i class="fab fa-windows"></i> Windows Versions
                             </a>
@@ -129,11 +124,38 @@
                                 <i class="fas fa-download"></i> Client Versions
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-light" asp-area="" asp-page="/Settings/Index">
-                                <i class="fas fa-cog"></i> Settings
+                        
+                        @* Admin Menu Dropdown *@
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle text-light" href="#" id="adminDropdown" role="button" 
+                               data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-tools"></i> Admin
                             </a>
+                            <ul class="dropdown-menu" aria-labelledby="adminDropdown">
+                                <li>
+                                    <h6 class="dropdown-header">
+                                        <i class="fas fa-cog"></i> Configuration
+                                    </h6>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" asp-area="" asp-page="/Settings/Index" data-page="/Settings/Index">
+                                        <i class="fas fa-sliders-h"></i> Application Settings
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <h6 class="dropdown-header">
+                                        <i class="fas fa-database"></i> Data Management
+                                    </h6>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" asp-area="" asp-page="/Devices/Cleanup" data-page="/Devices/Cleanup">
+                                        <i class="fas fa-trash-alt"></i> Device Cleanup
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
+                        
                         <li class="nav-item">
                             <a class="nav-link text-light" asp-area="" asp-page="/About">
                                 <i class="fas fa-info-circle"></i> About
@@ -215,6 +237,24 @@
     
     <script src="~/js/splash.js" asp-append-version="true"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+        // Highlight active page in Admin dropdown
+        document.addEventListener('DOMContentLoaded', function() {
+            var currentPath = window.location.pathname;
+            
+            // Check admin dropdown items
+            var dropdownItems = document.querySelectorAll('#adminDropdown + .dropdown-menu .dropdown-item[data-page]');
+            dropdownItems.forEach(function(item) {
+                var itemPage = item.getAttribute('data-page');
+                if (currentPath.indexOf(itemPage) !== -1) {
+                    item.classList.add('active');
+                    // Also highlight the Admin dropdown toggle
+                    document.getElementById('adminDropdown').classList.add('text-warning');
+                }
+            });
+        });
+    </script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>
