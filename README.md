@@ -213,6 +213,11 @@ The dashboard now includes powerful remote command processing capabilities:
 - **Authentication**: Entra ID (Azure AD) and Windows Domain authentication
 - **Managed Identity**: Azure AD authentication for database and storage access
 - **Certificate-based Auth**: Client certificate authentication for Azure Queue
+- **Mutual TLS (mTLS)**: X.509 certificate authentication for API communications *(NEW)*
+  - Client → API certificate validation
+  - Web → API certificate validation
+  - Certificate thumbprint and issuer allowlisting
+  - Configurable certificate revocation checking
 - **RBAC Support**: Fine-grained Azure role assignments
 - **Network Isolation**: VNet integration and private endpoint support
 - **Audit Logging**: Comprehensive Serilog logging with structured data
@@ -816,6 +821,8 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 - **[Certificate Enumeration](docs/CERTIFICATE_ENUMERATION.md)** - UEFI certificate tracking
 - **[Logo & Banner Implementation](docs/LOGO_BANNER_IMPLEMENTATION.md)** - Branding assets
 - **[Authentication Setup](docs/AUTHENTICATION_SETUP.md)** - Entra ID and Windows auth
+- **[Mutual TLS Configuration](docs/MUTUAL_TLS_CONFIGURATION.md)** - X.509 certificate authentication *(NEW)*
+- **[Mutual TLS Implementation Summary](docs/MUTUAL_TLS_IMPLEMENTATION_SUMMARY.md)** - mTLS implementation details *(NEW)*
 
 ### Operations & Troubleshooting
 - **[Logging Guide](docs/LOGGING_GUIDE.md)** - Serilog configuration and best practices
