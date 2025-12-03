@@ -217,6 +217,15 @@ The dashboard now includes powerful remote command processing capabilities:
 - **Network Isolation**: VNet integration and private endpoint support
 - **Audit Logging**: Comprehensive Serilog logging with structured data
 
+### ⚡ High Performance & Scalability *(NEW)*
+- **Rate Limiting**: Intelligent throttling (1000 req/min per client, 500 concurrent)
+- **Output Caching**: Redis-backed distributed caching for read-heavy endpoints
+- **Response Compression**: Brotli/Gzip compression for bandwidth optimization
+- **Connection Pooling**: Optimized database connection pooling (200 max connections)
+- **5000+ RPS Capable**: Enterprise-grade architecture supporting high request rates
+- **Auto-Scaling**: Horizontal scaling support with Azure App Service or Kubernetes
+- **Health Checks**: Comprehensive health monitoring endpoints
+
 ---
 
 ## Overview
@@ -781,6 +790,8 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 ### **NEW** - Q1 2025 Features
 - **[Windows Version Tracking API](docs/WINDOWS_VERSION_API.md)** - Complete API reference *(NEW v1.11)*
 - **[Windows Version Release Notes](docs/RELEASE_NOTES_V1.11.0.md)** - v1.11 feature details *(NEW)*
+- **[API Performance Guide](docs/API_PERFORMANCE_GUIDE.md)** - High-performance configuration *(NEW)*
+- **[Production Deployment Performance](docs/PRODUCTION_DEPLOYMENT_PERFORMANCE.md)** - Enterprise deployment *(NEW)*
 - **[SignalR Real-time Guide](docs/SIGNALR_REALTIME_COMPLETE.md)** - Complete SignalR implementation
 - **[Q1 2025 Features Plan](docs/Q1_2025_FEATURES_PLAN.md)** - Feature roadmap and planning
 - **[Export Implementation](docs/PULL_REQUEST_Q1_2025.md)** - Excel/CSV export details
