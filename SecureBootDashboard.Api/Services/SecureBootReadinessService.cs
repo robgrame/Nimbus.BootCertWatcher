@@ -394,7 +394,7 @@ namespace SecureBootDashboard.Api.Services
             // Add Windows UEFI CA 2023 status (informational only, not required for readiness)
             if (!evaluation.HasWindowsUEFICA2023)
             {
-                evaluation.CertificateEvaluationDetails += "; ℹ️ Windows UEFI CA 2023 not yet installed (expected before upgrade)";
+                evaluation.CertificateEvaluationDetails += "; ℹ️ Windows UEFI CA 2023 not yet installed (will be installed during upgrade)";
             }
             else
             {

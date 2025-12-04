@@ -25,7 +25,7 @@ namespace SecureBootDashboard.Api.Tests.Services
             {
                 CertificateExpirationWarningDays = 180,
                 CertificateExpirationCriticalDays = 90,
-                RequireWindowsUEFICA2023 = true,
+                RequireWindowsUEFICA2023 = false, // Not required for readiness (gets installed during upgrade)
                 WindowsUEFICA2023Thumbprint = "45A0FA32604773C82433C3B7D59E7466B3AC0C67",
                 RequireOemCertificatesValid = true,
                 MinimumOSBuildVersions = new Dictionary<string, string>
