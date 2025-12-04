@@ -95,6 +95,7 @@ namespace SecureBootWatcher.Client.Services
 
         public Task<SecureBootDeviceAttributesRegistrySnapshot> CaptureDeviceAttributesAsync(CancellationToken cancellationToken)
         {
+            _logger.LogDebug("CaptureDeviceAttributesAsync: Starting Device Attributes registry snapshot capture");
             var snapshot = new SecureBootDeviceAttributesRegistrySnapshot
             {
                 CollectedAtUtc = DateTimeOffset.UtcNow
@@ -102,13 +103,15 @@ namespace SecureBootWatcher.Client.Services
 
             try
             {
+                _logger.LogTrace("CaptureDeviceAttributesAsync: Opening registry key at {Path}", SecureBootDeviceAttributesRegistrySnapshot.RegistryRootPath);
                 using var baseKey = Registry.LocalMachine.OpenSubKey(SecureBootDeviceAttributesRegistrySnapshot.RegistryRootPath, false);
                 if (baseKey == null)
                 {
-                    _logger.LogDebug("Device Attributes registry path not found at {Path}. This is normal for devices without Secure Boot servicing configured.", SecureBootDeviceAttributesRegistrySnapshot.RegistryRootPath);
+                    _logger.LogDebug("CaptureDeviceAttributesAsync: Device Attributes registry path not found at {Path}. This is normal for devices without Secure Boot servicing configured.", SecureBootDeviceAttributesRegistrySnapshot.RegistryRootPath);
                     return Task.FromResult(snapshot);
                 }
 
+                _logger.LogTrace("CaptureDeviceAttributesAsync: Reading device attribute values");
                 snapshot.CanAttemptUpdateAfter = ReadDateTimeOffset(baseKey, "CanAttemptUpdateAfter");
                 snapshot.OEMManufacturerName = ReadString(baseKey, "OEMManufacturerName");
                 snapshot.OEMModelSystemVersion = ReadString(baseKey, "OEMModelSystemVersion");
@@ -124,14 +127,17 @@ namespace SecureBootWatcher.Client.Services
                 snapshot.FirmwareReleaseDate = ReadDateTime(baseKey, "FirmwareReleaseDate");
                 snapshot.OEMModelBaseBoardVersion = ReadString(baseKey, "OEMModelBaseBoardVersion");
                 snapshot.StateAttributes = ReadString(baseKey, "StateAttributes");
+                
+                _logger.LogDebug("CaptureDeviceAttributesAsync: Successfully captured Device Attributes - Manufacturer={Mfr}, FirmwareVersion={FwVer}, FirmwareReleaseDate={FwDate}",
+                    snapshot.OEMManufacturerName, snapshot.FirmwareVersion, snapshot.FirmwareReleaseDate);
             }
             catch (SecurityException ex)
             {
-                _logger.LogError(ex, "Access denied reading Device Attributes registry keys. Run as Administrator or check permissions.");
+                _logger.LogError(ex, "CaptureDeviceAttributesAsync: Access denied reading Device Attributes registry keys. Run as Administrator or check permissions.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error while reading Device Attributes registry keys.");
+                _logger.LogError(ex, "CaptureDeviceAttributesAsync: Unexpected error while reading Device Attributes registry keys.");
             }
 
             return Task.FromResult(snapshot);
@@ -139,6 +145,7 @@ namespace SecureBootWatcher.Client.Services
 
         public Task<TelemetryPolicySnapshot> CaptureTelemetryPolicyAsync(CancellationToken cancellationToken)
         {
+            _logger.LogDebug("CaptureTelemetryPolicyAsync: Starting Telemetry Policy snapshot capture");
             var snapshot = new TelemetryPolicySnapshot
             {
                 CollectedAtUtc = DateTimeOffset.UtcNow
@@ -146,26 +153,29 @@ namespace SecureBootWatcher.Client.Services
 
             try
             {
+                _logger.LogTrace("CaptureTelemetryPolicyAsync: Opening registry key at {Path}", TelemetryPolicySnapshot.RegistryRootPath);
                 using var baseKey = Registry.LocalMachine.OpenSubKey(TelemetryPolicySnapshot.RegistryRootPath, false);
                 if (baseKey == null)
                 {
-                    _logger.LogDebug("Telemetry policy registry path not found at {Path}. Using default telemetry settings.", TelemetryPolicySnapshot.RegistryRootPath);
+                    _logger.LogDebug("CaptureTelemetryPolicyAsync: Telemetry policy registry path not found at {Path}. Using default telemetry settings.", TelemetryPolicySnapshot.RegistryRootPath);
                     return Task.FromResult(snapshot);
                 }
 
+                _logger.LogTrace("CaptureTelemetryPolicyAsync: Reading AllowTelemetry value");
                 snapshot.AllowTelemetry = ReadUInt(baseKey, "AllowTelemetry");
 
-                _logger.LogDebug("Telemetry level: {Level} ({Description})", 
+                _logger.LogDebug("CaptureTelemetryPolicyAsync: Telemetry level: {Level} ({Description}), MeetsCFR={Meets}", 
                     snapshot.AllowTelemetry, 
-                    snapshot.TelemetryLevelDescription);
+                    snapshot.TelemetryLevelDescription,
+                    snapshot.MeetsCfrTelemetryRequirement);
             }
             catch (SecurityException ex)
             {
-                _logger.LogError(ex, "Access denied reading Telemetry policy registry keys. Run as Administrator or check permissions.");
+                _logger.LogError(ex, "CaptureTelemetryPolicyAsync: Access denied reading Telemetry policy registry keys. Run as Administrator or check permissions.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error while reading Telemetry policy registry keys.");
+                _logger.LogError(ex, "CaptureTelemetryPolicyAsync: Unexpected error while reading Telemetry policy registry keys.");
             }
 
             return Task.FromResult(snapshot);
