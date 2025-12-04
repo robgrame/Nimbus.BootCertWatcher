@@ -29,20 +29,29 @@ public class WindowsVersionService : IWindowsVersionService
         string buildNumber, 
         CancellationToken cancellationToken = default)
     {
+        _logger.LogDebug("CheckBuildSecurityAsync: Checking build security for {BuildNumber}", buildNumber);
         var (major, minor) = ParseBuildNumber(buildNumber);
+        _logger.LogTrace("CheckBuildSecurityAsync: Parsed build number - Major={Major}, Minor={Minor}", major, minor);
 
         // Try to determine Windows version from build number
         var windowsVersion = DetermineWindowsVersionFromBuild(major);
+        _logger.LogDebug("CheckBuildSecurityAsync: Determined Windows version as {Version} from build {Major}", 
+            windowsVersion ?? "Unknown", major);
 
         // Check against configured minimum build
         if (!string.IsNullOrEmpty(windowsVersion))
         {
             var isSecure = _securityOptions.IsBuildSecure(windowsVersion, buildNumber);
             var minimumBuild = _securityOptions.GetMinimumBuildNumber(windowsVersion);
+            _logger.LogDebug("CheckBuildSecurityAsync: Build security check - IsSecure={IsSecure}, MinimumBuild={MinBuild}", 
+                isSecure, minimumBuild);
 
             if (_securityOptions.MinimumSecureBuilds.TryGetValue(windowsVersion, out var buildInfo))
             {
-                return new WindowsBuildSecurityStatus(
+                _logger.LogTrace("CheckBuildSecurityAsync: Found build info - Name={Name}, KB={KB}, ReleaseDate={Date}", 
+                    buildInfo.Name, buildInfo.KBArticle, buildInfo.ReleaseDate);
+                
+                var result = new WindowsBuildSecurityStatus(
                     BuildNumber: buildNumber,
                     IsSecure: isSecure,
                     IsLatest: false, // We don't track "latest" in config
@@ -52,10 +61,23 @@ public class WindowsVersionService : IWindowsVersionService
                     ReleaseDate: buildInfo.ReleaseDate,
                     LatestSecureBuild: isSecure ? null : minimumBuild
                 );
+                
+                _logger.LogInformation("CheckBuildSecurityAsync: Build {BuildNumber} for {Version} is {Status}", 
+                    buildNumber, windowsVersion, isSecure ? "SECURE" : "OUTDATED");
+                return result;
             }
+            else
+            {
+                _logger.LogWarning("CheckBuildSecurityAsync: No build info found in configuration for {Version}", windowsVersion);
+            }
+        }
+        else
+        {
+            _logger.LogWarning("CheckBuildSecurityAsync: Could not determine Windows version from build {BuildNumber}", buildNumber);
         }
 
         // Build not found in configuration
+        _logger.LogWarning("CheckBuildSecurityAsync: Build {BuildNumber} not found in configuration", buildNumber);
         return new WindowsBuildSecurityStatus(
             BuildNumber: buildNumber,
             IsSecure: false,
@@ -100,9 +122,13 @@ public class WindowsVersionService : IWindowsVersionService
     public async Task<WindowsBuildStatistics> GetBuildStatisticsAsync(
         CancellationToken cancellationToken = default)
     {
+        _logger.LogDebug("GetBuildStatisticsAsync: Retrieving Windows build statistics from all devices");
+        
         var devices = await _dbContext.Devices
             .Where(d => d.OSBuildNumber != null)
             .ToListAsync(cancellationToken);
+
+        _logger.LogTrace("GetBuildStatisticsAsync: Retrieved {DeviceCount} devices with build numbers", devices.Count);
 
         var totalDevices = devices.Count;
         var secureCount = 0;
@@ -133,6 +159,10 @@ public class WindowsVersionService : IWindowsVersionService
         var percentage = totalDevices > 0 
             ? (double)secureCount / totalDevices * 100 
             : 0;
+
+        _logger.LogInformation("GetBuildStatisticsAsync: Statistics calculated - Total={Total}, Secure={Secure} ({Percentage:F2}%), Outdated={Outdated}, Unknown={Unknown}", 
+            totalDevices, secureCount, percentage, outdatedCount, unknownCount);
+        _logger.LogDebug("GetBuildStatisticsAsync: Found {UniqueBuilds} unique build numbers", buildDistribution.Count);
 
         return new WindowsBuildStatistics(
             TotalDevices: totalDevices,
