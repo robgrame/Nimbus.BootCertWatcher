@@ -1,0 +1,253 @@
+@page
+@model SecureBootDashboard.Web.Pages.Admin.MutualTls.IndexModel
+@{
+    ViewData["Title"] = "Mutual TLS Configuration";
+}
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-shield-lock"></i> Mutual TLS Configuration</h2>
+            <p class="text-muted">Configure client certificate authentication for API endpoints</p>
+        </div>
+        <div>
+            <a asp-page="/Admin/MutualTls/Certificates" class="btn btn-outline-primary">
+                <i class="bi bi-file-earmark-lock"></i> Manage CA Certificates
+            </a>
+            <a asp-page="/Admin/MutualTls/Status" class="btn btn-outline-info">
+                <i class="bi bi-graph-up"></i> View Status
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+    {
+        <div class="alert @(Model.IsError ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+            <i class="bi @(Model.IsError ? "bi-exclamation-triangle" : "bi-check-circle")"></i>
+            @Model.StatusMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Quick Enable/Disable Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card border-@(Model.Configuration.Enabled ? "success" : "secondary")">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Mutual TLS Status</h5>
+                    <div class="my-4">
+                        <span class="badge @(Model.Configuration.Enabled ? "bg-success" : "bg-secondary") fs-5 px-4 py-2">
+                            @(Model.Configuration.Enabled ? "ENABLED" : "DISABLED")
+                        </span>
+                    </div>
+                    <form method="post" asp-page-handler="Toggle" class="d-inline">
+                        <input type="hidden" name="enabled" value="@(!Model.Configuration.Enabled)" />
+                        <button type="submit" class="btn @(Model.Configuration.Enabled ? "btn-outline-danger" : "btn-success") w-100"
+                                onclick="return confirm('@(Model.Configuration.Enabled ? "Disable" : "Enable") mutual TLS authentication?')">
+                            <i class="bi @(Model.Configuration.Enabled ? "bi-x-circle" : "bi-check-circle")"></i>
+                            @(Model.Configuration.Enabled ? "Disable" : "Enable") Mutual TLS
+                        </button>
+                    </form>
+                    <p class="text-muted small mt-3 mb-0">
+                        Last updated: @Model.Configuration.UpdatedAtUtc.ToString("g")<br/>
+                        By: @(Model.Configuration.UpdatedBy ?? "System")
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Form -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-gear"></i> Validation Settings</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        <input type="hidden" asp-for="Configuration.Id" />
+
+                        <!-- Certificate Validation Options -->
+                        <h6 class="mb-3 text-primary"><i class="bi bi-shield-check"></i> Certificate Validation</h6>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" asp-for="Configuration.ValidateCertificateValidity" id="validateValidity">
+                                    <label class="form-check-label" for="validateValidity">
+                                        <strong>Validate Certificate Validity</strong>
+                                        <small class="d-block text-muted">Check NotBefore and NotAfter dates</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" asp-for="Configuration.ValidateCertificateChain" id="validateChain">
+                                    <label class="form-check-label" for="validateChain">
+                                        <strong>Validate Certificate Chain</strong>
+                                        <small class="d-block text-muted">Verify complete trust chain</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" asp-for="Configuration.CheckCertificateRevocation" id="checkRevocation">
+                                    <label class="form-check-label" for="checkRevocation">
+                                        <strong>Check Certificate Revocation</strong>
+                                        <small class="d-block text-muted">Use CRL/OCSP validation</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" asp-for="Configuration.RequireClientAuthEku" id="requireEku">
+                                    <label class="form-check-label" for="requireEku">
+                                        <strong>Require Client Auth EKU</strong>
+                                        <small class="d-block text-muted">Must have OID 1.3.6.1.5.5.7.3.2</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <!-- Allowlist Configuration -->
+                        <h6 class="mb-3 text-primary"><i class="bi bi-list-check"></i> Allowlist Configuration</h6>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" asp-for="Configuration.EnableIssuerAllowlist" id="enableIssuer">
+                                    <label class="form-check-label" for="enableIssuer">
+                                        <strong>Enable Issuer Allowlist</strong>
+                                        <small class="d-block text-muted">Use database-stored CA certificates</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" asp-for="Configuration.EnableThumbprintAllowlist" id="enableThumbprint">
+                                    <label class="form-check-label" for="enableThumbprint">
+                                        <strong>Enable Thumbprint Allowlist</strong>
+                                        <small class="d-block text-muted">Whitelist specific client certificates</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3" id="thumbprintSection" style="display: none;">
+                            <label asp-for="Configuration.AllowedThumbprints" class="form-label">
+                                <strong>Allowed Thumbprints</strong>
+                                <small class="text-muted">(Comma-separated SHA-1 thumbprints)</small>
+                            </label>
+                            <textarea asp-for="Configuration.AllowedThumbprints" class="form-control font-monospace" rows="3" 
+                                      placeholder="ABCDEF1234567890..., 1234567890ABCDEF..."></textarea>
+                            <small class="form-text text-muted">
+                                Enter client certificate thumbprints separated by commas. Example: ABC123..., DEF456...
+                            </small>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <!-- Advanced Settings -->
+                        <h6 class="mb-3 text-primary"><i class="bi bi-sliders"></i> Advanced Settings</h6>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" asp-for="Configuration.AllowSelfSignedCertificates" id="allowSelfSigned">
+                                    <label class="form-check-label" for="allowSelfSigned">
+                                        <strong>Allow Self-Signed Certificates</strong>
+                                        <small class="d-block text-muted text-danger">?? For testing only!</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" asp-for="Configuration.EnableDetailedLogging" id="detailedLogging">
+                                    <label class="form-check-label" for="detailedLogging">
+                                        <strong>Enable Detailed Logging</strong>
+                                        <small class="d-block text-muted">Verbose validation logs</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="Configuration.ExpirationGracePeriodDays" class="form-label">
+                                    <strong>Expiration Grace Period (Days)</strong>
+                                </label>
+                                <input asp-for="Configuration.ExpirationGracePeriodDays" type="number" min="0" max="365" class="form-control" />
+                                <small class="form-text text-muted">
+                                    Reject certificates expiring within this many days (0 = only expired)
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Configuration.RevocationCheckTimeoutSeconds" class="form-label">
+                                    <strong>Revocation Check Timeout (Seconds)</strong>
+                                </label>
+                                <input asp-for="Configuration.RevocationCheckTimeoutSeconds" type="number" min="1" max="300" class="form-control" />
+                                <small class="form-text text-muted">
+                                    CRL/OCSP network timeout (1-300 seconds)
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Configuration.ValidationNotes" class="form-label">
+                                <strong>Validation Notes</strong>
+                                <small class="text-muted">(Optional documentation)</small>
+                            </label>
+                            <textarea asp-for="Configuration.ValidationNotes" class="form-control" rows="3" 
+                                      placeholder="Document custom validation rules or special requirements..."></textarea>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a asp-page="/Admin/Settings/Index" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Back to Settings
+                            </a>
+                            <div>
+                                <button type="button" class="btn btn-outline-secondary me-2" onclick="location.reload()">
+                                    <i class="bi bi-arrow-clockwise"></i> Reset
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-save"></i> Save Configuration
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Show/hide thumbprint section based on checkbox
+        document.getElementById('enableThumbprint').addEventListener('change', function () {
+            document.getElementById('thumbprintSection').style.display = this.checked ? 'block' : 'none';
+        });
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function () {
+            const enableThumbprint = document.getElementById('enableThumbprint');
+            document.getElementById('thumbprintSection').style.display = enableThumbprint.checked ? 'block' : 'none';
+        });
+
+        // Show confirmation for production-unsafe settings
+        document.getElementById('allowSelfSigned').addEventListener('change', function () {
+            if (this.checked) {
+                if (!confirm('?? WARNING: Allowing self-signed certificates is unsafe for production!\n\nOnly enable this for testing environments.\n\nContinue?')) {
+                    this.checked = false;
+                }
+            }
+        });
+    </script>
+}

@@ -154,10 +154,60 @@ try
                 
                 options.Events = new CertificateAuthenticationEvents
                 {
-                    OnCertificateValidated = context =>
+                    OnCertificateValidated = async context =>
                     {
                         var certificate = context.ClientCertificate;
                         Log.Debug("Certificate validation requested for: {Subject}", certificate.Subject);
+                        
+                        // Try database-driven validation first (if available)
+                        try
+                        {
+                            var certValidationService = context.HttpContext.RequestServices
+                                .GetService<ICertificateValidationService>();
+                            
+                            if (certValidationService != null)
+                            {
+                                var dbConfig = await certValidationService.GetConfigurationAsync(context.HttpContext.RequestAborted);
+                                
+                                // Use database validation if enabled
+                                if (dbConfig?.Enabled == true)
+                                {
+                                    Log.Information("Using database-driven certificate validation");
+                                    
+                                    var validationResult = await certValidationService.ValidateClientCertificateAsync(
+                                        certificate,
+                                        context.HttpContext.RequestAborted);
+                                    
+                                    if (!validationResult.IsValid)
+                                    {
+                                        var errorMessage = string.Join("; ", validationResult.Errors);
+                                        Log.Warning("Certificate validation failed (database): {Errors}", errorMessage);
+                                        context.Fail(errorMessage);
+                                        return;
+                                    }
+                                    
+                                    if (validationResult.Warnings.Any())
+                                    {
+                                        Log.Warning("Certificate validation warnings: {Warnings}", 
+                                            string.Join("; ", validationResult.Warnings));
+                                    }
+                                    
+                                    Log.Information("Certificate validated successfully via database (Matched CA: {CA})", 
+                                        validationResult.MatchedCA?.CommonName ?? "None");
+                                    
+                                    context.Success();
+                                    return; // Exit early - database validation completed
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Error(ex, "Database certificate validation failed, falling back to appsettings.json");
+                            // Continue with appsettings.json validation below
+                        }
+                        
+                        // Fallback to appsettings.json validation (original behavior)
+                        Log.Debug("Using appsettings.json certificate validation");
                         
                         // Check thumbprint allowlist if configured
                         if (mtlsConfig.AllowedThumbprints?.Count > 0)
@@ -167,7 +217,7 @@ try
                             {
                                 Log.Warning("Certificate rejected - thumbprint not in allowlist: {Thumbprint}", thumbprint);
                                 context.Fail("Certificate thumbprint not allowed");
-                                return Task.CompletedTask;
+                                return;
                             }
                             Log.Debug("Certificate thumbprint validated: {Thumbprint}", thumbprint);
                         }
@@ -183,7 +233,7 @@ try
                             {
                                 Log.Warning("Certificate rejected - issuer not in allowlist: {Issuer}", issuerCN);
                                 context.Fail("Certificate issuer not allowed");
-                                return Task.CompletedTask;
+                                return;
                             }
                             Log.Debug("Certificate issuer validated: {Issuer}", issuerCN);
                         }
@@ -192,7 +242,6 @@ try
                             certificate.Subject, certificate.Issuer, certificate.Thumbprint);
                         
                         context.Success();
-                        return Task.CompletedTask;
                     },
                     OnAuthenticationFailed = context =>
                     {
@@ -471,6 +520,10 @@ try
     Log.Information("Configuring Application Settings Service...");
     builder.Services.AddMemoryCache();
     builder.Services.AddScoped<IApplicationSettingsService, ApplicationSettingsService>();
+
+    // Configure Certificate Validation Service (for mutual TLS)
+    Log.Information("Configuring Certificate Validation Service...");
+    builder.Services.AddScoped<ICertificateValidationService, CertificateValidationService>();
 
     // Configure Azure Queue Processor
     Log.Information("Configuring Queue Processor...");

@@ -28,6 +28,11 @@ namespace SecureBootDashboard.Api.Data
         // Application Settings
         public DbSet<ApplicationSettingEntity> ApplicationSettings => Set<ApplicationSettingEntity>();
 
+        // Mutual TLS Configuration
+        public DbSet<MutualTlsConfigEntity> MutualTlsConfig => Set<MutualTlsConfigEntity>();
+        
+        public DbSet<TrustedCertificateAuthorityEntity> TrustedCertificateAuthorities => Set<TrustedCertificateAuthorityEntity>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -164,8 +169,8 @@ namespace SecureBootDashboard.Api.Data
                 entity.HasIndex(e => e.Key).IsUnique();
                 entity.HasIndex(e => e.Category);
                 
-                // Seed default settings from appsettings.json
-                var now = new DateTimeOffset(2025, 1, 14, 12, 0, 0, TimeSpan.Zero);
+                // Seed default settings from appsettings.json - static timestamp
+                var settingsNow = new DateTimeOffset(2025, 1, 14, 12, 0, 0, TimeSpan.Zero);
                 
                 entity.HasData(
                     // QueueProcessor settings
@@ -179,8 +184,8 @@ namespace SecureBootDashboard.Api.Data
                         Description = "Enable or disable the queue processor background service",
                         IsSensitive = false,
                         RequiresRestart = true,
-                        CreatedAtUtc = now,
-                        UpdatedAtUtc = now
+                        CreatedAtUtc = settingsNow,
+                        UpdatedAtUtc = settingsNow
                     },
                     new ApplicationSettingEntity
                     {
@@ -192,8 +197,8 @@ namespace SecureBootDashboard.Api.Data
                         Description = "Maximum number of messages to process in each batch",
                         IsSensitive = false,
                         RequiresRestart = false,
-                        CreatedAtUtc = now,
-                        UpdatedAtUtc = now
+                        CreatedAtUtc = settingsNow,
+                        UpdatedAtUtc = settingsNow
                     },
                     new ApplicationSettingEntity
                     {
@@ -205,8 +210,8 @@ namespace SecureBootDashboard.Api.Data
                         Description = "Interval between queue processing cycles when messages are present",
                         IsSensitive = false,
                         RequiresRestart = false,
-                        CreatedAtUtc = now,
-                        UpdatedAtUtc = now
+                        CreatedAtUtc = settingsNow,
+                        UpdatedAtUtc = settingsNow
                     },
                     new ApplicationSettingEntity
                     {
@@ -218,8 +223,8 @@ namespace SecureBootDashboard.Api.Data
                         Description = "Interval to check queue when it was previously empty",
                         IsSensitive = false,
                         RequiresRestart = false,
-                        CreatedAtUtc = now,
-                        UpdatedAtUtc = now
+                        CreatedAtUtc = settingsNow,
+                        UpdatedAtUtc = settingsNow
                     },
                     
                     // ClientUpdate settings
@@ -233,8 +238,8 @@ namespace SecureBootDashboard.Api.Data
                         Description = "Latest available client version",
                         IsSensitive = false,
                         RequiresRestart = false,
-                        CreatedAtUtc = now,
-                        UpdatedAtUtc = now
+                        CreatedAtUtc = settingsNow,
+                        UpdatedAtUtc = settingsNow
                     },
                     new ApplicationSettingEntity
                     {
@@ -246,8 +251,8 @@ namespace SecureBootDashboard.Api.Data
                         Description = "Minimum supported client version",
                         IsSensitive = false,
                         RequiresRestart = false,
-                        CreatedAtUtc = now,
-                        UpdatedAtUtc = now
+                        CreatedAtUtc = settingsNow,
+                        UpdatedAtUtc = settingsNow
                     },
                     new ApplicationSettingEntity
                     {
@@ -259,8 +264,8 @@ namespace SecureBootDashboard.Api.Data
                         Description = "Whether client update is mandatory",
                         IsSensitive = false,
                         RequiresRestart = false,
-                        CreatedAtUtc = now,
-                        UpdatedAtUtc = now
+                        CreatedAtUtc = settingsNow,
+                        UpdatedAtUtc = settingsNow
                     },
                     new ApplicationSettingEntity
                     {
@@ -272,8 +277,8 @@ namespace SecureBootDashboard.Api.Data
                         Description = "URL to download the latest client package",
                         IsSensitive = false,
                         RequiresRestart = false,
-                        CreatedAtUtc = now,
-                        UpdatedAtUtc = now
+                        CreatedAtUtc = settingsNow,
+                        UpdatedAtUtc = settingsNow
                     },
                     
                     // SecureBootReadiness settings
@@ -287,8 +292,8 @@ namespace SecureBootDashboard.Api.Data
                         Description = "Days before expiration to show warning (3 years)",
                         IsSensitive = false,
                         RequiresRestart = false,
-                        CreatedAtUtc = now,
-                        UpdatedAtUtc = now
+                        CreatedAtUtc = settingsNow,
+                        UpdatedAtUtc = settingsNow
                     },
                     new ApplicationSettingEntity
                     {
@@ -300,8 +305,8 @@ namespace SecureBootDashboard.Api.Data
                         Description = "Days before expiration to show critical alert (1 year)",
                         IsSensitive = false,
                         RequiresRestart = false,
-                        CreatedAtUtc = now,
-                        UpdatedAtUtc = now
+                        CreatedAtUtc = settingsNow,
+                        UpdatedAtUtc = settingsNow
                     },
                     new ApplicationSettingEntity
                     {
@@ -313,8 +318,8 @@ namespace SecureBootDashboard.Api.Data
                         Description = "Require Windows UEFI CA 2023 certificate for readiness",
                         IsSensitive = false,
                         RequiresRestart = false,
-                        CreatedAtUtc = now,
-                        UpdatedAtUtc = now
+                        CreatedAtUtc = settingsNow,
+                        UpdatedAtUtc = settingsNow
                     },
                     new ApplicationSettingEntity
                     {
@@ -326,10 +331,71 @@ namespace SecureBootDashboard.Api.Data
                         Description = "Require OEM certificates to be valid (not expired)",
                         IsSensitive = false,
                         RequiresRestart = false,
-                        CreatedAtUtc = now,
-                        UpdatedAtUtc = now
+                        CreatedAtUtc = settingsNow,
+                        UpdatedAtUtc = settingsNow
                     }
                 );
+            });
+
+            // Mutual TLS Configuration
+            modelBuilder.Entity<MutualTlsConfigEntity>(entity =>
+            {
+                entity.ToTable("MutualTlsConfig");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.AllowedThumbprints).HasMaxLength(4000);
+                entity.Property(e => e.ValidationNotes).HasMaxLength(2000);
+                entity.Property(e => e.CreatedBy).HasMaxLength(256);
+                entity.Property(e => e.UpdatedBy).HasMaxLength(256);
+                
+                // Seed default mTLS configuration - static timestamp
+                var mtlsNow = new DateTimeOffset(2025, 1, 14, 12, 0, 0, TimeSpan.Zero);
+                
+                // Seed default mTLS configuration
+                entity.HasData(new MutualTlsConfigEntity
+                {
+                    Id = 1,
+                    Enabled = false,
+                    AllowSelfSignedCertificates = false,
+                    CheckCertificateRevocation = true,
+                    ValidateCertificateChain = true,
+                    RequireClientAuthEku = true,
+                    ValidateCertificateValidity = true,
+                    ExpirationGracePeriodDays = 0,
+                    EnableThumbprintAllowlist = false,
+                    AllowedThumbprints = null,
+                    EnableIssuerAllowlist = true,
+                    EnableDetailedLogging = false,
+                    RevocationCheckTimeoutSeconds = 10,
+                    ValidationNotes = "Default mutual TLS configuration. Update via Admin Settings.",
+                    CreatedAtUtc = mtlsNow,
+                    CreatedBy = "System",
+                    UpdatedAtUtc = mtlsNow,
+                    UpdatedBy = "System"
+                });
+            });
+
+            // Trusted Certificate Authorities
+            modelBuilder.Entity<TrustedCertificateAuthorityEntity>(entity =>
+            {
+                entity.ToTable("TrustedCertificateAuthorities");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CommonName).HasMaxLength(256).IsRequired();
+                entity.Property(e => e.Thumbprint).HasMaxLength(40).IsRequired();
+                entity.Property(e => e.Thumbprint256).HasMaxLength(64);
+                entity.Property(e => e.Subject).HasMaxLength(500).IsRequired();
+                entity.Property(e => e.Issuer).HasMaxLength(500).IsRequired();
+                entity.Property(e => e.SerialNumber).HasMaxLength(100);
+                entity.Property(e => e.CertificateDataBase64).IsRequired();
+                entity.Property(e => e.Description).HasMaxLength(1000);
+                entity.Property(e => e.CreatedBy).HasMaxLength(256);
+                entity.Property(e => e.UpdatedBy).HasMaxLength(256);
+                
+                // Indexes for fast lookups
+                entity.HasIndex(e => e.Thumbprint).IsUnique();
+                entity.HasIndex(e => e.CommonName);
+                entity.HasIndex(e => e.IsEnabled);
+                entity.HasIndex(e => e.IsRootCa);
+                entity.HasIndex(e => e.NotAfter);
             });
         }
     }

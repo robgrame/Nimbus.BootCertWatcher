@@ -29,6 +29,9 @@ public interface ISecureBootApiClient
     Task<T?> GetAsync<T>(string requestUri, CancellationToken cancellationToken = default);
     Task<T?> PostAsync<T>(string requestUri, object? content, CancellationToken cancellationToken = default);
     Task<T?> PutAsync<T>(string requestUri, object content, CancellationToken cancellationToken = default);
+    Task<T?> PostFormDataAsync<T>(string requestUri, MultipartFormDataContent content, CancellationToken cancellationToken = default);
+    Task PatchAsync(string requestUri, object content, CancellationToken cancellationToken = default);
+    Task DeleteAsync(string requestUri, CancellationToken cancellationToken = default);
 }
 
 // DTOs for device endpoints

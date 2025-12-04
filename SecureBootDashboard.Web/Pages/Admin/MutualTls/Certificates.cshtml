@@ -1,0 +1,281 @@
+@page
+@model SecureBootDashboard.Web.Pages.Admin.MutualTls.CertificatesModel
+@{
+    ViewData["Title"] = "Manage CA Certificates";
+}
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-file-earmark-lock"></i> Trusted CA Certificates</h2>
+            <p class="text-muted">Manage Certificate Authorities for client certificate validation</p>
+        </div>
+        <div>
+            <a asp-page="/Admin/MutualTls/Index" class="btn btn-outline-secondary">
+                <i class="bi bi-gear"></i> Configuration
+            </a>
+            <a asp-page="/Admin/MutualTls/Status" class="btn btn-outline-info">
+                <i class="bi bi-graph-up"></i> Status
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+    {
+        <div class="alert @(Model.IsError ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+            <i class="bi @(Model.IsError ? "bi-exclamation-triangle" : "bi-check-circle")"></i>
+            @Model.StatusMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Upload New Certificate Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-upload"></i> Upload New CA Certificate</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" asp-page-handler="Upload" enctype="multipart/form-data">
+                <div class="row">
+                    <div class="col-md-8">
+                        <label asp-for="CertificateFile" class="form-label">
+                            <strong>Certificate File</strong> (.cer, .crt, .pem, .der)
+                        </label>
+                        <input asp-for="CertificateFile" type="file" class="form-control" 
+                               accept=".cer,.crt,.pem,.der" required />
+                        <small class="form-text text-muted">
+                            Upload a CA certificate to trust for client authentication
+                        </small>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="Description" class="form-label">
+                            <strong>Description</strong> (Optional)
+                        </label>
+                        <input asp-for="Description" type="text" class="form-control" 
+                               placeholder="e.g., Contoso Root CA" maxlength="1000" />
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> Upload Certificate
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Certificates List -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-list-ul"></i> Installed CA Certificates (@Model.Certificates.Count)</h5>
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="showDisabled" 
+                       onchange="location.href='?includeDisabled=' + this.checked">
+                <label class="form-check-label" for="showDisabled">
+                    Show disabled certificates
+                </label>
+            </div>
+        </div>
+        <div class="card-body">
+            @if (!Model.Certificates.Any())
+            {
+                <div class="alert alert-info mb-0">
+                    <i class="bi bi-info-circle"></i>
+                    No CA certificates uploaded yet. Upload a certificate to get started.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Common Name</th>
+                                <th>Type</th>
+                                <th>Validity</th>
+                                <th>Thumbprint</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var cert in Model.Certificates)
+                            {
+                                var expirationClass = cert.IsExpired ? "table-danger" :
+                                                     cert.DaysUntilExpiration < 90 ? "table-warning" : "";
+                                
+                                <tr class="@expirationClass">
+                                    <td>
+                                        @if (cert.IsEnabled)
+                                        {
+                                            <span class="badge bg-success">Enabled</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Disabled</span>
+                                        }
+                                        
+                                        @if (cert.IsExpired)
+                                        {
+                                            <span class="badge bg-danger">Expired</span>
+                                        }
+                                        else if (cert.DaysUntilExpiration < 90)
+                                        {
+                                            <span class="badge bg-warning text-dark">Expiring Soon</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <strong>@cert.CommonName</strong>
+                                        @if (!string.IsNullOrEmpty(cert.Description))
+                                        {
+                                            <br/><small class="text-muted">@cert.Description</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (cert.IsRootCa)
+                                        {
+                                            <span class="badge bg-primary">Root CA</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-info">Intermediate</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <small>
+                                            <strong>Valid:</strong> @cert.NotBefore.ToString("yyyy-MM-dd")<br/>
+                                            <strong>Expires:</strong> @cert.NotAfter.ToString("yyyy-MM-dd")
+                                            @if (!cert.IsExpired)
+                                            {
+                                                <span class="text-muted">(@cert.DaysUntilExpiration days)</span>
+                                            }
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <code class="small">@cert.Thumbprint.Substring(0, 16)...</code>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                                data-bs-toggle="modal" data-bs-target="#certModal@cert.Id">
+                                            <i class="bi bi-info-circle"></i>
+                                        </button>
+                                    </td>
+                                    <td>
+                                        <form method="post" asp-page-handler="Toggle" class="d-inline">
+                                            <input type="hidden" name="id" value="@cert.Id" />
+                                            <input type="hidden" name="enabled" value="@(!cert.IsEnabled)" />
+                                            <button type="submit" class="btn btn-sm @(cert.IsEnabled ? "btn-outline-warning" : "btn-outline-success")">
+                                                <i class="bi @(cert.IsEnabled ? "bi-pause" : "bi-play")"></i>
+                                                @(cert.IsEnabled ? "Disable" : "Enable")
+                                            </button>
+                                        </form>
+                                        
+                                        <form method="post" asp-page-handler="Delete" class="d-inline">
+                                            <input type="hidden" name="id" value="@cert.Id" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                                    onclick="return confirm('Delete certificate \'@cert.CommonName\'?')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+
+                                <!-- Certificate Details Modal -->
+                                <div class="modal fade" id="certModal@cert.Id" tabindex="-1">
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Certificate Details: @cert.CommonName</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <dl class="row">
+                                                    <dt class="col-sm-3">Common Name</dt>
+                                                    <dd class="col-sm-9">@cert.CommonName</dd>
+
+                                                    <dt class="col-sm-3">Subject</dt>
+                                                    <dd class="col-sm-9"><code class="small">@cert.Subject</code></dd>
+
+                                                    <dt class="col-sm-3">Issuer</dt>
+                                                    <dd class="col-sm-9"><code class="small">@cert.Issuer</code></dd>
+
+                                                    <dt class="col-sm-3">Type</dt>
+                                                    <dd class="col-sm-9">@(cert.IsRootCa ? "Root CA (Self-signed)" : "Intermediate CA")</dd>
+
+                                                    <dt class="col-sm-3">Serial Number</dt>
+                                                    <dd class="col-sm-9"><code>@cert.SerialNumber</code></dd>
+
+                                                    <dt class="col-sm-3">Thumbprint (SHA-1)</dt>
+                                                    <dd class="col-sm-9"><code>@cert.Thumbprint</code></dd>
+
+                                                    @if (!string.IsNullOrEmpty(cert.Thumbprint256))
+                                                    {
+                                                        <dt class="col-sm-3">Thumbprint (SHA-256)</dt>
+                                                        <dd class="col-sm-9"><code class="small">@cert.Thumbprint256</code></dd>
+                                                    }
+
+                                                    <dt class="col-sm-3">Valid From</dt>
+                                                    <dd class="col-sm-9">@cert.NotBefore.ToString("F")</dd>
+
+                                                    <dt class="col-sm-3">Valid Until</dt>
+                                                    <dd class="col-sm-9">
+                                                        @cert.NotAfter.ToString("F")
+                                                        @if (cert.IsExpired)
+                                                        {
+                                                            <span class="badge bg-danger">EXPIRED</span>
+                                                        }
+                                                        else if (cert.DaysUntilExpiration < 90)
+                                                        {
+                                                            <span class="badge bg-warning text-dark">Expires in @cert.DaysUntilExpiration days</span>
+                                                        }
+                                                    </dd>
+
+                                                    @if (!string.IsNullOrEmpty(cert.Description))
+                                                    {
+                                                        <dt class="col-sm-3">Description</dt>
+                                                        <dd class="col-sm-9">@cert.Description</dd>
+                                                    }
+
+                                                    <dt class="col-sm-3">Uploaded</dt>
+                                                    <dd class="col-sm-9">
+                                                        @cert.CreatedAtUtc.ToString("F")
+                                                        @if (!string.IsNullOrEmpty(cert.CreatedBy))
+                                                        {
+                                                            <span>by <strong>@cert.CreatedBy</strong></span>
+                                                        }
+                                                    </dd>
+
+                                                    <dt class="col-sm-3">Last Updated</dt>
+                                                    <dd class="col-sm-9">
+                                                        @cert.UpdatedAtUtc.ToString("F")
+                                                        @if (!string.IsNullOrEmpty(cert.UpdatedBy))
+                                                        {
+                                                            <span>by <strong>@cert.UpdatedBy</strong></span>
+                                                        }
+                                                    </dd>
+
+                                                    <dt class="col-sm-3">Status</dt>
+                                                    <dd class="col-sm-9">
+                                                        @if (cert.IsEnabled)
+                                                        {
+                                                            <span class="badge bg-success">Active - Used for validation</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-secondary">Disabled - Not used</span>
+                                                        }
+                                                    </dd>
+                                                </dl>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

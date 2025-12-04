@@ -1,0 +1,342 @@
+@page
+@model SecureBootDashboard.Web.Pages.Admin.MutualTls.StatusModel
+@{
+    ViewData["Title"] = "Mutual TLS Status";
+}
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-graph-up"></i> Mutual TLS Status Dashboard</h2>
+            <p class="text-muted">Overview of client certificate authentication status</p>
+        </div>
+        <div>
+            <a asp-page="/Admin/MutualTls/Index" class="btn btn-outline-primary">
+                <i class="bi bi-gear"></i> Configuration
+            </a>
+            <a asp-page="/Admin/MutualTls/Certificates" class="btn btn-outline-secondary">
+                <i class="bi bi-file-earmark-lock"></i> Manage Certificates
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle"></i>
+            @Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (Model.Status != null)
+    {
+        <!-- Overall Status Card -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card border-@(Model.Status.IsEnabled ? "success" : "secondary")">
+                    <div class="card-body text-center">
+                        <h3 class="mb-3">
+                            Mutual TLS Authentication
+                            <span class="badge @(Model.Status.IsEnabled ? "bg-success" : "bg-secondary") ms-2">
+                                @(Model.Status.IsEnabled ? "ENABLED" : "DISABLED")
+                            </span>
+                        </h3>
+                        @if (Model.Status.IsEnabled)
+                        {
+                            <p class="lead text-success mb-0">
+                                <i class="bi bi-shield-check"></i>
+                                Client certificate authentication is active. All API requests require valid client certificates.
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="lead text-muted mb-0">
+                                <i class="bi bi-shield-slash"></i>
+                                Client certificate authentication is disabled. API endpoints do not require certificates.
+                            </p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <!-- Total CAs Card -->
+            <div class="col-md-3">
+                <div class="card border-primary">
+                    <div class="card-body text-center">
+                        <i class="bi bi-collection display-4 text-primary"></i>
+                        <h3 class="mt-2">@Model.Status.TotalTrustedCAs</h3>
+                        <p class="text-muted mb-0">Total CA Certificates</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enabled CAs Card -->
+            <div class="col-md-3">
+                <div class="card border-success">
+                    <div class="card-body text-center">
+                        <i class="bi bi-check-circle display-4 text-success"></i>
+                        <h3 class="mt-2">@Model.Status.EnabledTrustedCAs</h3>
+                        <p class="text-muted mb-0">Enabled Certificates</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expired CAs Card -->
+            <div class="col-md-3">
+                <div class="card border-danger">
+                    <div class="card-body text-center">
+                        <i class="bi bi-exclamation-triangle display-4 text-danger"></i>
+                        <h3 class="mt-2">@Model.Status.ExpiredCAs</h3>
+                        <p class="text-muted mb-0">Expired Certificates</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expiring Soon CAs Card -->
+            <div class="col-md-3">
+                <div class="card border-warning">
+                    <div class="card-body text-center">
+                        <i class="bi bi-clock display-4 text-warning"></i>
+                        <h3 class="mt-2">@Model.Status.ExpiringSoonCAs</h3>
+                        <p class="text-muted mb-0">Expiring Soon (&lt;90 days)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Validation Settings Status -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-shield-check"></i> Validation Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    @if (Model.Status.IssuerAllowlistEnabled)
+                                    {
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        <span>Issuer Allowlist</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-x-circle-fill text-secondary me-2"></i>
+                                        <span class="text-muted">Issuer Allowlist</span>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="col-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    @if (Model.Status.ThumbprintAllowlistEnabled)
+                                    {
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        <span>Thumbprint Allowlist</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-x-circle-fill text-secondary me-2"></i>
+                                        <span class="text-muted">Thumbprint Allowlist</span>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="col-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    @if (Model.Status.RevocationCheckEnabled)
+                                    {
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        <span>Revocation Check</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-x-circle-fill text-secondary me-2"></i>
+                                        <span class="text-muted">Revocation Check</span>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="col-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    @if (Model.Status.ChainValidationEnabled)
+                                    {
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        <span>Chain Validation</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-x-circle-fill text-secondary me-2"></i>
+                                        <span class="text-muted">Chain Validation</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (Model.Status.ExpiredCAs > 0)
+                        {
+                            <div class="alert alert-danger mt-3 mb-0">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <strong>Warning:</strong> @Model.Status.ExpiredCAs expired certificate(s) found. 
+                                <a asp-page="/Admin/MutualTls/Certificates" class="alert-link">Review certificates</a>
+                            </div>
+                        }
+                        else if (Model.Status.ExpiringSoonCAs > 0)
+                        {
+                            <div class="alert alert-warning mt-3 mb-0">
+                                <i class="bi bi-clock"></i>
+                                <strong>Notice:</strong> @Model.Status.ExpiringSoonCAs certificate(s) expiring within 90 days.
+                                <a asp-page="/Admin/MutualTls/Certificates" class="alert-link">Review certificates</a>
+                            </div>
+                        }
+                        else if (Model.Status.IsEnabled && Model.Status.EnabledTrustedCAs == 0)
+                        {
+                            <div class="alert alert-warning mt-3 mb-0">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Notice:</strong> Mutual TLS is enabled but no CA certificates are active.
+                                <a asp-page="/Admin/MutualTls/Certificates" class="alert-link">Upload certificates</a>
+                            </div>
+                        }
+                        else if (Model.Status.IsEnabled)
+                        {
+                            <div class="alert alert-success mt-3 mb-0">
+                                <i class="bi bi-check-circle"></i>
+                                <strong>OK:</strong> All certificates are valid and operational.
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration Info Card -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Configuration Info</h5>
+                    </div>
+                    <div class="card-body">
+                        <dl>
+                            <dt>Last Configuration Update</dt>
+                            <dd>
+                                @if (Model.Status.ConfigurationLastUpdated.HasValue)
+                                {
+                                    @Model.Status.ConfigurationLastUpdated.Value.ToString("F")
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Never updated</span>
+                                }
+                            </dd>
+
+                            <dt>Updated By</dt>
+                            <dd>
+                                @if (!string.IsNullOrEmpty(Model.Status.ConfigurationUpdatedBy))
+                                {
+                                    <strong>@Model.Status.ConfigurationUpdatedBy</strong>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">System</span>
+                                }
+                            </dd>
+
+                            <dt>Status</dt>
+                            <dd>
+                                @if (Model.Status.IsEnabled && Model.Status.EnabledTrustedCAs > 0 && Model.Status.ExpiredCAs == 0)
+                                {
+                                    <span class="badge bg-success">? Healthy</span>
+                                }
+                                else if (Model.Status.IsEnabled && Model.Status.ExpiredCAs > 0)
+                                {
+                                    <span class="badge bg-danger">? Needs Attention</span>
+                                }
+                                else if (Model.Status.IsEnabled && Model.Status.EnabledTrustedCAs == 0)
+                                {
+                                    <span class="badge bg-warning text-dark">? No Active CAs</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">? Disabled</span>
+                                }
+                            </dd>
+                        </dl>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <a asp-page="/Admin/MutualTls/Index" class="btn btn-primary">
+                                <i class="bi bi-gear"></i> Configure Settings
+                            </a>
+                            <a asp-page="/Admin/MutualTls/Certificates" class="btn btn-outline-secondary">
+                                <i class="bi bi-file-earmark-lock"></i> Manage Certificates
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recommendations Card -->
+        @if (Model.Status.IsEnabled)
+        {
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-lightbulb"></i> Recommendations</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        @if (Model.Status.ExpiredCAs > 0)
+                        {
+                            <li class="text-danger"><strong>Critical:</strong> Remove or replace expired CA certificates immediately.</li>
+                        }
+                        @if (Model.Status.ExpiringSoonCAs > 0)
+                        {
+                            <li class="text-warning"><strong>Important:</strong> Plan to renew or replace certificates expiring within 90 days.</li>
+                        }
+                        @if (Model.Status.EnabledTrustedCAs == 0)
+                        {
+                            <li class="text-warning"><strong>Action Required:</strong> Upload and enable CA certificates for client validation.</li>
+                        }
+                        @if (!Model.Status.RevocationCheckEnabled)
+                        {
+                            <li><strong>Consider:</strong> Enabling certificate revocation checking for enhanced security.</li>
+                        }
+                        @if (!Model.Status.ChainValidationEnabled)
+                        {
+                            <li><strong>Consider:</strong> Enabling chain validation to verify complete certificate trust paths.</li>
+                        }
+                        @if (Model.Status.IssuerAllowlistEnabled && Model.Status.ThumbprintAllowlistEnabled)
+                        {
+                            <li><strong>Note:</strong> Both issuer and thumbprint allowlists are enabled. This provides maximum security but requires both checks to pass.</li>
+                        }
+                        @if (Model.Status.ExpiredCAs == 0 && Model.Status.ExpiringSoonCAs == 0 && Model.Status.EnabledTrustedCAs > 0)
+                        {
+                            <li class="text-success"><strong>Good:</strong> All certificates are valid. No immediate action required.</li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card border-secondary">
+                <div class="card-body text-center text-muted">
+                    <i class="bi bi-shield-slash display-1 mb-3"></i>
+                    <h4>Mutual TLS is Disabled</h4>
+                    <p>Client certificate authentication is currently not active. To enable it:</p>
+                    <ol class="text-start" style="max-width: 500px; margin: 0 auto;">
+                        <li>Upload trusted CA certificates</li>
+                        <li>Configure validation settings</li>
+                        <li>Enable mutual TLS authentication</li>
+                    </ol>
+                    <a asp-page="/Admin/MutualTls/Index" class="btn btn-primary mt-3">
+                        <i class="bi bi-gear"></i> Get Started
+                    </a>
+                </div>
+            </div>
+        }
+    }
+</div>

@@ -398,4 +398,57 @@ public sealed class SecureBootApiClient : ISecureBootApiClient
             return default;
         }
     }
+
+    public async Task<T?> PostFormDataAsync<T>(string requestUri, MultipartFormDataContent content, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("POST FormData {RequestUri}", requestUri);
+            
+            var response = await _httpClient.PostAsync(requestUri, content, cancellationToken);
+
+            response.EnsureSuccessStatusCode();
+            
+            return await response.Content.ReadFromJsonAsync<T>(cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "POST FormData request failed: {RequestUri}", requestUri);
+            throw;
+        }
+    }
+
+    public async Task PatchAsync(string requestUri, object content, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("PATCH {RequestUri}", requestUri);
+            
+            var response = await _httpClient.PatchAsJsonAsync(requestUri, content, cancellationToken);
+
+            response.EnsureSuccessStatusCode();
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "PATCH request failed: {RequestUri}", requestUri);
+            throw;
+        }
+    }
+
+    public async Task DeleteAsync(string requestUri, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogDebug("DELETE {RequestUri}", requestUri);
+            
+            var response = await _httpClient.DeleteAsync(requestUri, cancellationToken);
+
+            response.EnsureSuccessStatusCode();
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "DELETE request failed: {RequestUri}", requestUri);
+            throw;
+        }
+    }
 }
