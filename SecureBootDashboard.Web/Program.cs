@@ -2,13 +2,18 @@ using Microsoft.Identity.Web;
 using SecureBootDashboard.Web.Services;
 using Serilog;
 using Serilog.Events;
+using Serilog.Sinks.ApplicationInsights.TelemetryConverters;
 using System.IO;
 using System.Reflection;
 
     // Configure Serilog before building the app
     var workspaceRoot = Directory.GetParent(AppContext.BaseDirectory)?.Parent?.Parent?.Parent?.Parent?.FullName ?? AppContext.BaseDirectory;
     var logPath = Path.Combine(workspaceRoot, "logs", "web-.log");
-    Log.Logger = new LoggerConfiguration()
+    
+    // Read Application Insights connection string from environment or config
+    var appInsightsConnectionString = Environment.GetEnvironmentVariable("APPLICATIONINSIGHTS_CONNECTION_STRING");
+    
+    var loggerConfig = new LoggerConfiguration()
         .MinimumLevel.Information()
         .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
         .Enrich.FromLogContext()
@@ -17,8 +22,18 @@ using System.Reflection;
             path: logPath,
             rollingInterval: RollingInterval.Day,
             retainedFileCountLimit: 30,
-            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
-        .CreateLogger();
+            outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}");
+    
+    // Add Application Insights sink if connection string is available
+    if (!string.IsNullOrEmpty(appInsightsConnectionString))
+    {
+        loggerConfig.WriteTo.ApplicationInsights(
+            connectionString: appInsightsConnectionString,
+            telemetryConverter: new TraceTelemetryConverter(),
+            restrictedToMinimumLevel: LogEventLevel.Information);
+    }
+    
+    Log.Logger = loggerConfig.CreateLogger();
 
     try
     {
@@ -38,8 +53,39 @@ using System.Reflection;
         Log.Information("Machine Name: {MachineName}", Environment.MachineName);
         Log.Information("User: {User}", Environment.UserName);
         Log.Information(".NET Version: {DotNetVersion}", Environment.Version);
+        
+        if (!string.IsNullOrEmpty(appInsightsConnectionString))
+        {
+            Log.Information("Application Insights: Enabled (Connection string configured)");
+        }
+        else
+        {
+            Log.Information("Application Insights: Disabled (No connection string found)");
+        }
 
         var builder = WebApplication.CreateBuilder(args);
+
+        // Add Application Insights telemetry
+        builder.Services.AddApplicationInsightsTelemetry(options =>
+        {
+            // Connection string can come from environment variable or appsettings.json
+            if (!string.IsNullOrEmpty(appInsightsConnectionString))
+            {
+                options.ConnectionString = appInsightsConnectionString;
+            }
+            
+            // Enable adaptive sampling to control telemetry volume
+            options.EnableAdaptiveSampling = true;
+            
+            // Collect detailed dependency telemetry
+            options.EnableDependencyTrackingTelemetryModule = true;
+            
+            // Collect performance counters
+            options.EnablePerformanceCounterCollectionModule = true;
+            
+            // Track unhandled exceptions
+            options.EnableQuickPulseMetricStream = true;
+        });
 
         // Use Serilog for logging
         builder.Host.UseSerilog();

@@ -11,13 +11,56 @@ This guide covers deploying the SecureBootDashboard API with enterprise-grade pe
 - **Database**: Azure SQL Database S3 or higher (100 DTUs)
 - **Network**: Load balancer with SSL termination
 - **Storage**: Azure Storage Account (for queues)
+- **Monitoring**: Application Insights (Standard tier)
 
 **High-Scale Recommended**:
 - **Compute**: 8-16 vCPU, 32-64 GB RAM per instance
 - **Database**: Azure SQL Database P2 or higher, or SQL Managed Instance
 - **Network**: Application Gateway with WAF
 - **Cache**: Azure Cache for Redis (Standard C1 or higher)
+- **Monitoring**: Application Insights (Enterprise tier with extended retention)
 - **Multiple Regions**: For geo-distribution and disaster recovery
+
+### 2. Monitoring & Observability Setup
+
+#### Application Insights Configuration
+
+**Azure Deployment:**
+```bash
+# Create Application Insights resource
+az monitor app-insights component create \
+  --app secureboot-dashboard-insights \
+  --location eastus \
+  --resource-group rg-secureboot-prod \
+  --application-type web
+
+# Get connection string
+CONNECTION_STRING=$(az monitor app-insights component show \
+  --app secureboot-dashboard-insights \
+  --resource-group rg-secureboot-prod \
+  --query connectionString --output tsv)
+
+echo "Application Insights Connection String: $CONNECTION_STRING"
+```
+
+**On-Premises Deployment:**
+
+For air-gapped or on-premises deployments, use OpenTelemetry Collector:
+
+```bash
+# Deploy OpenTelemetry Collector
+docker run -d \
+  --name appinsights-collector \
+  -p 4318:4318 \
+  -p 55678:55678 \
+  -v ./otel-config.yaml:/etc/otel/config.yaml \
+  otel/opentelemetry-collector-contrib:latest
+
+# Configure custom ingestion endpoint
+export APPLICATIONINSIGHTS_CONNECTION_STRING="InstrumentationKey=local;IngestionEndpoint=http://localhost:4318/"
+```
+
+See [APPLICATION_INSIGHTS_CONFIGURATION.md](../docs/APPLICATION_INSIGHTS_CONFIGURATION.md) for detailed setup instructions.
 
 ### 2. Configuration Review
 
@@ -25,6 +68,13 @@ Review and adjust `appsettings.Production.json`:
 
 ```json
 {
+  "ApplicationInsights": {
+    "ConnectionString": "InstrumentationKey=...;IngestionEndpoint=...",
+    "EnableAdaptiveSampling": true,
+    "EnablePerformanceCounterCollectionModule": true,
+    "EnableQuickPulseMetricStream": true,
+    "CloudRoleName": "SecureBootDashboard.Api"
+  },
   "Performance": {
     "RateLimiting": {
       "Enabled": true,
@@ -262,6 +312,11 @@ spec:
           valueFrom:
             secretKeyRef:
               name: redis-connection
+              key: connectionString
+        - name: APPLICATIONINSIGHTS_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: appinsights-connection
               key: connectionString
         livenessProbe:
           httpGet:
