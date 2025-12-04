@@ -59,9 +59,10 @@ namespace SecureBootDashboard.Api.Services
             }
 
             // Overall readiness
+            // Note: Windows UEFI CA 2023 is not required for readiness as it gets provisioned
+            // AFTER the secure boot certificate upgrade, not before.
             evaluation.IsReadyToUpdate = evaluation.IsOSReady &&
-                                         evaluation.AreOemCertificatesValid &&
-                                         evaluation.HasWindowsUEFICA2023;
+                                         evaluation.AreOemCertificatesValid;
 
             return evaluation;
         }
@@ -390,14 +391,14 @@ namespace SecureBootDashboard.Api.Services
                 _logger.LogWarning("No OEM certificates found in signature database - this may indicate a virtual machine, consumer device, or firmware read error");
             }
 
-            // Add Windows UEFI CA 2023 status
+            // Add Windows UEFI CA 2023 status (informational only, not required for readiness)
             if (!evaluation.HasWindowsUEFICA2023)
             {
-                evaluation.CertificateEvaluationDetails += "; ❌ Windows UEFI CA 2023 not found";
+                evaluation.CertificateEvaluationDetails += "; ℹ️ Windows UEFI CA 2023 not yet installed (expected before upgrade)";
             }
             else
             {
-                evaluation.CertificateEvaluationDetails += "; ✅ Windows UEFI CA 2023 present";
+                evaluation.CertificateEvaluationDetails += "; ✅ Windows UEFI CA 2023 already present";
             }
         }
     }
