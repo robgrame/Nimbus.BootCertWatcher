@@ -14,6 +14,8 @@ using System.IO.Compression;
 using Microsoft.AspNetCore.ResponseCompression;
 using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Authentication.Certificate;
+using System.Security.Cryptography.X509Certificates;
 
 // Configure Serilog before building the app
 var workspaceRoot = Directory.GetParent(AppContext.BaseDirectory)?.Parent?.Parent?.Parent?.Parent?.FullName ?? AppContext.BaseDirectory;
@@ -105,6 +107,108 @@ try
         options.MaximumReceiveMessageSize = null;
     });
     Log.Information("SignalR configured successfully");
+
+    // Configure Mutual TLS Authentication
+    Log.Information("Configuring Mutual TLS Authentication...");
+    builder.Services.Configure<MutualTlsOptions>(builder.Configuration.GetSection("MutualTls"));
+    var mtlsConfig = builder.Configuration.GetSection("MutualTls").Get<MutualTlsOptions>();
+    
+    if (mtlsConfig?.Enabled == true)
+    {
+        Log.Information("Mutual TLS is ENABLED");
+        Log.Information("  Allow Self-Signed Certificates: {AllowSelfSigned}", mtlsConfig.AllowSelfSignedCertificates);
+        Log.Information("  Check Certificate Revocation: {CheckRevocation}", mtlsConfig.CheckCertificateRevocation);
+        Log.Information("  Validate Certificate Chain: {ValidateChain}", mtlsConfig.ValidateCertificateChain);
+        
+        if (mtlsConfig.AllowedThumbprints?.Count > 0)
+        {
+            Log.Information("  Allowed Thumbprints: {Count} configured", mtlsConfig.AllowedThumbprints.Count);
+            foreach (var thumbprint in mtlsConfig.AllowedThumbprints)
+            {
+                Log.Information("    - {Thumbprint}", thumbprint);
+            }
+        }
+        
+        if (mtlsConfig.AllowedIssuers?.Count > 0)
+        {
+            Log.Information("  Allowed Issuers: {Count} configured", mtlsConfig.AllowedIssuers.Count);
+            foreach (var issuer in mtlsConfig.AllowedIssuers)
+            {
+                Log.Information("    - {Issuer}", issuer);
+            }
+        }
+        
+        builder.Services.AddAuthentication(CertificateAuthenticationDefaults.AuthenticationScheme)
+            .AddCertificate(options =>
+            {
+                options.AllowedCertificateTypes = mtlsConfig.AllowSelfSignedCertificates 
+                    ? CertificateTypes.All 
+                    : CertificateTypes.Chained;
+                
+                options.RevocationMode = mtlsConfig.CheckCertificateRevocation 
+                    ? X509RevocationMode.Online 
+                    : X509RevocationMode.NoCheck;
+                
+                options.ValidateCertificateUse = true;
+                options.ValidateValidityPeriod = true;
+                
+                options.Events = new CertificateAuthenticationEvents
+                {
+                    OnCertificateValidated = context =>
+                    {
+                        var certificate = context.ClientCertificate;
+                        Log.Debug("Certificate validation requested for: {Subject}", certificate.Subject);
+                        
+                        // Check thumbprint allowlist if configured
+                        if (mtlsConfig.AllowedThumbprints?.Count > 0)
+                        {
+                            var thumbprint = certificate.Thumbprint;
+                            if (!mtlsConfig.AllowedThumbprints.Contains(thumbprint, StringComparer.OrdinalIgnoreCase))
+                            {
+                                Log.Warning("Certificate rejected - thumbprint not in allowlist: {Thumbprint}", thumbprint);
+                                context.Fail("Certificate thumbprint not allowed");
+                                return Task.CompletedTask;
+                            }
+                            Log.Debug("Certificate thumbprint validated: {Thumbprint}", thumbprint);
+                        }
+                        
+                        // Check issuer allowlist if configured
+                        if (mtlsConfig.AllowedIssuers?.Count > 0)
+                        {
+                            var issuerCN = certificate.Issuer;
+                            var issuerAllowed = mtlsConfig.AllowedIssuers.Any(allowed => 
+                                issuerCN.Contains($"CN={allowed}", StringComparison.OrdinalIgnoreCase));
+                            
+                            if (!issuerAllowed)
+                            {
+                                Log.Warning("Certificate rejected - issuer not in allowlist: {Issuer}", issuerCN);
+                                context.Fail("Certificate issuer not allowed");
+                                return Task.CompletedTask;
+                            }
+                            Log.Debug("Certificate issuer validated: {Issuer}", issuerCN);
+                        }
+                        
+                        Log.Information("Certificate validated successfully: Subject={Subject}, Issuer={Issuer}, Thumbprint={Thumbprint}", 
+                            certificate.Subject, certificate.Issuer, certificate.Thumbprint);
+                        
+                        context.Success();
+                        return Task.CompletedTask;
+                    },
+                    OnAuthenticationFailed = context =>
+                    {
+                        Log.Error(context.Exception, "Certificate authentication failed");
+                        return Task.CompletedTask;
+                    }
+                };
+            });
+        
+        builder.Services.AddAuthorization();
+        Log.Information("Mutual TLS authentication configured successfully");
+    }
+    else
+    {
+        Log.Information("Mutual TLS is DISABLED - API endpoints will not require client certificates");
+    }
 
     // Log connection string (masked)
     var connectionString = builder.Configuration.GetConnectionString("SqlServer");
@@ -434,6 +538,14 @@ try
     {
         app.UseOutputCache();
         Log.Information("Output Caching middleware enabled");
+    }
+
+    // Enable Certificate Authentication if configured
+    if (mtlsConfig?.Enabled == true)
+    {
+        app.UseAuthentication();
+        app.UseAuthorization();
+        Log.Information("Certificate Authentication middleware enabled");
     }
 
     app.MapControllers();

@@ -260,7 +260,95 @@ namespace SecureBootWatcher.Client
 				builder.AddSerilog(dispose: false);
 			});
 
-			services.AddHttpClient("SecureBootIngestion");
+			// Configure HttpClient with certificate support
+			services.AddHttpClient("SecureBootIngestion")
+				.ConfigurePrimaryHttpMessageHandler(sp =>
+				{
+					var options = sp.GetRequiredService<IOptionsMonitor<SecureBootWatcherOptions>>();
+					var webApiOptions = options.CurrentValue.Sinks.WebApi;
+					
+					var handler = new System.Net.Http.HttpClientHandler();
+					
+					// Configure certificate authentication if enabled
+					if (webApiOptions.UseCertificateAuth)
+					{
+						System.Security.Cryptography.X509Certificates.X509Certificate2? certificate = null;
+						
+						try
+						{
+							// Try to load from certificate store first
+							if (!string.IsNullOrEmpty(webApiOptions.CertificateThumbprint))
+							{
+								Log.Information("Loading client certificate from store: {Thumbprint}", webApiOptions.CertificateThumbprint);
+								
+								var storeLocation = webApiOptions.CertificateStoreLocation.Equals("LocalMachine", StringComparison.OrdinalIgnoreCase)
+									? System.Security.Cryptography.X509Certificates.StoreLocation.LocalMachine
+									: System.Security.Cryptography.X509Certificates.StoreLocation.CurrentUser;
+								
+								var storeName = webApiOptions.CertificateStoreName.Equals("Root", StringComparison.OrdinalIgnoreCase)
+									? System.Security.Cryptography.X509Certificates.StoreName.Root
+									: System.Security.Cryptography.X509Certificates.StoreName.My;
+								
+								using (var store = new System.Security.Cryptography.X509Certificates.X509Store(storeName, storeLocation))
+								{
+									store.Open(System.Security.Cryptography.X509Certificates.OpenFlags.ReadOnly);
+									var certificates = store.Certificates.Find(
+										System.Security.Cryptography.X509Certificates.X509FindType.FindByThumbprint,
+										webApiOptions.CertificateThumbprint,
+										false);
+									
+									if (certificates.Count > 0)
+									{
+										certificate = certificates[0];
+										Log.Information("Client certificate loaded from store: Subject={Subject}, Issuer={Issuer}", 
+											certificate.Subject, certificate.Issuer);
+									}
+									else
+									{
+										Log.Error("Client certificate not found in store with thumbprint: {Thumbprint}", 
+											webApiOptions.CertificateThumbprint);
+									}
+								}
+							}
+							// Otherwise try to load from file
+							else if (!string.IsNullOrEmpty(webApiOptions.CertificatePath))
+							{
+								Log.Information("Loading client certificate from file: {Path}", webApiOptions.CertificatePath);
+								
+								if (!string.IsNullOrEmpty(webApiOptions.CertificatePassword))
+								{
+									certificate = new System.Security.Cryptography.X509Certificates.X509Certificate2(
+										webApiOptions.CertificatePath,
+										webApiOptions.CertificatePassword);
+								}
+								else
+								{
+									certificate = new System.Security.Cryptography.X509Certificates.X509Certificate2(
+										webApiOptions.CertificatePath);
+								}
+								
+								Log.Information("Client certificate loaded from file: Subject={Subject}, Issuer={Issuer}", 
+									certificate.Subject, certificate.Issuer);
+							}
+							
+							if (certificate != null)
+							{
+								handler.ClientCertificates.Add(certificate);
+								Log.Information("Client certificate added to HttpClient handler");
+							}
+							else
+							{
+								Log.Warning("Certificate authentication enabled but no certificate could be loaded");
+							}
+						}
+						catch (Exception ex)
+						{
+							Log.Error(ex, "Failed to load client certificate for mutual TLS");
+						}
+					}
+					
+					return handler;
+				});
 
 			services.AddSecureBootWatcherOptions(configuration);
 
