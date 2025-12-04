@@ -1,106 +1,268 @@
-<!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
-- [x] Verify that the copilot-instructions.md file in the .github directory is created. (created file per workspace checklist)
+# GitHub Copilot Instructions - Secure Boot Certificate Watcher
 
-- [x] Clarify Project Requirements (confirmed .NET Framework 4.8 client, .NET 8 web/API, Azure Queue sink, SQL Server target)
-	<!-- Ask for project type, language, and frameworks if not specified. Skip if already provided. -->
+## Project Overview
 
-- [x] Scaffold the Project (dotnet new sln/projects plus tests and infra/docs folders created)
-	<!--
-	Ensure that the previous step has been marked as completed.
-	Call project setup tool with projectType parameter.
-	Run scaffolding command to create project files and folders.
-	Use '.' as the working directory.
-	If no appropriate projectType is available, search documentation using available tools.
-	Otherwise, create the project structure manually using available file creation tools.
-	-->
+**Secure Boot Certificate Watcher** is an enterprise Windows monitoring solution for tracking Secure Boot certificates, Windows versions, and device compliance across Windows fleets. The solution consists of:
 
-- [ ] Customize the Project
-	<!--
-	Verify that all previous steps have been completed successfully and you have marked the step as completed.
-	Develop a plan to modify codebase according to user requirements.
-	Apply modifications using appropriate tools and user-provided references.
-	Skip this step for "Hello World" projects.
-	-->
+- **.NET Framework 4.8 Client** (SecureBootWatcher.Client) - Runs on Windows devices to collect data
+- **.NET 10 Web API** (SecureBootDashboard.Api) - REST API for data ingestion and querying
+- **.NET 10 Web Dashboard** (SecureBootDashboard.Web) - Razor Pages dashboard for visualization
+- **Shared Libraries** (SecureBootWatcher.Shared, WindowsVersionsCore) - Common models and utilities
+- **Test Projects** - Comprehensive test coverage for all components
 
-- [ ] Install Required Extensions
-	<!-- ONLY install extensions provided mentioned in the get_project_setup_info. Skip this step otherwise and mark as completed. -->
+**Current Version**: 1.13 (using Nerdbank.GitVersioning)
 
-- [ ] Compile the Project
-	<!--
-	Verify that all previous steps have been completed.
-	Install any missing dependencies.
-	Run diagnostics and resolve any issues.
-	Check for markdown files in project folder for relevant instructions on how to do this.
-	-->
+## Technology Stack
 
-- [ ] Create and Run Task
-	<!--
-	Verify that all previous steps have been completed.
-	Check https://code.visualstudio.com/docs/debugtest/tasks to determine if the project needs a task. If so, use the create_and_run_task to create and launch a task based on package.json, README.md, and project structure.
-	Skip this step otherwise.
-	 -->
+### Backend
+- **.NET 10** (API & Web)
+- **ASP.NET Core 10** (Web API, Razor Pages)
+- **Entity Framework Core 10** (SQL Server)
+- **SignalR 1.2.0** (Real-time updates)
+- **Serilog 10.0** (Structured logging)
+- **Azure SDK** (Storage Queues, Identity)
+- **Polly 8.x** (Resilience & retry policies)
 
-- [ ] Launch the Project
-	<!--
-	Verify that all previous steps have been completed.
-	Prompt user for debug mode, launch only if confirmed.
-	 -->
+### Frontend
+- **Razor Pages** (server-side rendering)
+- **Bootstrap 5** (UI framework)
+- **Chart.js 4.4** (Analytics charts)
+- **SignalR Client 8.0** (WebSocket client)
+- **jQuery 3.x** (DOM manipulation)
 
-- [ ] Ensure Documentation is Complete
-	<!--
-	Verify that all previous steps have been completed.
-	Verify that README.md and the copilot-instructions.md file in the .github directory exists and contains current project information.
-	Clean up the copilot-instructions.md file in the .github directory by removing all HTML comments.
-	 -->
+### Client
+- **.NET Framework 4.8** (Windows compatibility)
+- **PowerShell 5.0+** (Certificate enumeration)
+- **Windows Registry API** (Registry polling)
+- **WMI** (Device information)
 
-<!--
-## Execution Guidelines
-PROGRESS TRACKING:
-- If any tools are available to manage the above todo list, use it to track progress through this checklist.
-- After completing each step, mark it complete and add a summary.
-- Read current todo list status before starting each new step.
+### Infrastructure
+- **Azure App Service** (Hosting)
+- **Azure SQL Database** (Persistence)
+- **Azure Queue Storage** (Message buffering)
+- **Azure Monitor** (Telemetry)
+- **WebSocket Support** (SignalR)
 
-COMMUNICATION RULES:
-- Avoid verbose explanations or printing full command outputs.
-- If a step is skipped, state that briefly (e.g. "No extensions needed").
-- Do not explain project structure unless asked.
-- Keep explanations concise and focused.
+## Architecture Patterns
 
-DEVELOPMENT RULES:
-- Use '.' as the working directory unless user specifies otherwise.
-- Avoid adding media or external links unless explicitly requested.
-- Use placeholders only with a note that they should be replaced.
-- Use VS Code API tool only for VS Code extension projects.
-- Once the project is created, it is already opened in Visual Studio Code—do not suggest commands to open this project in Visual Studio again.
-- If the project setup information has additional rules, follow them strictly.
+### Multi-Component Solution
+- **Client-Server Architecture**: .NET Framework client → Azure Queue → .NET 10 API
+- **Layered Architecture**: Presentation → API → Service → Data layers
+- **Repository Pattern**: Data access abstraction with EF Core
+- **Background Services**: Queue processor, scheduled tasks
+- **Real-time Communication**: SignalR hubs for live dashboard updates
 
-FOLDER CREATION RULES:
-- Always use the current directory as the project root.
-- If you are running any terminal commands, use the '.' argument to ensure that the current working directory is used ALWAYS.
-- Do not create a new folder unless the user explicitly requests it besides a .vscode folder for a tasks.json file.
-- If any of the scaffolding commands mention that the folder name is not correct, let the user know to create a new folder with the correct name and then reopen it again in vscode.
+### Data Flow
+1. Client collects Secure Boot data from Windows devices
+2. Data sent to Azure Queue or directly to API
+3. Background service processes queue messages
+4. API stores data in SQL Server via EF Core
+5. Web dashboard queries API and displays real-time updates via SignalR
 
-EXTENSION INSTALLATION RULES:
-- Only install extension specified by the get_project_setup_info tool. DO NOT INSTALL any other extensions.
+### Key Design Principles
+- **Nullable Reference Types**: Enabled in all .NET 10 projects
+- **Implicit Usings**: Enabled for cleaner code
+- **Dependency Injection**: Used throughout API and Web projects
+- **Configuration**: appsettings.json with environment-specific overrides
+- **Logging**: Serilog with structured logging to Application Insights and files
 
-PROJECT CONTENT RULES:
-- If the user has not specified project details, assume they want a "Hello World" project as a starting point.
-- Avoid adding links of any type (URLs, files, folders, etc.) or integrations that are not explicitly required.
-- Avoid generating images, videos, or any other media files unless explicitly requested.
-- If you need to use any media assets as placeholders, let the user know that these are placeholders and should be replaced with the actual assets later.
-- Ensure all generated components serve a clear purpose within the user's requested workflow.
-- If a feature is assumed but not confirmed, prompt the user for clarification before including it.
-- If you are working on a VS Code extension, use the VS Code API tool with a query to find relevant VS Code API references and samples related to that query.
+## Coding Standards
 
-TASK COMPLETION RULES:
-- Your task is complete when:
-  - Project is successfully scaffolded and compiled without errors
-  - copilot-instructions.md file in the .github directory exists in the project
-  - README.md file exists and is up to date
-  - User is provided with clear instructions to debug/launch the project
+### General Guidelines
+- Use C# 13 features (with .NET 10)
+- Enable nullable reference types (`<Nullable>enable</Nullable>`)
+- Enable implicit usings (`<ImplicitUsings>enable</ImplicitUsings>`)
+- Follow Microsoft C# coding conventions
+- Use async/await for I/O operations
+- Implement proper exception handling with logging
+- Use dependency injection for loose coupling
 
-Before starting a new task in the above plan, update progress in the plan.
--->
-- Work through each checklist item systematically.
-- Keep communication concise and focused.
-- Follow development best practices.
+### Naming Conventions
+- **Classes**: PascalCase (e.g., `DeviceEntity`, `SecureBootReport`)
+- **Methods**: PascalCase (e.g., `GetDeviceAsync`, `ProcessReport`)
+- **Properties**: PascalCase (e.g., `DeviceId`, `LastReportDate`)
+- **Fields**: camelCase with underscore prefix for private fields (e.g., `_logger`, `_repository`)
+- **Interfaces**: PascalCase with 'I' prefix (e.g., `IDeviceRepository`, `IReportService`)
+- **Async Methods**: Suffix with 'Async' (e.g., `GetDevicesAsync`)
+
+### Project Structure
+- **Models**: DTOs and entity classes in `Models/` folder
+- **Services**: Business logic in `Services/` folder
+- **Controllers**: API endpoints in `Controllers/` folder (API project)
+- **Pages**: Razor pages in `Pages/` folder (Web project)
+- **Data**: EF Core context and repositories in `Data/` folder
+- **Tests**: Mirror source project structure in test projects
+
+### Testing
+- Use xUnit for all tests
+- Follow Arrange-Act-Assert pattern
+- Use meaningful test names (e.g., `GetDevice_WhenDeviceExists_ReturnsDevice`)
+- Mock external dependencies with Moq or NSubstitute
+- Aim for high code coverage on business logic
+
+### Documentation
+- All public APIs should have XML documentation comments
+- Keep README.md up to date with major changes
+- Document architectural decisions in `docs/` folder
+- Use clear commit messages following conventional commits format
+
+## Build and Test Commands
+
+### Build
+```powershell
+# Build entire solution
+dotnet build SecureBootWatcher.sln
+
+# Build specific project
+dotnet build SecureBootDashboard.Api/SecureBootDashboard.Api.csproj
+
+# Build in Release mode
+dotnet build -c Release
+```
+
+### Test
+```powershell
+# Run all tests
+dotnet test
+
+# Run tests with coverage
+dotnet test /p:CollectCoverage=true
+
+# Run specific test project
+dotnet test SecureBootDashboard.Api.Tests/SecureBootDashboard.Api.Tests.csproj
+```
+
+### Run Development Environment
+```powershell
+# Start API and Web in parallel
+.\start-dev.ps1
+
+# Or manually in separate terminals:
+cd SecureBootDashboard.Api && dotnet run
+cd SecureBootDashboard.Web && dotnet run
+```
+
+**Default URLs**:
+- API: `https://localhost:7120`
+- API Swagger: `https://localhost:7120/swagger`
+- Web: `https://localhost:7001`
+
+### Database Migrations
+```powershell
+# Add new migration
+dotnet ef migrations add MigrationName --project SecureBootDashboard.Api
+
+# Update database
+dotnet ef database update --project SecureBootDashboard.Api
+
+# Generate SQL script
+dotnet ef migrations script --project SecureBootDashboard.Api
+```
+
+## Common Development Tasks
+
+### Adding a New API Endpoint
+1. Create model in `SecureBootWatcher.Shared/Models/`
+2. Add service method in `SecureBootDashboard.Api/Services/`
+3. Create controller endpoint in `SecureBootDashboard.Api/Controllers/`
+4. Add XML documentation to endpoint
+5. Test endpoint via Swagger UI
+6. Add unit tests in `SecureBootDashboard.Api.Tests/`
+
+### Adding a New Dashboard Page
+1. Create Razor page in `SecureBootDashboard.Web/Pages/`
+2. Create page model class (code-behind)
+3. Add navigation link in `_Layout.cshtml`
+4. Style with Bootstrap 5 classes
+5. Test responsiveness on different screen sizes
+
+### Adding Database Table
+1. Create entity class in `SecureBootWatcher.Shared/Models/`
+2. Add DbSet to `SecureBootDashboard.Api/Data/ApplicationDbContext.cs`
+3. Create migration: `dotnet ef migrations add AddTableName`
+4. Review generated migration code
+5. Apply migration: `dotnet ef database update`
+
+### Adding SignalR Real-time Feature
+1. Define hub method in `SecureBootDashboard.Api/Hubs/DashboardHub.cs`
+2. Inject IHubContext in service that needs to broadcast
+3. Call hub method: `await _hubContext.Clients.All.SendAsync("MethodName", data)`
+4. Add client-side handler in JavaScript (e.g., `_Layout.cshtml`)
+5. Test real-time updates in browser
+
+## Security Best Practices
+
+### Never Commit
+- Connection strings with credentials (use User Secrets or Azure Key Vault)
+- API keys or tokens
+- Certificates (`.pfx`, `.p12`, `.cer`, `.crt`, `.key`) - already in `.gitignore`
+- Personal access tokens
+
+### Always
+- Use parameterized queries (EF Core does this automatically)
+- Validate all user inputs
+- Use HTTPS for all communications
+- Implement proper authentication and authorization
+- Log security-relevant events
+- Keep dependencies up to date
+
+## Troubleshooting
+
+### Build Fails
+- Ensure .NET 10 SDK is installed: `dotnet --version`
+- Clean and rebuild: `dotnet clean && dotnet build`
+- Check for NuGet package issues: `dotnet restore`
+- Review build errors in Output window
+
+### Tests Fail
+- Ensure database is available for integration tests
+- Check test data setup in test fixtures
+- Review test logs for specific errors
+- Run tests individually to isolate issues
+
+### Runtime Issues
+- Check logs in `logs/` folder or Application Insights
+- Verify database connection string in `appsettings.json`
+- Ensure required services are running (SQL Server, Azure Queue, etc.)
+- Check port availability: `netstat -ano | findstr :7120`
+
+### API Not Accessible
+- Verify API is running: check console output
+- Check firewall settings for ports 7120 (API) and 7001 (Web)
+- Review `launchSettings.json` for port configuration
+- Test with Swagger UI at `https://localhost:7120/swagger`
+
+## Documentation Resources
+
+Comprehensive documentation is available in the `docs/` folder:
+- **API Documentation**: Swagger UI at `/swagger` endpoint
+- **Architecture Guides**: `docs/` folder
+- **Deployment Guides**: `docs/DEPLOYMENT_GUIDE.md`
+- **Troubleshooting**: `docs/TROUBLESHOOTING_PORTS.md`
+- **Release Notes**: `docs/RELEASE_NOTES_*.md`
+
+## Version Control
+
+- Use semantic versioning via `version.json` (Nerdbank.GitVersioning)
+- Current version: 1.13
+- Follow conventional commits: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`
+- Create feature branches for new work
+- Write descriptive commit messages
+
+## Development Workflow
+
+1. **Create feature branch**: `git checkout -b feature/feature-name`
+2. **Make changes**: Edit code, add tests
+3. **Build and test**: `dotnet build && dotnet test`
+4. **Commit changes**: `git commit -m "feat: add feature"`
+5. **Push branch**: `git push origin feature/feature-name`
+6. **Create pull request**: Use GitHub UI
+7. **Code review**: Address feedback
+8. **Merge**: Squash and merge to main
+
+## Additional Notes
+
+- **PowerShell Scripts**: Available in `scripts/` for common tasks
+- **Client Deployment**: Use `Deploy-Client.ps1` for automated deployment
+- **Database Scripts**: PowerShell scripts for migrations and verification
+- **Intune Deployment**: Scripts available for Intune Win32 app deployment
