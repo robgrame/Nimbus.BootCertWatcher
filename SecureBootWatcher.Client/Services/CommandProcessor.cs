@@ -107,8 +107,8 @@ namespace SecureBootWatcher.Client.Services
                 "CommandProcessor.ExecuteCommandAsync: Executing command {CommandId} of type {Type}", 
                 command.CommandId, 
                 command.ConfigurationType);
-            _logger.LogTrace("CommandProcessor.ExecuteCommandAsync: Command details - Priority={Priority}, CreatedAt={CreatedAt}", 
-                command.Priority, command.CreatedAtUtc);
+            _logger.LogTrace("CommandProcessor.ExecuteCommandAsync: Command details - CreatedAt={CreatedAt}", 
+                command.CreatedAtUtc);
 
             try
             {

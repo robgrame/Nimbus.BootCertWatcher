@@ -78,8 +78,8 @@ namespace SecureBootWatcher.Client.Services
                     _logger.LogDebug("RegistrySnapshotProvider.CaptureAsync: State subkey not found. UEFI Secure Boot status will be unavailable.");
                 }
                 
-                _logger.LogInformation("RegistrySnapshotProvider.CaptureAsync: Successfully captured Secure Boot registry snapshot - DeploymentState={State}", 
-                    snapshot.DeploymentState);
+                _logger.LogInformation("RegistrySnapshotProvider.CaptureAsync: Successfully captured Secure Boot registry snapshot - InferredDeploymentState={State}", 
+                    snapshot.InferredDeploymentState);
             }
             catch (SecurityException ex)
             {
