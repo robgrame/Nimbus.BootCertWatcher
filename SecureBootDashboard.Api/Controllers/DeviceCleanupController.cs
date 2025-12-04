@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SecureBootDashboard.Api.Data;
@@ -18,13 +19,16 @@ namespace SecureBootDashboard.Api.Controllers
     public sealed class DeviceCleanupController : ControllerBase
     {
         private readonly SecureBootDbContext _dbContext;
+        private readonly IOutputCacheStore _outputCacheStore;
         private readonly ILogger<DeviceCleanupController> _logger;
 
         public DeviceCleanupController(
             SecureBootDbContext dbContext,
+            IOutputCacheStore outputCacheStore,
             ILogger<DeviceCleanupController> logger)
         {
             _dbContext = dbContext;
+            _outputCacheStore = outputCacheStore;
             _logger = logger;
         }
 
@@ -195,8 +199,11 @@ namespace SecureBootDashboard.Api.Controllers
             _dbContext.Devices.RemoveRange(devices);
             await _dbContext.SaveChangesAsync(cancellationToken);
 
+            // Invalidate device list cache to ensure fresh data on next request
+            await _outputCacheStore.EvictByTagAsync("devices", cancellationToken);
+            
             _logger.LogWarning(
-                "Manual device cleanup: {Count} devices deleted by user request",
+                "Manual device cleanup: {Count} devices deleted by user request. Cache invalidated.",
                 devices.Count);
 
             var response = new ManualCleanupResponse
@@ -248,6 +255,9 @@ namespace SecureBootDashboard.Api.Controllers
             _dbContext.Devices.RemoveRange(inactiveDevices);
             await _dbContext.SaveChangesAsync(cancellationToken);
 
+            // Invalidate device list cache
+            await _outputCacheStore.EvictByTagAsync("devices", cancellationToken);
+
             // Update config
             config.LastCleanupRunUtc = DateTimeOffset.UtcNow;
             config.LastCleanupDeviceCount = inactiveDevices.Count;
@@ -255,7 +265,7 @@ namespace SecureBootDashboard.Api.Controllers
             await _dbContext.SaveChangesAsync(cancellationToken);
 
             _logger.LogWarning(
-                "Manual cleanup run: {Count} devices deleted. Threshold: {Days} days",
+                "Manual cleanup run: {Count} devices deleted. Threshold: {Days} days. Cache invalidated.",
                 inactiveDevices.Count, config.InactiveDaysThreshold);
 
             var response = new ManualCleanupResponse

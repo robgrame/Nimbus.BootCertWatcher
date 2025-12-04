@@ -633,12 +633,16 @@
         const apiBaseUrl = document.querySelector('meta[name="api-base-url"]').content;
         let currentDeviceId = null;
 
+        console.log('[Device Delete] API Base URL:', apiBaseUrl);
+
         // Set device info in delete modal
         const deleteDeviceModal = document.getElementById('deleteDeviceModal');
         deleteDeviceModal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
             currentDeviceId = button.getAttribute('data-device-id');
             const deviceName = button.getAttribute('data-device-name');
+
+            console.log('[Device Delete] Modal opened for device:', deviceName, 'ID:', currentDeviceId);
 
             const modalBody = deleteDeviceModal.querySelector('#deviceNameToDelete');
             modalBody.textContent = deviceName || 'Unknown Device';
@@ -647,6 +651,7 @@
         // Handle confirm delete
         document.getElementById('confirmDeleteDevice').addEventListener('click', async function() {
             if (!currentDeviceId) {
+                console.error('[Device Delete] No device ID found');
                 alert('Device ID not found');
                 return;
             }
@@ -655,45 +660,82 @@
             confirmBtn.disabled = true;
             confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
 
+            const deleteUrl = `${apiBaseUrl}/api/DeviceCleanup/delete`;
+            const payload = {
+                deviceIds: [currentDeviceId]
+            };
+
+            console.log('[Device Delete] Sending DELETE request to:', deleteUrl);
+            console.log('[Device Delete] Payload:', JSON.stringify(payload));
+
             try {
-                const response = await fetch(`${apiBaseUrl}/api/DeviceCleanup/delete`, {
+                const response = await fetch(deleteUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({
-                        deviceIds: [currentDeviceId]
-                    })
+                    body: JSON.stringify(payload)
                 });
+
+                console.log('[Device Delete] Response status:', response.status, response.statusText);
+                console.log('[Device Delete] Response OK:', response.ok);
 
                 if (response.ok) {
                     const result = await response.json();
+                    console.log('[Device Delete] Success response:', result);
                     
                     // Close modal
                     const modalInstance = bootstrap.Modal.getInstance(deleteDeviceModal);
-                    modalInstance.hide();
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
                     
                     // Show success message
                     const alertDiv = document.createElement('div');
-                    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show mt-3';
                     alertDiv.innerHTML = `
                         <i class="fas fa-check-circle"></i> 
                         Device deleted successfully! ${result.deletedCount} device(s) removed.
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     `;
-                    document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.row'));
                     
-                    // Reload page after short delay
-                    setTimeout(() => location.reload(), 1500);
+                    // Insert at the beginning of container-fluid
+                    const container = document.querySelector('.container-fluid');
+                    if (container && container.firstChild) {
+                        container.insertBefore(alertDiv, container.firstChild);
+                    } else if (container) {
+                        container.appendChild(alertDiv);
+                    }
+                    
+                    console.log('[Device Delete] Success alert added, reloading page...');
+                    
+                    // Force reload from server (bypass cache) after longer delay
+                    setTimeout(() => {
+                        // Use location.replace to force a clean reload
+                        window.location.replace(window.location.pathname + '?t=' + new Date().getTime());
+                    }, 2000);
                 } else {
-                    const error = await response.json();
-                    alert(`Error deleting device: ${error.error || response.statusText}`);
+                    let errorMessage = response.statusText;
+                    const responseText = await response.text();
+                    console.log('[Device Delete] Error response text:', responseText);
+                    
+                    try {
+                        const error = JSON.parse(responseText);
+                        console.log('[Device Delete] Error response JSON:', error);
+                        errorMessage = error.Error || error.error || error.title || errorMessage;
+                    } catch (e) {
+                        console.log('[Device Delete] Failed to parse error as JSON, using text:', responseText);
+                        errorMessage = responseText || errorMessage;
+                    }
+                    
+                    console.error('[Device Delete] Error message:', errorMessage);
+                    alert(`Error deleting device: ${errorMessage}`);
                     confirmBtn.disabled = false;
                     confirmBtn.innerHTML = '<i class="fas fa-trash"></i> Yes, Delete Device';
                 }
             } catch (error) {
-                console.error('Error:', error);
+                console.error('[Device Delete] Exception caught:', error);
                 alert('An error occurred while deleting the device. Please try again.');
                 confirmBtn.disabled = false;
                 confirmBtn.innerHTML = '<i class="fas fa-trash"></i> Yes, Delete Device';

@@ -177,100 +177,6 @@
                                         </form>
                                     </td>
                                 </tr>
-
-                                <!-- Certificate Details Modal -->
-                                <div class="modal fade" id="certModal@cert.Id" tabindex="-1">
-                                    <div class="modal-dialog modal-lg">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">Certificate Details: @cert.CommonName</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <dl class="row">
-                                                    <dt class="col-sm-3">Common Name</dt>
-                                                    <dd class="col-sm-9">@cert.CommonName</dd>
-
-                                                    <dt class="col-sm-3">Subject</dt>
-                                                    <dd class="col-sm-9"><code class="small">@cert.Subject</code></dd>
-
-                                                    <dt class="col-sm-3">Issuer</dt>
-                                                    <dd class="col-sm-9"><code class="small">@cert.Issuer</code></dd>
-
-                                                    <dt class="col-sm-3">Type</dt>
-                                                    <dd class="col-sm-9">@(cert.IsRootCa ? "Root CA (Self-signed)" : "Intermediate CA")</dd>
-
-                                                    <dt class="col-sm-3">Serial Number</dt>
-                                                    <dd class="col-sm-9"><code>@cert.SerialNumber</code></dd>
-
-                                                    <dt class="col-sm-3">Thumbprint (SHA-1)</dt>
-                                                    <dd class="col-sm-9"><code>@cert.Thumbprint</code></dd>
-
-                                                    @if (!string.IsNullOrEmpty(cert.Thumbprint256))
-                                                    {
-                                                        <dt class="col-sm-3">Thumbprint (SHA-256)</dt>
-                                                        <dd class="col-sm-9"><code class="small">@cert.Thumbprint256</code></dd>
-                                                    }
-
-                                                    <dt class="col-sm-3">Valid From</dt>
-                                                    <dd class="col-sm-9">@cert.NotBefore.ToString("F")</dd>
-
-                                                    <dt class="col-sm-3">Valid Until</dt>
-                                                    <dd class="col-sm-9">
-                                                        @cert.NotAfter.ToString("F")
-                                                        @if (cert.IsExpired)
-                                                        {
-                                                            <span class="badge bg-danger">EXPIRED</span>
-                                                        }
-                                                        else if (cert.DaysUntilExpiration < 90)
-                                                        {
-                                                            <span class="badge bg-warning text-dark">Expires in @cert.DaysUntilExpiration days</span>
-                                                        }
-                                                    </dd>
-
-                                                    @if (!string.IsNullOrEmpty(cert.Description))
-                                                    {
-                                                        <dt class="col-sm-3">Description</dt>
-                                                        <dd class="col-sm-9">@cert.Description</dd>
-                                                    }
-
-                                                    <dt class="col-sm-3">Uploaded</dt>
-                                                    <dd class="col-sm-9">
-                                                        @cert.CreatedAtUtc.ToString("F")
-                                                        @if (!string.IsNullOrEmpty(cert.CreatedBy))
-                                                        {
-                                                            <span>by <strong>@cert.CreatedBy</strong></span>
-                                                        }
-                                                    </dd>
-
-                                                    <dt class="col-sm-3">Last Updated</dt>
-                                                    <dd class="col-sm-9">
-                                                        @cert.UpdatedAtUtc.ToString("F")
-                                                        @if (!string.IsNullOrEmpty(cert.UpdatedBy))
-                                                        {
-                                                            <span>by <strong>@cert.UpdatedBy</strong></span>
-                                                        }
-                                                    </dd>
-
-                                                    <dt class="col-sm-3">Status</dt>
-                                                    <dd class="col-sm-9">
-                                                        @if (cert.IsEnabled)
-                                                        {
-                                                            <span class="badge bg-success">Active - Used for validation</span>
-                                                        }
-                                                        else
-                                                        {
-                                                            <span class="badge bg-secondary">Disabled - Not used</span>
-                                                        }
-                                                    </dd>
-                                                </dl>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
                             }
                         </tbody>
                     </table>
@@ -278,4 +184,101 @@
             }
         </div>
     </div>
+
+    @foreach (var cert in Model.Certificates)
+    {
+        <!-- Certificate Details Modal -->
+        <div class="modal fade" id="certModal@cert.Id" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Certificate Details: @cert.CommonName</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <dl class="row">
+                            <dt class="col-sm-3">Common Name</dt>
+                            <dd class="col-sm-9">@cert.CommonName</dd>
+
+                            <dt class="col-sm-3">Subject</dt>
+                            <dd class="col-sm-9"><code class="small">@cert.Subject</code></dd>
+
+                            <dt class="col-sm-3">Issuer</dt>
+                            <dd class="col-sm-9"><code class="small">@cert.Issuer</code></dd>
+
+                            <dt class="col-sm-3">Type</dt>
+                            <dd class="col-sm-9">@(cert.IsRootCa ? "Root CA (Self-signed)" : "Intermediate CA")</dd>
+
+                            <dt class="col-sm-3">Serial Number</dt>
+                            <dd class="col-sm-9"><code>@cert.SerialNumber</code></dd>
+
+                            <dt class="col-sm-3">Thumbprint (SHA-1)</dt>
+                            <dd class="col-sm-9"><code>@cert.Thumbprint</code></dd>
+
+                            @if (!string.IsNullOrEmpty(cert.Thumbprint256))
+                            {
+                                <dt class="col-sm-3">Thumbprint (SHA-256)</dt>
+                                <dd class="col-sm-9"><code class="small">@cert.Thumbprint256</code></dd>
+                            }
+
+                            <dt class="col-sm-3">Valid From</dt>
+                            <dd class="col-sm-9">@cert.NotBefore.ToString("F")</dd>
+
+                            <dt class="col-sm-3">Valid Until</dt>
+                            <dd class="col-sm-9">
+                                @cert.NotAfter.ToString("F")
+                                @if (cert.IsExpired)
+                                {
+                                    <span class="badge bg-danger">EXPIRED</span>
+                                }
+                                else if (cert.DaysUntilExpiration < 90)
+                                {
+                                    <span class="badge bg-warning text-dark">Expires in @cert.DaysUntilExpiration days</span>
+                                }
+                            </dd>
+
+                            @if (!string.IsNullOrEmpty(cert.Description))
+                            {
+                                <dt class="col-sm-3">Description</dt>
+                                <dd class="col-sm-9">@cert.Description</dd>
+                            }
+
+                            <dt class="col-sm-3">Uploaded</dt>
+                            <dd class="col-sm-9">
+                                @cert.CreatedAtUtc.ToString("F")
+                                @if (!string.IsNullOrEmpty(cert.CreatedBy))
+                                {
+                                    <span>by <strong>@cert.CreatedBy</strong></span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-3">Last Updated</dt>
+                            <dd class="col-sm-9">
+                                @cert.UpdatedAtUtc.ToString("F")
+                                @if (!string.IsNullOrEmpty(cert.UpdatedBy))
+                                {
+                                    <span>by <strong>@cert.UpdatedBy</strong></span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-3">Status</dt>
+                            <dd class="col-sm-9">
+                                @if (cert.IsEnabled)
+                                {
+                                    <span class="badge bg-success">Active - Used for validation</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Disabled - Not used</span>
+                                }
+                            </dd>
+                        </dl>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 </div>

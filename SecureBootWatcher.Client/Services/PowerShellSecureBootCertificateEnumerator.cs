@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -286,7 +287,10 @@ namespace SecureBootWatcher.Client.Services
                     return null;
                 }
 
+                // Note: Using old constructor for .NET Framework 4.8 compatibility
+                #pragma warning disable SYSLIB0057 // X509Certificate2(byte[]) is obsolete
                 var x509 = new X509Certificate2(certData);
+                #pragma warning restore SYSLIB0057
 
                 var now = DateTimeOffset.UtcNow;
 

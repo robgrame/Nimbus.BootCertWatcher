@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SecureBootDashboard.Api.Data;
 
@@ -11,9 +12,11 @@ using SecureBootDashboard.Api.Data;
 namespace SecureBootDashboard.Api.Data.Migrations
 {
     [DbContext(typeof(SecureBootDbContext))]
-    partial class SecureBootDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251204151938_AddClientSinkConfiguration")]
+    partial class AddClientSinkConfiguration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,168 +24,6 @@ namespace SecureBootDashboard.Api.Data.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("SecureBootDashboard.Api.Data.ApiConfigurationEntity", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTimeOffset>("CreatedAtUtc")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("CreatedBy")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<int>("DeviceCleanupDaysThreshold")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("DeviceCleanupEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("DeviceCleanupSchedule")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<bool>("FileReportStoreAppendTimestamp")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("FileReportStoreBasePath")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<bool>("FileReportStoreEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("FileReportStoreExtension")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("QueueAuthenticationMethod")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("QueueCertificatePassword")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("QueueCertificatePath")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("QueueCertificateStoreLocation")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("QueueCertificateStoreName")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("QueueCertificateThumbprint")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("QueueClientId")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("QueueClientSecret")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("QueueConnectionString")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("QueueEmptyQueuePollIntervalSeconds")
-                        .HasColumnType("int");
-
-                    b.Property<int>("QueueMaxDequeueCount")
-                        .HasColumnType("int");
-
-                    b.Property<int>("QueueMaxMessages")
-                        .HasColumnType("int");
-
-                    b.Property<string>("QueueName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("QueueProcessingIntervalSeconds")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("QueueProcessorEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("QueueServiceUri")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("QueueTenantId")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("QueueVisibilityTimeoutSeconds")
-                        .HasColumnType("int");
-
-                    b.Property<DateTimeOffset>("UpdatedAtUtc")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IsActive");
-
-                    b.ToTable("ApiConfiguration", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CreatedAtUtc = new DateTimeOffset(new DateTime(2025, 1, 14, 12, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            CreatedBy = "System",
-                            Description = "Default API configuration. Update via Admin Settings.",
-                            DeviceCleanupDaysThreshold = 90,
-                            DeviceCleanupEnabled = true,
-                            DeviceCleanupSchedule = "0 2 * * 0",
-                            FileReportStoreAppendTimestamp = true,
-                            FileReportStoreEnabled = false,
-                            FileReportStoreExtension = ".json",
-                            IsActive = true,
-                            QueueAuthenticationMethod = "Certificate",
-                            QueueCertificateStoreLocation = "LocalMachine",
-                            QueueCertificateStoreName = "My",
-                            QueueCertificateThumbprint = "522172C364D58BB50EA08C60055ACC095A161D12",
-                            QueueClientId = "c8034569-4990-4823-9f1d-b46223789c35",
-                            QueueEmptyQueuePollIntervalSeconds = 30,
-                            QueueMaxDequeueCount = 5,
-                            QueueMaxMessages = 10,
-                            QueueName = "secureboot-reports",
-                            QueueProcessingIntervalSeconds = 5,
-                            QueueProcessorEnabled = true,
-                            QueueServiceUri = "https://secbootcert.queue.core.windows.net",
-                            QueueTenantId = "d6dbad84-5922-4700-a049-c7068c37c884",
-                            QueueVisibilityTimeoutSeconds = 300,
-                            UpdatedAtUtc = new DateTimeOffset(new DateTime(2025, 1, 14, 12, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            UpdatedBy = "System"
-                        });
-                });
 
             modelBuilder.Entity("SecureBootDashboard.Api.Data.ApplicationSettingEntity", b =>
                 {

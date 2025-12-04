@@ -37,7 +37,7 @@ param(
     [switch]$SkipBuild,
     
     [Parameter(Mandatory = $false)]
-    [string]$PackageZipPath = ""
+    [string]$PackageZipPath = ".\client-package"
 )
 
 $ErrorActionPreference = "Stop"

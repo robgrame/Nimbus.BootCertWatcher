@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -315,6 +316,8 @@ namespace SecureBootWatcher.Client
 							{
 								Log.Information("Loading client certificate from file: {Path}", webApiOptions.CertificatePath);
 								
+								// Note: Using old constructors for .NET Framework 4.8 compatibility
+								#pragma warning disable SYSLIB0057 // X509Certificate2 constructors are obsolete
 								if (!string.IsNullOrEmpty(webApiOptions.CertificatePassword))
 								{
 									certificate = new System.Security.Cryptography.X509Certificates.X509Certificate2(
@@ -326,6 +329,7 @@ namespace SecureBootWatcher.Client
 									certificate = new System.Security.Cryptography.X509Certificates.X509Certificate2(
 										webApiOptions.CertificatePath);
 								}
+								#pragma warning restore SYSLIB0057
 								
 								Log.Information("Client certificate loaded from file: Subject={Subject}, Issuer={Issuer}", 
 									certificate.Subject, certificate.Issuer);
@@ -352,6 +356,17 @@ namespace SecureBootWatcher.Client
 
 			services.AddSecureBootWatcherOptions(configuration);
 
+			// Register SinkConfigurationProvider with fallback to appsettings.json
+			services.AddSingleton<SinkConfigurationProvider>(sp =>
+			{
+				var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger<SinkConfigurationProvider>();
+				var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+				var options = sp.GetRequiredService<IOptionsMonitor<SecureBootWatcherOptions>>();
+				var fallbackSinkOptions = options.CurrentValue.Sinks;
+				
+				return new SinkConfigurationProvider(logger, httpClientFactory, fallbackSinkOptions);
+			});
+
 			services.AddSingleton<IRegistrySnapshotProvider, RegistrySnapshotProvider>();
 			services.AddSingleton<IEventLogReader, EventLogReader>();
 			services.AddSingleton<IEventCheckpointStore, FileEventCheckpointStore>();
@@ -374,18 +389,18 @@ namespace SecureBootWatcher.Client
 			services.AddSingleton<IReportSink>(sp =>
 			{
 				var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger<SinkCoordinator>();
-				var optionsMonitor = sp.GetRequiredService<IOptionsMonitor<SecureBootWatcherOptions>>();
-				
-				// Get all sink instances
-				var allSinks = new List<IReportSink>
+                var configProvider = sp.GetRequiredService<SinkConfigurationProvider>();
+
+                // Get all sink instances
+                var allSinks = new List<IReportSink>
 				{
 					sp.GetRequiredService<FileShareReportSink>(),
 					sp.GetRequiredService<AzureQueueReportSink>(),
 					sp.GetRequiredService<WebApiReportSink>()
 				};
 
-				return new SinkCoordinator(logger, optionsMonitor, allSinks);
-			});
+                return new SinkCoordinator(logger, configProvider, allSinks);
+            });
 
 			return services.BuildServiceProvider();
 		}

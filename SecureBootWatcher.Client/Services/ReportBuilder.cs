@@ -308,11 +308,11 @@ namespace SecureBootWatcher.Client.Services
             {
                 if (!report.TelemetryPolicy.MeetsCfrTelemetryRequirement)
                 {
-                    alerts.Add($"? Telemetry level ({report.TelemetryPolicy.TelemetryLevelDescription}) does not meet CFR requirements. Basic (1) or higher required for Microsoft managed rollout.");
+                    alerts.Add($"Telemetry level ({report.TelemetryPolicy.TelemetryLevelDescription}) does not meet CFR requirements. Basic (1) or higher required for Microsoft managed rollout.");
                 }
                 else if (report.Registry.MicrosoftUpdateManagedOptIn == true)
                 {
-                    alerts.Add($"? Telemetry level ({report.TelemetryPolicy.TelemetryLevelDescription}) meets CFR requirements.");
+                    alerts.Add($"Telemetry level ({report.TelemetryPolicy.TelemetryLevelDescription}) meets CFR requirements.");
                 }
             }
 
@@ -363,11 +363,11 @@ namespace SecureBootWatcher.Client.Services
             {
                 if (updateCheck.UpdateRequired)
                 {
-                    alerts.Add($"?? CLIENT UPDATE REQUIRED: Version {updateCheck.LatestVersion} is available (current: {updateCheck.CurrentVersion}). Update is mandatory.");
+                    alerts.Add($"CLIENT UPDATE REQUIRED: Version {updateCheck.LatestVersion} is available (current: {updateCheck.CurrentVersion}). Update is mandatory.");
                 }
                 else if (updateCheck.UpdateAvailable)
                 {
-                    alerts.Add($"?? Client update available: Version {updateCheck.LatestVersion} (current: {updateCheck.CurrentVersion})");
+                    alerts.Add($"Client update available: Version {updateCheck.LatestVersion} (current: {updateCheck.CurrentVersion})");
                 }
             }
 

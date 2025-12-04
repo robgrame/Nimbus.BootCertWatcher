@@ -35,11 +35,22 @@ $ErrorActionPreference = "Stop"
 $installPath = "C:\Program Files\SecureBootWatcher"
 $taskName = "SecureBootWatcher"
 $logPath = Join-Path $env:ProgramData "SecureBootWatcher\install.log"
-$secureBootWatcherPackage = ".\client-package"
 $certificateFileName = "SecureBootWatcher.pfx"  # Expected certificate file name in package
 
 # Get script directory (where the package content is extracted by Intune)
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+# Determine package path - try current directory first (Intune deployment), then parent directory (local testing)
+$packageZipName = "SecureBootWatcher-Client.zip"
+$clientPackageDir = Join-Path $scriptDir "client-package"
+$packageZipPath = Join-Path $clientPackageDir $packageZipName
+
+# If not found in script directory, try parent directory (for local testing)
+if (-not (Test-Path $packageZipPath)) {
+    $parentDir = Split-Path -Parent $scriptDir
+    $clientPackageDir = Join-Path $parentDir "client-package"
+    $packageZipPath = Join-Path $clientPackageDir $packageZipName
+}
 
 # Create log directory
 $logDir = Split-Path $logPath -Parent
@@ -132,19 +143,22 @@ try {
 
     # Step 3: Extract client package and copy files
     Write-InstallLog "Extracting and copying client files"
+    Write-InstallLog "Package path: $packageZipPath"
     
-    # Look for the client package ZIP file
-    $packageZipName = "SecureBootWatcher-Client.zip"
-    $packageZipPath = Join-Path $scriptDir (Join-Path $secureBootWatcherPackage $packageZipName)
-    
-    if (-not (Test-Path $secureBootWatcherPackage)) {
+    if (-not (Test-Path $packageZipPath)) {
         Write-InstallLog "ERROR: Client package not found: $packageZipPath"
         Write-InstallLog "Expected file: $packageZipName"
-        Write-InstallLog "Files in package directory:"
-        Get-ChildItem -Path $scriptDir -File | ForEach-Object {
-            Write-InstallLog "  - $($_.Name)"
+        Write-InstallLog "Searched locations:"
+        Write-InstallLog "  1. $packageZipPath"
+        
+        Write-InstallLog "Files in script directory ($scriptDir):"
+        if (Test-Path $scriptDir) {
+            Get-ChildItem -Path $scriptDir -File | ForEach-Object {
+                Write-InstallLog "  - $($_.Name)"
+            }
         }
-        throw "Client package ZIP file not found in package directory"
+        
+        throw "Client package ZIP file not found. Please run Package-Client.ps1 first to create the package."
     }
     
     Write-InstallLog "Found client package: $packageZipName ($([math]::Round((Get-Item $packageZipPath).Length / 1MB, 2)) MB)"

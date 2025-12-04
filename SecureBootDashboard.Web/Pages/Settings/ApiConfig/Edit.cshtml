@@ -1,0 +1,275 @@
+@page "{id:int}"
+@model SecureBootDashboard.Web.Pages.Settings.ApiConfig.EditModel
+@{
+    ViewData["Title"] = $"Edit API Configuration #{Model.Id}";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h2><i class="fas fa-edit"></i> Edit API Configuration #@Model.Id</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-page="/Index">Home</a></li>
+                    <li class="breadcrumb-item"><a asp-page="Index">API Configuration</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Edit #@Model.Id</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle"></i>
+            @Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <form method="post">
+        <!-- General Settings -->
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-cog"></i> General Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label">Description</label>
+                            <textarea asp-for="Description" class="form-control" rows="2" placeholder="Optional description for this configuration"></textarea>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <div class="form-check form-switch">
+                                <input asp-for="IsActive" class="form-check-input" type="checkbox" role="switch">
+                                <label asp-for="IsActive" class="form-check-label">
+                                    Active
+                                </label>
+                            </div>
+                            <small class="text-muted">Only one configuration can be active at a time</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Queue Processor Settings -->
+        <div class="card mb-3">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-layer-group"></i> Queue Processor Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="form-check form-switch mb-3">
+                    <input asp-for="QueueProcessorEnabled" class="form-check-input" type="checkbox" role="switch">
+                    <label asp-for="QueueProcessorEnabled" class="form-check-label">
+                        <strong>Enable Queue Processor</strong>
+                    </label>
+                </div>
+
+                <div id="queueSettings" style="@(Model.QueueProcessorEnabled ? "" : "display:none;")">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="QueueServiceUri" class="form-label">Queue Service URI</label>
+                                <input asp-for="QueueServiceUri" class="form-control" placeholder="https://account.queue.core.windows.net">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="QueueName" class="form-label">Queue Name</label>
+                                <input asp-for="QueueName" class="form-control" placeholder="secureboot-reports">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="QueueAuthenticationMethod" class="form-label">Authentication Method</label>
+                                <select asp-for="QueueAuthenticationMethod" class="form-select">
+                                    <option value="ManagedIdentity">Managed Identity</option>
+                                    <option value="Certificate">Certificate</option>
+                                    <option value="AppRegistration">App Registration</option>
+                                    <option value="DefaultAzureCredential">Default Azure Credential</option>
+                                    <option value="ConnectionString">Connection String (Not Recommended)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label asp-for="QueueMaxMessages" class="form-label">Max Messages</label>
+                                <input asp-for="QueueMaxMessages" class="form-control" type="number" min="1" max="32">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label asp-for="QueueProcessingIntervalSeconds" class="form-label">Processing Interval (s)</label>
+                                <input asp-for="QueueProcessingIntervalSeconds" class="form-control" type="number" min="1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="QueueClientId" class="form-label">Client ID</label>
+                                <input asp-for="QueueClientId" class="form-control" placeholder="Optional for ManagedIdentity">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="QueueTenantId" class="form-label">Tenant ID</label>
+                                <input asp-for="QueueTenantId" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="QueueCertificateThumbprint" class="form-label">Certificate Thumbprint</label>
+                                <input asp-for="QueueCertificateThumbprint" class="form-control" placeholder="For Certificate auth">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label asp-for="QueueCertificateStoreLocation" class="form-label">Store Location</label>
+                                <select asp-for="QueueCertificateStoreLocation" class="form-select">
+                                    <option value="LocalMachine">Local Machine</option>
+                                    <option value="CurrentUser">Current User</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label asp-for="QueueCertificateStoreName" class="form-label">Store Name</label>
+                                <select asp-for="QueueCertificateStoreName" class="form-select">
+                                    <option value="My">My (Personal)</option>
+                                    <option value="Root">Root</option>
+                                    <option value="CA">CA</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Report Store Settings -->
+        <div class="card mb-3">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-folder"></i> File Report Store Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-check form-switch mb-3">
+                    <input asp-for="FileReportStoreEnabled" class="form-check-input" type="checkbox" role="switch">
+                    <label asp-for="FileReportStoreEnabled" class="form-check-label">
+                        <strong>Enable File Report Store</strong>
+                    </label>
+                </div>
+
+                <div id="fileStoreSettings" style="@(Model.FileReportStoreEnabled ? "" : "display:none;")">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label asp-for="FileReportStoreBasePath" class="form-label">Base Path</label>
+                                <input asp-for="FileReportStoreBasePath" class="form-control" placeholder="C:\ReportStore or \\server\share\reports">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label asp-for="FileReportStoreExtension" class="form-label">File Extension</label>
+                                <input asp-for="FileReportStoreExtension" class="form-control" placeholder=".json">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Device Cleanup Settings -->
+        <div class="card mb-3">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-broom"></i> Device Cleanup Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-check form-switch mb-3">
+                    <input asp-for="DeviceCleanupEnabled" class="form-check-input" type="checkbox" role="switch">
+                    <label asp-for="DeviceCleanupEnabled" class="form-check-label">
+                        <strong>Enable Automatic Device Cleanup</strong>
+                    </label>
+                </div>
+
+                <div id="cleanupSettings" style="@(Model.DeviceCleanupEnabled ? "" : "display:none;")">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="DeviceCleanupDaysThreshold" class="form-label">Days Threshold</label>
+                                <input asp-for="DeviceCleanupDaysThreshold" class="form-control" type="number" min="1">
+                                <small class="text-muted">Devices inactive for this many days will be cleaned up</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="DeviceCleanupSchedule" class="form-label">Schedule (Cron Expression)</label>
+                                <input asp-for="DeviceCleanupSchedule" class="form-control" placeholder="0 2 * * 0">
+                                <small class="text-muted">Example: "0 2 * * 0" = Every Sunday at 2 AM</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex justify-content-between mb-4">
+            <a asp-page="Index" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Cancel
+            </a>
+            <div>
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+                <button type="submit" asp-page-handler="InvalidateCache" class="btn btn-warning" formnovalidate>
+                    <i class="fas fa-sync"></i> Invalidate Cache
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Toggle Queue Settings
+            const queueEnabledCheckbox = document.getElementById('@Html.IdFor(m => m.QueueProcessorEnabled)');
+            const queueSettings = document.getElementById('queueSettings');
+            
+            queueEnabledCheckbox.addEventListener('change', function() {
+                queueSettings.style.display = this.checked ? '' : 'none';
+            });
+
+            // Toggle File Store Settings
+            const fileStoreEnabledCheckbox = document.getElementById('@Html.IdFor(m => m.FileReportStoreEnabled)');
+            const fileStoreSettings = document.getElementById('fileStoreSettings');
+            
+            fileStoreEnabledCheckbox.addEventListener('change', function() {
+                fileStoreSettings.style.display = this.checked ? '' : 'none';
+            });
+
+            // Toggle Cleanup Settings
+            const cleanupEnabledCheckbox = document.getElementById('@Html.IdFor(m => m.DeviceCleanupEnabled)');
+            const cleanupSettings = document.getElementById('cleanupSettings');
+            
+            cleanupEnabledCheckbox.addEventListener('change', function() {
+                cleanupSettings.style.display = this.checked ? '' : 'none';
+            });
+        });
+    </script>
+}

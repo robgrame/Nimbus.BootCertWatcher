@@ -33,7 +33,13 @@ namespace SecureBootDashboard.Api.Data
         
         public DbSet<TrustedCertificateAuthorityEntity> TrustedCertificateAuthorities => Set<TrustedCertificateAuthorityEntity>();
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
+    // Client Sink Configuration
+    public DbSet<ClientSinkConfigEntity> ClientSinkConfig => Set<ClientSinkConfigEntity>();
+
+    // API Configuration
+    public DbSet<ApiConfigurationEntity> ApiConfiguration => Set<ApiConfigurationEntity>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
@@ -396,6 +402,175 @@ namespace SecureBootDashboard.Api.Data
                 entity.HasIndex(e => e.IsEnabled);
                 entity.HasIndex(e => e.IsRootCa);
                 entity.HasIndex(e => e.NotAfter);
+            });
+
+            // Client Sink Configuration
+            modelBuilder.Entity<ClientSinkConfigEntity>(entity =>
+            {
+                entity.ToTable("ClientSinkConfig");
+                entity.HasKey(e => e.Id);
+                
+                // General settings
+                entity.Property(e => e.ExecutionStrategy).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.SinkPriority).HasMaxLength(200).IsRequired();
+                
+                // FileShare settings
+                entity.Property(e => e.FileShareRootPath).HasMaxLength(500);
+                entity.Property(e => e.FileShareExtension).HasMaxLength(20).IsRequired();
+                
+                // Azure Queue settings
+                entity.Property(e => e.AzureQueueServiceUri).HasMaxLength(500);
+                entity.Property(e => e.AzureQueueName).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.AzureQueueAuthMethod).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.AzureQueueConnectionString).HasColumnType("nvarchar(max)");
+                entity.Property(e => e.AzureQueueClientId).HasMaxLength(100);
+                entity.Property(e => e.AzureQueueTenantId).HasMaxLength(100);
+                entity.Property(e => e.AzureQueueClientSecret).HasColumnType("nvarchar(max)");
+                entity.Property(e => e.AzureQueueCertPath).HasMaxLength(500);
+                entity.Property(e => e.AzureQueueCertPassword).HasMaxLength(500);
+                entity.Property(e => e.AzureQueueCertThumbprint).HasMaxLength(100);
+                entity.Property(e => e.AzureQueueCertStoreLocation).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.AzureQueueCertStoreName).HasMaxLength(50).IsRequired();
+                
+                // Web API settings
+                entity.Property(e => e.WebApiBaseAddress).HasMaxLength(500);
+                entity.Property(e => e.WebApiIngestionRoute).HasMaxLength(200).IsRequired();
+                entity.Property(e => e.WebApiCertPath).HasMaxLength(500);
+                entity.Property(e => e.WebApiCertPassword).HasMaxLength(500);
+                entity.Property(e => e.WebApiCertThumbprint).HasMaxLength(100);
+                entity.Property(e => e.WebApiCertStoreLocation).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.WebApiCertStoreName).HasMaxLength(50).IsRequired();
+                
+                // Metadata
+                entity.Property(e => e.Description).HasMaxLength(1000);
+                entity.Property(e => e.CreatedBy).HasMaxLength(256);
+                entity.Property(e => e.UpdatedBy).HasMaxLength(256);
+                
+                // Indexes
+                entity.HasIndex(e => e.IsActive);
+                
+                // Seed default configuration
+                var now = new DateTimeOffset(2025, 1, 14, 12, 0, 0, TimeSpan.Zero);
+                
+                entity.HasData(new ClientSinkConfigEntity
+                {
+                    Id = 1,
+                    EnableFileShare = false,
+                    EnableAzureQueue = false,
+                    EnableWebApi = true,
+                    ExecutionStrategy = "StopOnFirstSuccess",
+                    SinkPriority = "WebApi,AzureQueue,FileShare",
+                    MaxRetryAttempts = 3,
+                    RetryDelaySeconds = 300,
+                    UseExponentialBackoff = false,
+                    FileShareRootPath = null,
+                    FileShareExtension = ".json",
+                    FileShareAppendTimestamp = true,
+                    AzureQueueServiceUri = null,
+                    AzureQueueName = "secureboot-reports",
+                    AzureQueueAuthMethod = "DefaultAzureCredential",
+                    AzureQueueConnectionString = null,
+                    AzureQueueClientId = null,
+                    AzureQueueTenantId = null,
+                    AzureQueueClientSecret = null,
+                    AzureQueueCertPath = null,
+                    AzureQueueCertPassword = null,
+                    AzureQueueCertThumbprint = null,
+                    AzureQueueCertStoreLocation = "CurrentUser",
+                    AzureQueueCertStoreName = "My",
+                    AzureQueueVisibilityTimeoutSeconds = 300,
+                    AzureQueueMaxSendRetryCount = 5,
+                    WebApiBaseAddress = null,
+                    WebApiIngestionRoute = "/api/SecureBootReports",
+                    WebApiTimeoutSeconds = 30,
+                    WebApiUseCertAuth = false,
+                    WebApiCertPath = null,
+                    WebApiCertPassword = null,
+                    WebApiCertThumbprint = null,
+                    WebApiCertStoreLocation = "LocalMachine",
+                    WebApiCertStoreName = "My",
+                    Description = "Default client sink configuration. Configure via Admin Settings.",
+                    IsActive = true,
+                    CreatedAtUtc = now,
+                    CreatedBy = "System",
+                    UpdatedAtUtc = now,
+                    UpdatedBy = "System"
+                });
+            });
+
+            // API Configuration
+            modelBuilder.Entity<ApiConfigurationEntity>(entity =>
+            {
+                entity.ToTable("ApiConfiguration");
+                entity.HasKey(e => e.Id);
+
+                // Queue settings
+                entity.Property(e => e.QueueServiceUri).HasMaxLength(500);
+                entity.Property(e => e.QueueName).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.QueueAuthenticationMethod).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.QueueConnectionString).HasColumnType("nvarchar(max)");
+                entity.Property(e => e.QueueClientId).HasMaxLength(100);
+                entity.Property(e => e.QueueTenantId).HasMaxLength(100);
+                entity.Property(e => e.QueueClientSecret).HasColumnType("nvarchar(max)");
+                entity.Property(e => e.QueueCertificatePath).HasMaxLength(500);
+                entity.Property(e => e.QueueCertificatePassword).HasMaxLength(500);
+                entity.Property(e => e.QueueCertificateThumbprint).HasMaxLength(100);
+                entity.Property(e => e.QueueCertificateStoreLocation).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.QueueCertificateStoreName).HasMaxLength(50).IsRequired();
+
+                // File store settings
+                entity.Property(e => e.FileReportStoreBasePath).HasMaxLength(1000);
+                entity.Property(e => e.FileReportStoreExtension).HasMaxLength(20).IsRequired();
+
+                // Device cleanup settings
+                entity.Property(e => e.DeviceCleanupSchedule).HasMaxLength(100).IsRequired();
+
+                // Metadata
+                entity.Property(e => e.Description).HasMaxLength(1000);
+                entity.Property(e => e.CreatedBy).HasMaxLength(256);
+                entity.Property(e => e.UpdatedBy).HasMaxLength(256);
+
+                // Indexes
+                entity.HasIndex(e => e.IsActive);
+
+                // Seed default configuration
+                var apiConfigNow = new DateTimeOffset(2025, 1, 14, 12, 0, 0, TimeSpan.Zero);
+
+                entity.HasData(new ApiConfigurationEntity
+                {
+                    Id = 1,
+                    QueueProcessorEnabled = true,
+                    QueueServiceUri = "https://secbootcert.queue.core.windows.net",
+                    QueueName = "secureboot-reports",
+                    QueueAuthenticationMethod = "Certificate",
+                    QueueConnectionString = null,
+                    QueueClientId = "c8034569-4990-4823-9f1d-b46223789c35",
+                    QueueTenantId = "d6dbad84-5922-4700-a049-c7068c37c884",
+                    QueueClientSecret = null,
+                    QueueCertificatePath = null,
+                    QueueCertificatePassword = null,
+                    QueueCertificateThumbprint = "522172C364D58BB50EA08C60055ACC095A161D12",
+                    QueueCertificateStoreLocation = "LocalMachine",
+                    QueueCertificateStoreName = "My",
+                    QueueMaxMessages = 10,
+                    QueueProcessingIntervalSeconds = 5,
+                    QueueEmptyQueuePollIntervalSeconds = 30,
+                    QueueVisibilityTimeoutSeconds = 300,
+                    QueueMaxDequeueCount = 5,
+                    FileReportStoreEnabled = false,
+                    FileReportStoreBasePath = null,
+                    FileReportStoreExtension = ".json",
+                    FileReportStoreAppendTimestamp = true,
+                    DeviceCleanupEnabled = true,
+                    DeviceCleanupSchedule = "0 2 * * 0",
+                    DeviceCleanupDaysThreshold = 90,
+                    Description = "Default API configuration. Update via Admin Settings.",
+                    IsActive = true,
+                    CreatedAtUtc = apiConfigNow,
+                    CreatedBy = "System",
+                    UpdatedAtUtc = apiConfigNow,
+                    UpdatedBy = "System"
+                });
             });
         }
     }

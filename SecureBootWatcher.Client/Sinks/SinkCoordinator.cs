@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using SecureBootWatcher.Client.Services;
 using SecureBootWatcher.Shared.Configuration;
 using SecureBootWatcher.Shared.Models;
 
@@ -12,26 +12,29 @@ namespace SecureBootWatcher.Client.Sinks
 {
     /// <summary>
     /// Coordinates execution of multiple report sinks with priority, retry, and failover support.
+    /// Retrieves configuration from database with fallback to appsettings.json.
     /// </summary>
     internal sealed class SinkCoordinator : IReportSink
     {
         private readonly ILogger<SinkCoordinator> _logger;
-        private readonly IOptionsMonitor<SecureBootWatcherOptions> _options;
+        private readonly SinkConfigurationProvider _configProvider;
         private readonly IEnumerable<IReportSink> _sinks;
 
         public SinkCoordinator(
             ILogger<SinkCoordinator> logger,
-            IOptionsMonitor<SecureBootWatcherOptions> options,
+            SinkConfigurationProvider configProvider,
             IEnumerable<IReportSink> sinks)
         {
             _logger = logger;
-            _options = options;
+            _configProvider = configProvider;
             _sinks = sinks;
         }
 
         public async Task EmitAsync(SecureBootStatusReport report, CancellationToken cancellationToken)
         {
-            var sinkOptions = _options.CurrentValue.Sinks;
+            // Get configuration (from DB or fallback to appsettings.json)
+            var sinkOptions = await _configProvider.GetConfigurationAsync(cancellationToken);
+            
             var executionStrategy = sinkOptions.ExecutionStrategy ?? "StopOnFirstSuccess";
             var maxRetries = sinkOptions.MaxRetryAttempts;
             var retryDelay = sinkOptions.RetryDelay;
@@ -86,7 +89,7 @@ namespace SecureBootWatcher.Client.Sinks
 
                         await sink.EmitAsync(report, cancellationToken).ConfigureAwait(false);
 
-                        _logger.LogInformation("? Successfully sent report to {SinkName}{AttemptInfo}",
+                        _logger.LogInformation("Successfully sent report to {SinkName}{AttemptInfo}",
                             sinkName,
                             attemptNumber > 1 ? $" (after {attemptNumber} attempts)" : "");
 
@@ -110,7 +113,7 @@ namespace SecureBootWatcher.Client.Sinks
                             var delay = GetCurrentDelay(attemptNumber, retryDelay, useExponentialBackoff);
 
                             _logger.LogWarning(
-                                "? Attempt {Attempt}/{MaxRetries} failed for {SinkName}: {ErrorMessage}. Retrying in {Delay}...",
+                                "Attempt {Attempt}/{MaxRetries} failed for {SinkName}: {ErrorMessage}. Retrying in {Delay}...",
                                 attemptNumber,
                                 maxRetries + 1,
                                 sinkName,
@@ -135,7 +138,7 @@ namespace SecureBootWatcher.Client.Sinks
                         {
                             // Log error without full stack trace since we'll try next sink
                             _logger.LogWarning(
-                                "? All {TotalAttempts} attempts failed for {SinkName}: {ErrorMessage}. Moving to next sink.",
+                                "All {TotalAttempts} attempts failed for {SinkName}: {ErrorMessage}. Moving to next sink.",
                                 attemptNumber,
                                 sinkName,
                                 lastException?.Message ?? "Unknown error");

@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Threading;
@@ -417,9 +418,10 @@ namespace SecureBootDashboard.Api.Services
                     if (!string.IsNullOrWhiteSpace(options.CertificatePath))
                     {
                         var password = options.CertificatePassword;
+                        // Use X509CertificateLoader for loading certificates (recommended for .NET 8+)
                         certificate = string.IsNullOrWhiteSpace(password)
-                            ? new X509Certificate2(options.CertificatePath)
-                            : new X509Certificate2(options.CertificatePath, password);
+                            ? X509CertificateLoader.LoadCertificateFromFile(options.CertificatePath)
+                            : X509CertificateLoader.LoadPkcs12FromFile(options.CertificatePath, password, X509KeyStorageFlags.DefaultKeySet);
                         _logger.LogInformation("Loaded certificate from file: {Path}", options.CertificatePath);
                     }
                     // From Windows Certificate Store

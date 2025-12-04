@@ -17,26 +17,57 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Authentication.Certificate;
 using System.Security.Cryptography.X509Certificates;
 using System.Reflection;
+using Microsoft.Extensions.Configuration;
 
 // Configure Serilog before building the app
-var workspaceRoot = Directory.GetParent(AppContext.BaseDirectory)?.Parent?.Parent?.Parent?.Parent?.FullName ?? AppContext.BaseDirectory;
-var logPath = Path.Combine(workspaceRoot, "logs", "api-.log");
+
+// Build a temporary configuration to read environment and appsettings
+var tempConfig = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables()
+    .Build();
 
 // Read Application Insights connection string from environment or config
-var appInsightsConnectionString = Environment.GetEnvironmentVariable("APPLICATIONINSIGHTS_CONNECTION_STRING");
+var appInsightsConnectionString = Environment.GetEnvironmentVariable("APPLICATIONINSIGHTS_CONNECTION_STRING")
+    ?? tempConfig["ApplicationInsights:ConnectionString"];
 
+// Read logging level from configuration
+var defaultLogLevel = tempConfig["Logging:LogLevel:Default"] ?? "Information";
+
+// DEBUG: Print to console what we're reading
+Console.WriteLine("=== LOGGING CONFIGURATION DEBUG ===");
+Console.WriteLine($"ASPNETCORE_ENVIRONMENT: {Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "NOT SET"}");
+Console.WriteLine($"Current Directory: {Directory.GetCurrentDirectory()}");
+Console.WriteLine($"Config Default Log Level: {defaultLogLevel}");
+Console.WriteLine($"Config Microsoft: {tempConfig["Logging:LogLevel:Microsoft"] ?? "NOT SET"}");
+Console.WriteLine($"Config Microsoft.AspNetCore: {tempConfig["Logging:LogLevel:Microsoft.AspNetCore"] ?? "NOT SET"}");
+
+// Read Serilog file path from configuration
+var serilogFilePath = tempConfig["Serilog:WriteTo:1:Args:path"] ?? "logs/api-.log";
+Console.WriteLine($"Serilog File Path (from config): {serilogFilePath}");
+Console.WriteLine("====================================");
+
+var logLevel = defaultLogLevel switch
+{
+    "Trace" => LogEventLevel.Verbose,
+    "Debug" => LogEventLevel.Debug,
+    "Information" => LogEventLevel.Information,
+    "Warning" => LogEventLevel.Warning,
+    "Error" => LogEventLevel.Error,
+    "Critical" => LogEventLevel.Fatal,
+    _ => LogEventLevel.Information
+};
+
+Console.WriteLine($"Mapped to Serilog Level: {logLevel}");
+Console.WriteLine("====================================");
+
+// Configure Serilog using configuration from appsettings.json
 var loggerConfig = new LoggerConfiguration()
-    .MinimumLevel.Information()
-    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
-    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-    .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .WriteTo.File(
-        path: logPath,
-        rollingInterval: RollingInterval.Day,
-        retainedFileCountLimit: 30,
-        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}");
+    .ReadFrom.Configuration(tempConfig)
+    .MinimumLevel.Is(logLevel)
+    .Enrich.FromLogContext();
 
 // Add Application Insights sink if connection string is available
 if (!string.IsNullOrEmpty(appInsightsConnectionString))
@@ -62,8 +93,9 @@ try
     Log.Information("========================================");
     Log.Information("Version: {Version}", version);
     Log.Information("Environment: {Environment}", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production");
+    Log.Information("Logging Level: {LogLevel}", defaultLogLevel);
     Log.Information("Base Directory: {BaseDirectory}", AppContext.BaseDirectory);
-    Log.Information("Log File Path: {LogPath}", Path.GetFullPath(logPath));
+    Log.Information("Log File Path: {LogPath}", serilogFilePath);
     Log.Information("Machine Name: {MachineName}", Environment.MachineName);
     Log.Information("User: {User}", Environment.UserName);
     Log.Information(".NET Version: {DotNetVersion}", Environment.Version);
@@ -430,7 +462,8 @@ try
                 options.AddPolicy("DeviceList", builder =>
                 {
                     builder.Expire(TimeSpan.FromSeconds(perfConfig.OutputCaching.DeviceListCacheDuration))
-                           .SetVaryByQuery("*");
+                           .SetVaryByQuery("*")
+                           .Tag("devices");
                 });
                 
                 // Device details policy
@@ -568,15 +601,24 @@ try
     builder.Services.AddMemoryCache();
     builder.Services.AddScoped<IApplicationSettingsService, ApplicationSettingsService>();
 
+    // Configure API Configuration Service (database-driven API settings)
+    Log.Information("Configuring API Configuration Service...");
+    builder.Services.AddScoped<IApiConfigurationService, ApiConfigurationService>();
+
     // Configure Certificate Validation Service (for mutual TLS)
     Log.Information("Configuring Certificate Validation Service...");
     builder.Services.AddScoped<ICertificateValidationService, CertificateValidationService>();
 
     // Configure Azure Queue Processor
     Log.Information("Configuring Queue Processor...");
+    
+    // Register Options Provider to load configuration from database with fallback to appsettings.json
+    Log.Information("Registering Queue Processor Options Provider (Database ? appsettings.json)...");
+    builder.Services.AddSingleton<Microsoft.Extensions.Options.IConfigureOptions<QueueProcessorOptions>, QueueProcessorOptionsProvider>();
+    
     var queueConfig = builder.Configuration.GetSection("QueueProcessor");
     var queueEnabled = queueConfig.GetValue<bool>("Enabled");
-    Log.Information("Queue Processor Enabled: {Enabled}", queueEnabled);
+    Log.Information("Queue Processor Enabled (from appsettings.json): {Enabled}", queueEnabled);
     
     if (queueEnabled)
     {
@@ -584,11 +626,14 @@ try
         var queueName = queueConfig.GetValue<string>("QueueName");
         var authMethod = queueConfig.GetValue<string>("AuthenticationMethod");
         
-        Log.Information("  Queue URI: {QueueUri}", queueUri);
-        Log.Information("  Queue Name: {QueueName}", queueName);
-        Log.Information("  Auth Method: {AuthMethod}", authMethod);
+        Log.Information("  Queue URI (appsettings.json): {QueueUri}", queueUri);
+        Log.Information("  Queue Name (appsettings.json): {QueueName}", queueName);
+        Log.Information("  Auth Method (appsettings.json): {AuthMethod}", authMethod);
+        Log.Information("  NOTE: These values may be overridden by database configuration if available");
     }
     
+    // Load default configuration from appsettings.json
+    // This will be overridden by QueueProcessorOptionsProvider if database config is available
     builder.Services.Configure<QueueProcessorOptions>(queueConfig);
     builder.Services.AddHostedService<QueueProcessorService>();
 

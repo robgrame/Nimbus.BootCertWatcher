@@ -1,0 +1,440 @@
+@page
+@model EditModel
+@{
+    ViewData["Title"] = Model.IsEditMode ? "Edit Sink Configuration" : "New Sink Configuration";
+}
+
+<div class="container-fluid mt-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-page="/Index"><i class="fas fa-home"></i> Dashboard</a></li>
+            <li class="breadcrumb-item"><a asp-page="/Settings/Index">Settings</a></li>
+            <li class="breadcrumb-item"><a asp-page="./Index">Sink Config</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@(Model.IsEditMode ? "Edit" : "New")</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-5">
+                <i class="fas fa-@(Model.IsEditMode ? "edit" : "plus") text-primary"></i>
+                @(Model.IsEditMode ? "Edit" : "New") Sink Configuration
+            </h1>
+        </div>
+        <div class="col-auto">
+            <a asp-page="./Index" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Error Message -->
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle"></i> @Model.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <form method="post">
+        <input type="hidden" asp-for="Input.Id" />
+
+        <!-- General Settings Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-cog"></i> General Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Execution Strategy</label>
+                            <select asp-for="Input.ExecutionStrategy" class="form-select">
+                                <option value="StopOnFirstSuccess">Stop On First Success</option>
+                                <option value="TryAll">Try All</option>
+                            </select>
+                            <small class="form-text text-muted">How to handle multiple enabled sinks</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label asp-for="Input.SinkPriority" class="form-label"></label>
+                            <input asp-for="Input.SinkPriority" class="form-control" />
+                            <small class="form-text text-muted">Comma-separated (e.g., WebApi,AzureQueue,FileShare)</small>
+                            <span asp-validation-for="Input.SinkPriority" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label asp-for="Input.MaxRetryAttempts" class="form-label"></label>
+                            <input asp-for="Input.MaxRetryAttempts" type="number" class="form-control" min="0" max="10" />
+                            <span asp-validation-for="Input.MaxRetryAttempts" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label asp-for="Input.RetryDelaySeconds" class="form-label"></label>
+                            <input asp-for="Input.RetryDelaySeconds" type="number" class="form-control" min="1" max="3600" />
+                            <small class="form-text text-muted">Seconds (@TimeSpan.FromSeconds(Model.Input.RetryDelaySeconds).ToString(@"mm\:ss"))</small>
+                            <span asp-validation-for="Input.RetryDelaySeconds" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <div class="form-check mt-4">
+                                <input asp-for="Input.UseExponentialBackoff" class="form-check-input" />
+                                <label asp-for="Input.UseExponentialBackoff" class="form-check-label"></label>
+                            </div>
+                            <small class="form-text text-muted">Double delay on each retry</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Input.Description" class="form-label"></label>
+                    <textarea asp-for="Input.Description" class="form-control" rows="2"></textarea>
+                </div>
+
+                <div class="form-check">
+                    <input asp-for="Input.IsActive" class="form-check-input" />
+                    <label asp-for="Input.IsActive" class="form-check-label"></label>
+                    <small class="form-text text-muted d-block">Only one configuration can be active</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sink Configuration Tabs -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-plug"></i> Sink Configuration</h5>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs" id="sinkTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="webapi-tab" data-bs-toggle="tab" data-bs-target="#webapi" 
+                                type="button" role="tab">
+                            <i class="fas fa-globe"></i> Web API
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="azurequeue-tab" data-bs-toggle="tab" data-bs-target="#azurequeue" 
+                                type="button" role="tab">
+                            <i class="fab fa-microsoft"></i> Azure Queue
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="fileshare-tab" data-bs-toggle="tab" data-bs-target="#fileshare" 
+                                type="button" role="tab">
+                            <i class="fas fa-folder"></i> FileShare
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content pt-3" id="sinkTabContent">
+                    <!-- Web API Tab -->
+                    <div class="tab-pane fade show active" id="webapi" role="tabpanel">
+                        <div class="form-check mb-3">
+                            <input asp-for="Input.EnableWebApi" class="form-check-input" />
+                            <label asp-for="Input.EnableWebApi" class="form-check-label"></label>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Input.WebApiBaseAddress" class="form-label"></label>
+                                    <input asp-for="Input.WebApiBaseAddress" class="form-control" placeholder="https://api.example.com" />
+                                    <small class="form-text text-muted">Full URL including protocol</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Input.WebApiIngestionRoute" class="form-label"></label>
+                                    <input asp-for="Input.WebApiIngestionRoute" class="form-control" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.WebApiTimeoutSeconds" class="form-label"></label>
+                            <input asp-for="Input.WebApiTimeoutSeconds" type="number" class="form-control" min="1" max="300" />
+                            <span asp-validation-for="Input.WebApiTimeoutSeconds" class="text-danger"></span>
+                        </div>
+
+                        <hr />
+                        <h6><i class="fas fa-certificate"></i> Certificate Authentication (mTLS)</h6>
+
+                        <div class="form-check mb-3">
+                            <input asp-for="Input.WebApiUseCertAuth" class="form-check-input" id="webApiUseCertAuth" />
+                            <label asp-for="Input.WebApiUseCertAuth" class="form-check-label" for="webApiUseCertAuth"></label>
+                        </div>
+
+                        <div id="webApiCertFields" style="display: @(Model.Input.WebApiUseCertAuth ? "block" : "none");">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label asp-for="Input.WebApiCertPath" class="form-label"></label>
+                                        <input asp-for="Input.WebApiCertPath" class="form-control" />
+                                        <small class="form-text text-muted">Path to .pfx file (leave empty if using thumbprint)</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label asp-for="Input.WebApiCertPassword" class="form-label"></label>
+                                        <input asp-for="Input.WebApiCertPassword" type="password" class="form-control" />
+                                        <small class="form-text text-muted">Password for .pfx file</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label asp-for="Input.WebApiCertThumbprint" class="form-label"></label>
+                                        <input asp-for="Input.WebApiCertThumbprint" class="form-control" />
+                                        <small class="form-text text-muted">Alternative to file path</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label asp-for="Input.WebApiCertStoreLocation" class="form-label"></label>
+                                        <select asp-for="Input.WebApiCertStoreLocation" class="form-select">
+                                            <option value="CurrentUser">Current User</option>
+                                            <option value="LocalMachine">Local Machine</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label asp-for="Input.WebApiCertStoreName" class="form-label"></label>
+                                        <select asp-for="Input.WebApiCertStoreName" class="form-select">
+                                            <option value="My">My (Personal)</option>
+                                            <option value="Root">Root</option>
+                                            <option value="CA">CA</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Azure Queue Tab -->
+                    <div class="tab-pane fade" id="azurequeue" role="tabpanel">
+                        <div class="form-check mb-3">
+                            <input asp-for="Input.EnableAzureQueue" class="form-check-input" />
+                            <label asp-for="Input.EnableAzureQueue" class="form-check-label"></label>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Input.AzureQueueServiceUri" class="form-label"></label>
+                                    <input asp-for="Input.AzureQueueServiceUri" class="form-control" 
+                                           placeholder="https://account.queue.core.windows.net" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Input.AzureQueueName" class="form-label"></label>
+                                    <input asp-for="Input.AzureQueueName" class="form-control" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.AzureQueueAuthMethod" class="form-label"></label>
+                            <select asp-for="Input.AzureQueueAuthMethod" class="form-select" id="azureQueueAuthMethod">
+                                <option value="DefaultAzureCredential">Default Azure Credential</option>
+                                <option value="ManagedIdentity">Managed Identity</option>
+                                <option value="AppRegistration">App Registration (Client Secret)</option>
+                                <option value="Certificate">Certificate</option>
+                                <option value="ConnectionString">Connection String</option>
+                            </select>
+                        </div>
+
+                        <!-- Connection String (shown only if selected) -->
+                        <div id="azureQueueConnString" style="display: @(Model.Input.AzureQueueAuthMethod == "ConnectionString" ? "block" : "none");">
+                            <div class="mb-3">
+                                <label asp-for="Input.AzureQueueConnectionString" class="form-label"></label>
+                                <textarea asp-for="Input.AzureQueueConnectionString" class="form-control font-monospace" rows="2"></textarea>
+                                <small class="text-warning"><i class="fas fa-exclamation-triangle"></i> Not recommended for production</small>
+                            </div>
+                        </div>
+
+                        <!-- App Registration / Certificate fields -->
+                        <div id="azureQueueAppReg" style="display: @(Model.Input.AzureQueueAuthMethod is "AppRegistration" or "Certificate" ? "block" : "none");">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label asp-for="Input.AzureQueueClientId" class="form-label"></label>
+                                        <input asp-for="Input.AzureQueueClientId" class="form-control" />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label asp-for="Input.AzureQueueTenantId" class="form-label"></label>
+                                        <input asp-for="Input.AzureQueueTenantId" class="form-control" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="azureQueueSecret" style="display: @(Model.Input.AzureQueueAuthMethod == "AppRegistration" ? "block" : "none");">
+                                <div class="mb-3">
+                                    <label asp-for="Input.AzureQueueClientSecret" class="form-label"></label>
+                                    <input asp-for="Input.AzureQueueClientSecret" type="password" class="form-control" />
+                                </div>
+                            </div>
+
+                            <div id="azureQueueCert" style="display: @(Model.Input.AzureQueueAuthMethod == "Certificate" ? "block" : "none");">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label asp-for="Input.AzureQueueCertPath" class="form-label"></label>
+                                            <input asp-for="Input.AzureQueueCertPath" class="form-control" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label asp-for="Input.AzureQueueCertPassword" class="form-label"></label>
+                                            <input asp-for="Input.AzureQueueCertPassword" type="password" class="form-control" />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label asp-for="Input.AzureQueueCertThumbprint" class="form-label"></label>
+                                            <input asp-for="Input.AzureQueueCertThumbprint" class="form-control" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label asp-for="Input.AzureQueueCertStoreLocation" class="form-label"></label>
+                                            <select asp-for="Input.AzureQueueCertStoreLocation" class="form-select">
+                                                <option value="CurrentUser">Current User</option>
+                                                <option value="LocalMachine">Local Machine</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label asp-for="Input.AzureQueueCertStoreName" class="form-label"></label>
+                                            <select asp-for="Input.AzureQueueCertStoreName" class="form-select">
+                                                <option value="My">My (Personal)</option>
+                                                <option value="Root">Root</option>
+                                                <option value="CA">CA</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr />
+                        <h6>Advanced Settings</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Input.AzureQueueVisibilityTimeoutSeconds" class="form-label"></label>
+                                    <input asp-for="Input.AzureQueueVisibilityTimeoutSeconds" type="number" class="form-control" />
+                                    <span asp-validation-for="Input.AzureQueueVisibilityTimeoutSeconds" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Input.AzureQueueMaxSendRetryCount" class="form-label"></label>
+                                    <input asp-for="Input.AzureQueueMaxSendRetryCount" type="number" class="form-control" />
+                                    <span asp-validation-for="Input.AzureQueueMaxSendRetryCount" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- FileShare Tab -->
+                    <div class="tab-pane fade" id="fileshare" role="tabpanel">
+                        <div class="form-check mb-3">
+                            <input asp-for="Input.EnableFileShare" class="form-check-input" />
+                            <label asp-for="Input.EnableFileShare" class="form-check-label"></label>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.FileShareRootPath" class="form-label"></label>
+                            <input asp-for="Input.FileShareRootPath" class="form-control" 
+                                   placeholder="\\server\share\reports or C:\reports" />
+                            <small class="form-text text-muted">UNC path or local directory</small>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Input.FileShareExtension" class="form-label"></label>
+                                    <input asp-for="Input.FileShareExtension" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mt-4">
+                                    <input asp-for="Input.FileShareAppendTimestamp" class="form-check-input" />
+                                    <label asp-for="Input.FileShareAppendTimestamp" class="form-check-label"></label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="mt-4 mb-5">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save"></i> Save Configuration
+            </button>
+            <a asp-page="./Index" class="btn btn-secondary btn-lg">
+                <i class="fas fa-times"></i> Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        // Toggle Web API certificate fields
+        document.getElementById('webApiUseCertAuth').addEventListener('change', function() {
+            document.getElementById('webApiCertFields').style.display = this.checked ? 'block' : 'none';
+        });
+
+        // Toggle Azure Queue auth fields
+        document.getElementById('azureQueueAuthMethod').addEventListener('change', function() {
+            const value = this.value;
+            document.getElementById('azureQueueConnString').style.display = (value === 'ConnectionString') ? 'block' : 'none';
+            document.getElementById('azureQueueAppReg').style.display = (value === 'AppRegistration' || value === 'Certificate') ? 'block' : 'none';
+            document.getElementById('azureQueueSecret').style.display = (value === 'AppRegistration') ? 'block' : 'none';
+            document.getElementById('azureQueueCert').style.display = (value === 'Certificate') ? 'block' : 'none';
+        });
+
+        // Warn before leaving if form is dirty
+        var formChanged = false;
+        document.querySelectorAll('input, select, textarea').forEach(function(element) {
+            element.addEventListener('change', function() {
+                formChanged = true;
+            });
+        });
+
+        window.addEventListener('beforeunload', function(e) {
+            if (formChanged) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        document.querySelector('form').addEventListener('submit', function() {
+            formChanged = false;
+        });
+    </script>
+}
