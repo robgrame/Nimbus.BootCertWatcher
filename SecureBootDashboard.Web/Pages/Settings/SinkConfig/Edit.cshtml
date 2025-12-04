@@ -248,12 +248,16 @@
                         <div class="mb-3">
                             <label asp-for="Input.AzureQueueAuthMethod" class="form-label"></label>
                             <select asp-for="Input.AzureQueueAuthMethod" class="form-select" id="azureQueueAuthMethod">
-                                <option value="DefaultAzureCredential">Default Azure Credential</option>
-                                <option value="ManagedIdentity">Managed Identity</option>
+                                <option value="DefaultAzureCredential">Default Azure Credential (Auto-detect: MI, CLI, VS, etc.)</option>
+                                <option value="ManagedIdentity">Managed Identity (Azure VM/App Service)</option>
                                 <option value="AppRegistration">App Registration (Client Secret)</option>
-                                <option value="Certificate">Certificate</option>
-                                <option value="ConnectionString">Connection String</option>
+                                <option value="Certificate">Certificate (Most Secure)</option>
+                                <option value="ConnectionString">Connection String (Not Recommended)</option>
                             </select>
+                            <small class="form-text text-muted">
+                                Choose authentication method for Azure Queue Storage access. 
+                                <strong>Recommended:</strong> Certificate or App Registration for production.
+                            </small>
                         </div>
 
                         <!-- Connection String (shown only if selected) -->
@@ -265,71 +269,106 @@
                             </div>
                         </div>
 
-                        <!-- App Registration / Certificate fields -->
-                        <div id="azureQueueAppReg" style="display: @(Model.Input.AzureQueueAuthMethod is "AppRegistration" or "Certificate" ? "block" : "none");">
+                        <!-- Managed Identity / DefaultAzureCredential - Optional ClientId -->
+                        <div id="azureQueueManagedIdentity" style="display: @(Model.Input.AzureQueueAuthMethod is "ManagedIdentity" or "DefaultAzureCredential" ? "block" : "none");">
+                            <div class="mb-3">
+                                <label asp-for="Input.AzureQueueClientId" class="form-label"></label>
+                                <input asp-for="Input.AzureQueueClientId" class="form-control" />
+                                <small class="form-text text-muted">Optional: For User-Assigned Managed Identity. Leave empty for System-Assigned.</small>
+                            </div>
+                        </div>
+
+                        <!-- App Registration - ClientId, TenantId, ClientSecret (Required) -->
+                        <div id="azureQueueAppReg" style="display: @(Model.Input.AzureQueueAuthMethod == "AppRegistration" ? "block" : "none");">
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label asp-for="Input.AzureQueueClientId" class="form-label"></label>
                                         <input asp-for="Input.AzureQueueClientId" class="form-control" />
+                                        <small class="form-text text-muted">Application (Client) ID from App Registration</small>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label asp-for="Input.AzureQueueTenantId" class="form-label"></label>
                                         <input asp-for="Input.AzureQueueTenantId" class="form-control" />
+                                        <small class="form-text text-muted">Directory (Tenant) ID</small>
                                     </div>
                                 </div>
                             </div>
 
-                            <div id="azureQueueSecret" style="display: @(Model.Input.AzureQueueAuthMethod == "AppRegistration" ? "block" : "none");">
-                                <div class="mb-3">
-                                    <label asp-for="Input.AzureQueueClientSecret" class="form-label"></label>
-                                    <input asp-for="Input.AzureQueueClientSecret" type="password" class="form-control" />
+                            <div class="mb-3">
+                                <label asp-for="Input.AzureQueueClientSecret" class="form-label"></label>
+                                <input asp-for="Input.AzureQueueClientSecret" type="password" class="form-control" />
+                                <small class="form-text text-muted">Client Secret from App Registration</small>
+                            </div>
+                        </div>
+
+                        <!-- Certificate - ClientId, TenantId, Certificate (Required) -->
+                        <div id="azureQueueCert" style="display: @(Model.Input.AzureQueueAuthMethod == "Certificate" ? "block" : "none");">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label asp-for="Input.AzureQueueClientId" class="form-label"></label>
+                                        <input asp-for="Input.AzureQueueClientId" class="form-control" />
+                                        <small class="form-text text-muted">Application (Client) ID from App Registration</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label asp-for="Input.AzureQueueTenantId" class="form-label"></label>
+                                        <input asp-for="Input.AzureQueueTenantId" class="form-control" />
+                                        <small class="form-text text-muted">Directory (Tenant) ID</small>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div id="azureQueueCert" style="display: @(Model.Input.AzureQueueAuthMethod == "Certificate" ? "block" : "none");">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label asp-for="Input.AzureQueueCertPath" class="form-label"></label>
-                                            <input asp-for="Input.AzureQueueCertPath" class="form-control" />
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label asp-for="Input.AzureQueueCertPassword" class="form-label"></label>
-                                            <input asp-for="Input.AzureQueueCertPassword" type="password" class="form-control" />
-                                        </div>
+                            <hr />
+                            <h6><i class="fas fa-certificate"></i> Certificate Configuration</h6>
+                            <p class="text-muted small">Provide either certificate file path OR certificate thumbprint (from Windows Certificate Store)</p>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label asp-for="Input.AzureQueueCertPath" class="form-label"></label>
+                                        <input asp-for="Input.AzureQueueCertPath" class="form-control" />
+                                        <small class="form-text text-muted">Path to .pfx file (Option A)</small>
                                     </div>
                                 </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label asp-for="Input.AzureQueueCertPassword" class="form-label"></label>
+                                        <input asp-for="Input.AzureQueueCertPassword" type="password" class="form-control" />
+                                        <small class="form-text text-muted">Password for .pfx file (if protected)</small>
+                                    </div>
+                                </div>
+                            </div>
 
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label asp-for="Input.AzureQueueCertThumbprint" class="form-label"></label>
-                                            <input asp-for="Input.AzureQueueCertThumbprint" class="form-control" />
-                                        </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label asp-for="Input.AzureQueueCertThumbprint" class="form-label"></label>
+                                        <input asp-for="Input.AzureQueueCertThumbprint" class="form-control" />
+                                        <small class="form-text text-muted">Certificate thumbprint (Option B)</small>
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label asp-for="Input.AzureQueueCertStoreLocation" class="form-label"></label>
-                                            <select asp-for="Input.AzureQueueCertStoreLocation" class="form-select">
-                                                <option value="CurrentUser">Current User</option>
-                                                <option value="LocalMachine">Local Machine</option>
-                                            </select>
-                                        </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label asp-for="Input.AzureQueueCertStoreLocation" class="form-label"></label>
+                                        <select asp-for="Input.AzureQueueCertStoreLocation" class="form-select">
+                                            <option value="CurrentUser">Current User</option>
+                                            <option value="LocalMachine">Local Machine</option>
+                                        </select>
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label asp-for="Input.AzureQueueCertStoreName" class="form-label"></label>
-                                            <select asp-for="Input.AzureQueueCertStoreName" class="form-select">
-                                                <option value="My">My (Personal)</option>
-                                                <option value="Root">Root</option>
-                                                <option value="CA">CA</option>
-                                            </select>
-                                        </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label asp-for="Input.AzureQueueCertStoreName" class="form-label"></label>
+                                        <select asp-for="Input.AzureQueueCertStoreName" class="form-select">
+                                            <option value="My">My (Personal)</option>
+                                            <option value="Root">Root</option>
+                                            <option value="CA">CA</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -412,9 +451,16 @@
         // Toggle Azure Queue auth fields
         document.getElementById('azureQueueAuthMethod').addEventListener('change', function() {
             const value = this.value;
+            // Connection String
             document.getElementById('azureQueueConnString').style.display = (value === 'ConnectionString') ? 'block' : 'none';
-            document.getElementById('azureQueueAppReg').style.display = (value === 'AppRegistration' || value === 'Certificate') ? 'block' : 'none';
-            document.getElementById('azureQueueSecret').style.display = (value === 'AppRegistration') ? 'block' : 'none';
+            
+            // Managed Identity / DefaultAzureCredential - show optional ClientId
+            document.getElementById('azureQueueManagedIdentity').style.display = (value === 'ManagedIdentity' || value === 'DefaultAzureCredential') ? 'block' : 'none';
+            
+            // App Registration - show ClientId, TenantId, ClientSecret
+            document.getElementById('azureQueueAppReg').style.display = (value === 'AppRegistration') ? 'block' : 'none';
+            
+            // Certificate - show ClientId, TenantId, Certificate fields
             document.getElementById('azureQueueCert').style.display = (value === 'Certificate') ? 'block' : 'none';
         });
 
