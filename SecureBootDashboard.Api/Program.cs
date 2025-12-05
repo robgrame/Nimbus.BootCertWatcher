@@ -143,6 +143,16 @@ try
         Log.Information("  - {Source}", source.ToString());
     }
 
+    // Configure and log Configuration Source Options
+    Log.Information("Configuring Configuration Source Options...");
+    builder.Services.Configure<ConfigurationSourceOptions>(builder.Configuration.GetSection(ConfigurationSourceOptions.SectionName));
+    var configSourceOptions = builder.Configuration.GetSection(ConfigurationSourceOptions.SectionName).Get<ConfigurationSourceOptions>() ?? new ConfigurationSourceOptions();
+    Log.Information("========================================");
+    Log.Information("Configuration Source: {Provider}", configSourceOptions.Provider);
+    Log.Information("  Use Database Configuration: {UseDatabase}", configSourceOptions.UseDatabaseConfiguration);
+    Log.Information("  Use AppSettings Configuration: {UseAppSettings}", configSourceOptions.UseAppSettingsConfiguration);
+    Log.Information("========================================");
+
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
@@ -238,51 +248,63 @@ try
                         var certificate = context.ClientCertificate;
                         Log.Debug("Certificate validation requested for: {Subject}", certificate.Subject);
                         
-                        // Try database-driven validation first (if available)
-                        try
+                        // Check if database configuration is enabled
+                        var configuration = context.HttpContext.RequestServices.GetRequiredService<IConfiguration>();
+                        var configSourceOpts = configuration.GetSection(ConfigurationSourceOptions.SectionName)
+                            .Get<ConfigurationSourceOptions>() ?? new ConfigurationSourceOptions();
+                        
+                        // Try database-driven validation first (if database configuration is enabled)
+                        if (configSourceOpts.UseDatabaseConfiguration)
                         {
-                            var certValidationService = context.HttpContext.RequestServices
-                                .GetService<ICertificateValidationService>();
-                            
-                            if (certValidationService != null)
+                            try
                             {
-                                var dbConfig = await certValidationService.GetConfigurationAsync(context.HttpContext.RequestAborted);
+                                var certValidationService = context.HttpContext.RequestServices
+                                    .GetService<ICertificateValidationService>();
                                 
-                                // Use database validation if enabled
-                                if (dbConfig?.Enabled == true)
+                                if (certValidationService != null)
                                 {
-                                    Log.Information("Using database-driven certificate validation");
+                                    var dbConfig = await certValidationService.GetConfigurationAsync(context.HttpContext.RequestAborted);
                                     
-                                    var validationResult = await certValidationService.ValidateClientCertificateAsync(
-                                        certificate,
-                                        context.HttpContext.RequestAborted);
-                                    
-                                    if (!validationResult.IsValid)
+                                    // Use database validation if enabled
+                                    if (dbConfig?.Enabled == true)
                                     {
-                                        var errorMessage = string.Join("; ", validationResult.Errors);
-                                        Log.Warning("Certificate validation failed (database): {Errors}", errorMessage);
-                                        context.Fail(errorMessage);
-                                        return;
+                                        Log.Information("Using database-driven certificate validation");
+                                        
+                                        var validationResult = await certValidationService.ValidateClientCertificateAsync(
+                                            certificate,
+                                            context.HttpContext.RequestAborted);
+                                        
+                                        if (!validationResult.IsValid)
+                                        {
+                                            var errorMessage = string.Join("; ", validationResult.Errors);
+                                            Log.Warning("Certificate validation failed (database): {Errors}", errorMessage);
+                                            context.Fail(errorMessage);
+                                            return;
+                                        }
+                                        
+                                        if (validationResult.Warnings.Any())
+                                        {
+                                            Log.Warning("Certificate validation warnings: {Warnings}", 
+                                                string.Join("; ", validationResult.Warnings));
+                                        }
+                                        
+                                        Log.Information("Certificate validated successfully via database (Matched CA: {CA})", 
+                                            validationResult.MatchedCA?.CommonName ?? "None");
+                                        
+                                        context.Success();
+                                        return; // Exit early - database validation completed
                                     }
-                                    
-                                    if (validationResult.Warnings.Any())
-                                    {
-                                        Log.Warning("Certificate validation warnings: {Warnings}", 
-                                            string.Join("; ", validationResult.Warnings));
-                                    }
-                                    
-                                    Log.Information("Certificate validated successfully via database (Matched CA: {CA})", 
-                                        validationResult.MatchedCA?.CommonName ?? "None");
-                                    
-                                    context.Success();
-                                    return; // Exit early - database validation completed
                                 }
                             }
+                            catch (Exception ex)
+                            {
+                                Log.Error(ex, "Database certificate validation failed, falling back to appsettings.json");
+                                // Continue with appsettings.json validation below
+                            }
                         }
-                        catch (Exception ex)
+                        else
                         {
-                            Log.Error(ex, "Database certificate validation failed, falling back to appsettings.json");
-                            // Continue with appsettings.json validation below
+                            Log.Debug("Database configuration disabled. Using appsettings.json for certificate validation.");
                         }
                         
                         // Fallback to appsettings.json validation (original behavior)

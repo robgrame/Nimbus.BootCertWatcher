@@ -11,19 +11,34 @@ public class QueueProcessorOptionsProvider : IConfigureOptions<QueueProcessorOpt
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<QueueProcessorOptionsProvider> _logger;
+    private readonly IConfiguration _configuration;
 
     public QueueProcessorOptionsProvider(
         IServiceProvider serviceProvider,
-        ILogger<QueueProcessorOptionsProvider> logger)
+        ILogger<QueueProcessorOptionsProvider> logger,
+        IConfiguration configuration)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _configuration = configuration;
     }
 
     public void Configure(QueueProcessorOptions options)
     {
         // This method is called when IOptionsMonitor<QueueProcessorOptions> is first accessed
         // It allows us to override values from appsettings.json with database values
+        
+        // Check configuration source setting
+        var configSource = _configuration.GetSection(ConfigurationSourceOptions.SectionName)
+            .Get<ConfigurationSourceOptions>() ?? new ConfigurationSourceOptions();
+
+        if (!configSource.UseDatabaseConfiguration)
+        {
+            _logger.LogInformation(
+                "Configuration source is set to '{Provider}'. Queue Processor will use appsettings.json configuration only.",
+                configSource.Provider);
+            return;
+        }
         
         try
         {
@@ -87,7 +102,7 @@ public class QueueProcessorOptionsProvider : IConfigureOptions<QueueProcessorOpt
             options.MaxDequeueCount = dbOptions.MaxDequeueCount;
 
             _logger.LogInformation(
-                "? Queue Processor configured from DATABASE: " +
+                "✓ Queue Processor configured from DATABASE: " +
                 "Enabled={Enabled}, Queue={QueueName}, Auth={AuthMethod}, Uri={QueueUri}",
                 options.Enabled,
                 options.QueueName,
@@ -103,7 +118,7 @@ public class QueueProcessorOptionsProvider : IConfigureOptions<QueueProcessorOpt
         catch (Exception ex)
         {
             _logger.LogError(ex, 
-                "? Failed to load Queue Processor configuration from database. " +
+                "✗ Failed to load Queue Processor configuration from database. " +
                 "Falling back to appsettings.json configuration.");
             
             // Options will retain their default values from appsettings.json
