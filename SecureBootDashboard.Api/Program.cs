@@ -590,8 +590,7 @@ try
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
     {
         AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate
-    })
-    .AddStandardResilienceHandler(); // Add automatic retry and circuit breaker
+    });
     
     Log.Information("Office Versions API Client registered (Primary source: officeversions.azurewebsites.net)");
     
