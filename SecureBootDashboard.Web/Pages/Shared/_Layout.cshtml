@@ -104,22 +104,66 @@
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
+                        @* ========== DASHBOARD (Home) ========== *@
                         <li class="nav-item">
                             <a class="nav-link text-light" asp-area="" asp-page="/Index">
-                                <i class="fas fa-chart-line"></i> Dashboard
+                                <i class="fas fa-tachometer-alt"></i> Dashboard
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-light" asp-area="" asp-page="/Devices/List">
-                                <i class="fas fa-laptop"></i> Devices
-                            </a>
-                        </li>
+                        
+                        @* ========== FLEET (Devices & Versions) ========== *@
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle text-light" href="#" id="commandsDropdown" role="button" 
+                            <a class="nav-link dropdown-toggle text-light" href="#" id="fleetDropdown" role="button" 
                                data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-terminal"></i> Commands
+                                <i class="fas fa-server"></i> Fleet
                             </a>
-                            <ul class="dropdown-menu" aria-labelledby="commandsDropdown">
+                            <ul class="dropdown-menu" aria-labelledby="fleetDropdown">
+                                <li>
+                                    <h6 class="dropdown-header">
+                                        <i class="fas fa-laptop"></i> Devices
+                                    </h6>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" asp-area="" asp-page="/Devices/List" data-page="/Devices/List">
+                                        <i class="fas fa-list"></i> Device List
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" asp-area="" asp-page="/Devices/Cleanup" data-page="/Devices/Cleanup">
+                                        <i class="fas fa-trash-alt"></i> Device Cleanup
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <h6 class="dropdown-header">
+                                        <i class="fas fa-code-branch"></i> Versions
+                                    </h6>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" asp-area="" asp-page="/Windows/Versions" data-page="/Windows/Versions">
+                                        <i class="fab fa-windows"></i> Windows Versions
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" asp-area="" asp-page="/ClientVersions" data-page="/ClientVersions">
+                                        <i class="fas fa-download"></i> Client Versions
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                        
+                        @* ========== OPERATIONS (Commands) ========== *@
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle text-light" href="#" id="operationsDropdown" role="button" 
+                               data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-play-circle"></i> Operations
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="operationsDropdown">
+                                <li>
+                                    <h6 class="dropdown-header">
+                                        <i class="fas fa-terminal"></i> Commands
+                                    </h6>
+                                </li>
                                 <li>
                                     <a class="dropdown-item" asp-area="" asp-page="/Commands/Send" data-page="/Commands/Send">
                                         <i class="fas fa-desktop"></i> Send to Single Device
@@ -138,37 +182,27 @@
                                 </li>
                             </ul>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-light" asp-area="" asp-page="/Windows/Versions">
-                                <i class="fab fa-windows"></i> Windows Versions
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-light" asp-area="" asp-page="/ClientVersions">
-                                <i class="fas fa-download"></i> Client Versions
-                            </a>
-                        </li>
                         
-                        @* Admin Menu Dropdown *@
+                        @* ========== ADMIN (Configuration & Security) ========== *@
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle text-light" href="#" id="adminDropdown" role="button" 
                                data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-tools"></i> Admin
+                                <i class="fas fa-cog"></i> Admin
                             </a>
                             <ul class="dropdown-menu" aria-labelledby="adminDropdown">
                                 <li>
                                     <h6 class="dropdown-header">
-                                        <i class="fas fa-cog"></i> Configuration
+                                        <i class="fas fa-sliders-h"></i> Configuration
                                     </h6>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" asp-area="" asp-page="/Settings/Index" data-page="/Settings/Index">
-                                        <i class="fas fa-sliders-h"></i> Application Settings
+                                        <i class="fas fa-cogs"></i> Application Settings
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" asp-area="" asp-page="/Settings/SinkConfig/Index" data-page="/Settings/SinkConfig">
-                                        <i class="fas fa-plug"></i> Client Sink Configuration
+                                    <a class="dropdown-item" asp-area="" asp-page="/Settings/SinkConfig/Index" data-page="/Settings/DrainConfig">
+                                        <i class="fas fa-plug"></i> Client Sink Config
                                     </a>
                                 </li>
                                 <li>
@@ -176,34 +210,44 @@
                                         <i class="fas fa-server"></i> API Configuration
                                     </a>
                                 </li>
-                                <li>
-                                    <a class="dropdown-item" asp-area="" asp-page="/Admin/MutualTls/Index" data-page="/Admin/MutualTls">
-                                        <i class="fas fa-shield-alt"></i> Mutual TLS
-                                    </a>
-                                </li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <h6 class="dropdown-header">
-                                        <i class="fas fa-database"></i> Data Management
+                                        <i class="fas fa-shield-alt"></i> Security
                                     </h6>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" asp-area="" asp-page="/Devices/Cleanup" data-page="/Devices/Cleanup">
-                                        <i class="fas fa-trash-alt"></i> Device Cleanup
+                                    <a class="dropdown-item" asp-area="" asp-page="/Admin/MutualTls/Index" data-page="/Admin/MutualTls">
+                                        <i class="fas fa-lock"></i> Mutual TLS
                                     </a>
                                 </li>
                             </ul>
                         </li>
                         
-                        <li class="nav-item">
-                            <a class="nav-link text-light" asp-area="" asp-page="/About">
-                                <i class="fas fa-info-circle"></i> About
+                        @* ========== HELP (About, Privacy, Docs) ========== *@
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle text-light" href="#" id="helpDropdown" role="button" 
+                               data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-question-circle"></i> Help
                             </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-light" asp-area="" asp-page="/Privacy">
-                                <i class="fas fa-lock"></i> Privacy
-                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="helpDropdown">
+                                <li>
+                                    <a class="dropdown-item" asp-area="" asp-page="/About" data-page="/About">
+                                        <i class="fas fa-info-circle"></i> About
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" asp-area="" asp-page="/Privacy" data-page="/Privacy">
+                                        <i class="fas fa-user-shield"></i> Privacy Policy
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="https://github.com/robgrame/Nimbus.BootCertWatcher/wiki" target="_blank">
+                                        <i class="fas fa-book"></i> Documentation <i class="fas fa-external-link-alt fa-xs"></i>
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
                     </ul>
                     
@@ -282,27 +326,28 @@
         document.addEventListener('DOMContentLoaded', function() {
             var currentPath = window.location.pathname;
             
-            // Check Commands dropdown items
-            var commandsItems = document.querySelectorAll('#commandsDropdown + .dropdown-menu .dropdown-item[data-page]');
-            commandsItems.forEach(function(item) {
-                var itemPage = item.getAttribute('data-page');
-                if (currentPath.indexOf(itemPage) !== -1) {
-                    item.classList.add('active');
-                    // Also highlight the Commands dropdown toggle
-                    document.getElementById('commandsDropdown').classList.add('text-warning');
-                }
+            // List of all dropdown IDs to check
+            var dropdowns = ['fleetDropdown', 'operationsDropdown', 'adminDropdown', 'helpDropdown'];
+            
+            dropdowns.forEach(function(dropdownId) {
+                var dropdownItems = document.querySelectorAll('#' + dropdownId + ' + .dropdown-menu .dropdown-item[data-page]');
+                dropdownItems.forEach(function(item) {
+                    var itemPage = item.getAttribute('data-page');
+                    if (currentPath.indexOf(itemPage) !== -1) {
+                        item.classList.add('active');
+                        // Also highlight the dropdown toggle
+                        document.getElementById(dropdownId).classList.add('text-warning');
+                    }
+                });
             });
             
-            // Check admin dropdown items
-            var adminItems = document.querySelectorAll('#adminDropdown + .dropdown-menu .dropdown-item[data-page]');
-            adminItems.forEach(function(item) {
-                var itemPage = item.getAttribute('data-page');
-                if (currentPath.indexOf(itemPage) !== -1) {
-                    item.classList.add('active');
-                    // Also highlight the Admin dropdown toggle
-                    document.getElementById('adminDropdown').classList.add('text-warning');
+            // Special handling for Dashboard (not a dropdown)
+            if (currentPath === '/' || currentPath === '/Index') {
+                var dashboardLink = document.querySelector('a[asp-page="/Index"]');
+                if (dashboardLink) {
+                    dashboardLink.classList.add('active');
                 }
-            });
+            }
         });
     </script>
 
