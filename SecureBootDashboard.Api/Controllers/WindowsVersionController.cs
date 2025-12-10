@@ -13,13 +13,16 @@ public class WindowsVersionController : ControllerBase
 {
     private readonly IWindowsVersionService _windowsVersionService;
     private readonly ILogger<WindowsVersionController> _logger;
+    private readonly IOfficeVersionsApiClient _officeVersionsClient;
 
     public WindowsVersionController(
         IWindowsVersionService windowsVersionService,
-        ILogger<WindowsVersionController> logger)
+        ILogger<WindowsVersionController> logger,
+        IOfficeVersionsApiClient officeVersionsClient)
     {
         _windowsVersionService = windowsVersionService;
         _logger = logger;
+        _officeVersionsClient = officeVersionsClient;
     }
 
     /// <summary>
@@ -121,72 +124,118 @@ public class WindowsVersionController : ControllerBase
     public async Task<ActionResult<List<WindowsVersionDto>>> GetAllVersions(
         CancellationToken cancellationToken = default)
     {
-        _logger.LogDebug("Getting all Windows versions");
+        _logger.LogDebug("Getting all Windows versions from Office Versions API v2");
 
-        // For now, return versions from Office Versions API
         try
         {
             var versions = new List<WindowsVersionDto>();
+            int id = 1;
 
-            // Add Windows 10 versions
-            versions.Add(new WindowsVersionDto
+            // Get Windows 10 versions from API
+            var win10Response = await _officeVersionsClient.GetWindows10VersionsAsync(cancellationToken);
+            if (win10Response.IsSuccess && win10Response.Data != null)
             {
-                Id = 1,
-                Version = "22H2",
-                Name = "Windows 10 22H2",
-                ReleaseDate = new DateTime(2022, 10, 18),
-                EndOfSupportDate = new DateTime(2025, 10, 14),
-                LastSyncedUtc = DateTime.UtcNow
-            });
+                foreach (var version in win10Response.Data.GroupBy(v => v.Version))
+                {
+                    versions.Add(new WindowsVersionDto
+                    {
+                        Id = id++,
+                        Version = version.Key,
+                        Name = $"Windows 10 {version.Key}",
+                        ReleaseDate = version.Min(v => v.ReleaseDate),
+                        EndOfSupportDate = version.Min(v => v.EndOfSupport),
+                        LastSyncedUtc = DateTime.UtcNow
+                    });
+                }
+            }
 
-            // Add Windows 11 versions
-            versions.Add(new WindowsVersionDto
+            // Get Windows 11 versions from API
+            var win11Response = await _officeVersionsClient.GetWindows11VersionsAsync(cancellationToken);
+            if (win11Response.IsSuccess && win11Response.Data != null)
             {
-                Id = 2,
-                Version = "21H2",
-                Name = "Windows 11 21H2",
-                ReleaseDate = new DateTime(2021, 10, 4),
-                EndOfSupportDate = new DateTime(2024, 10, 8),
-                LastSyncedUtc = DateTime.UtcNow
-            });
+                foreach (var version in win11Response.Data.GroupBy(v => v.Version))
+                {
+                    versions.Add(new WindowsVersionDto
+                    {
+                        Id = id++,
+                        Version = version.Key,
+                        Name = $"Windows 11 {version.Key}",
+                        ReleaseDate = version.Min(v => v.ReleaseDate),
+                        EndOfSupportDate = version.Min(v => v.EndOfSupport),
+                        LastSyncedUtc = DateTime.UtcNow
+                    });
+                }
+            }
 
-            versions.Add(new WindowsVersionDto
-            {
-                Id = 3,
-                Version = "22H2",
-                Name = "Windows 11 22H2",
-                ReleaseDate = new DateTime(2022, 9, 20),
-                EndOfSupportDate = new DateTime(2025, 10, 14),
-                LastSyncedUtc = DateTime.UtcNow
-            });
-
-            versions.Add(new WindowsVersionDto
-            {
-                Id = 4,
-                Version = "23H2",
-                Name = "Windows 11 23H2",
-                ReleaseDate = new DateTime(2023, 10, 31),
-                EndOfSupportDate = null, // Still supported
-                LastSyncedUtc = DateTime.UtcNow
-            });
-
-            versions.Add(new WindowsVersionDto
-            {
-                Id = 5,
-                Version = "24H2",
-                Name = "Windows 11 24H2",
-                ReleaseDate = new DateTime(2024, 10, 1),
-                EndOfSupportDate = null, // Still supported
-                LastSyncedUtc = DateTime.UtcNow
-            });
-
-            _logger.LogInformation("Returning {Count} Windows versions", versions.Count);
+            _logger.LogInformation("Returning {Count} Windows versions from Office Versions API v2", versions.Count);
             return Ok(versions);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting Windows versions");
-            return StatusCode(500, new { error = "Failed to retrieve Windows versions" });
+            _logger.LogError(ex, "Error getting Windows versions from API");
+            
+            // Fallback to hard-coded versions if API fails
+            _logger.LogWarning("Falling back to hard-coded Windows versions");
+            
+            var fallbackVersions = new List<WindowsVersionDto>
+            {
+                new WindowsVersionDto
+                {
+                    Id = 1,
+                    Version = "22H2",
+                    Name = "Windows 10 22H2",
+                    ReleaseDate = new DateTime(2022, 10, 18),
+                    EndOfSupportDate = new DateTime(2025, 10, 14),
+                    LastSyncedUtc = DateTime.UtcNow
+                },
+                new WindowsVersionDto
+                {
+                    Id = 2,
+                    Version = "21H2",
+                    Name = "Windows 11 21H2",
+                    ReleaseDate = new DateTime(2021, 10, 4),
+                    EndOfSupportDate = new DateTime(2024, 10, 8),
+                    LastSyncedUtc = DateTime.UtcNow
+                },
+                new WindowsVersionDto
+                {
+                    Id = 3,
+                    Version = "22H2",
+                    Name = "Windows 11 22H2",
+                    ReleaseDate = new DateTime(2022, 9, 20),
+                    EndOfSupportDate = new DateTime(2025, 10, 14),
+                    LastSyncedUtc = DateTime.UtcNow
+                },
+                new WindowsVersionDto
+                {
+                    Id = 4,
+                    Version = "23H2",
+                    Name = "Windows 11 23H2",
+                    ReleaseDate = new DateTime(2023, 10, 31),
+                    EndOfSupportDate = null,
+                    LastSyncedUtc = DateTime.UtcNow
+                },
+                new WindowsVersionDto
+                {
+                    Id = 5,
+                    Version = "24H2",
+                    Name = "Windows 11 24H2",
+                    ReleaseDate = new DateTime(2024, 10, 1),
+                    EndOfSupportDate = new DateTime(2026, 10, 13),
+                    LastSyncedUtc = DateTime.UtcNow
+                },
+                new WindowsVersionDto
+                {
+                    Id = 6,
+                    Version = "25H2",
+                    Name = "Windows 11 25H2",
+                    ReleaseDate = new DateTime(2025, 9, 30),
+                    EndOfSupportDate = new DateTime(2027, 10, 12),
+                    LastSyncedUtc = DateTime.UtcNow
+                }
+            };
+
+            return Ok(fallbackVersions);
         }
     }
 
