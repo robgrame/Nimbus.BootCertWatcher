@@ -87,6 +87,7 @@ $projects = @(
         Name = 'SecureBootDashboard.Api'
         Path = 'SecureBootDashboard.Api\SecureBootDashboard.Api.csproj'
         Profile = 'FolderProfile'
+        LocalPublishPath = 'publish\SecureBootDashboard.Api'
         Destination = '\\srvcm00\r$\Nimbus.SecureBootCert\SecureBootDashboard.Api'
         Filter = 'Api'
         AppPool = $ApiAppPool
@@ -95,6 +96,7 @@ $projects = @(
         Name = 'SecureBootDashboard.Web'
         Path = 'SecureBootDashboard.Web\SecureBootDashboard.Web.csproj'
         Profile = 'FolderProfile'
+        LocalPublishPath = 'publish\SecureBootDashboard.Web'
         Destination = '\\Srvcm00\r$\Nimbus.SecureBootCert\SecureBootDashboard.Web'
         Filter = 'Web'
         AppPool = $WebAppPool
@@ -330,20 +332,24 @@ function Invoke-ProjectPublish {
     param(
         [string]$ProjectPath,
         [string]$ProjectName,
-        [string]$ProfileName,
-        [string]$Destination
+        [string]$LocalPublishPath
     )
     
-    Write-Step "Publishing $ProjectName..."
+    Write-Step "Publishing $ProjectName to local folder..."
     Write-Host "   Configuration: $Configuration" -ForegroundColor Gray
-    Write-Host "   Profile: $ProfileName" -ForegroundColor Gray
-    Write-Host "   Destination: $Destination" -ForegroundColor Gray
+    Write-Host "   Local Path: $LocalPublishPath" -ForegroundColor Gray
+    
+    # Ensure local publish directory exists
+    if (-not (Test-Path $LocalPublishPath)) {
+        New-Item -ItemType Directory -Path $LocalPublishPath -Force | Out-Null
+    }
     
     $publishArgs = @(
         'publish',
         $ProjectPath,
-        "/p:PublishProfile=$ProfileName",
-        "/p:Configuration=$Configuration"
+        '-c', $Configuration,
+        '-o', $LocalPublishPath,
+        '--no-self-contained'
     )
     
     if ($VerboseMode) {
@@ -355,12 +361,62 @@ function Invoke-ProjectPublish {
     $stopwatch.Stop()
     
     if ($LASTEXITCODE -eq 0) {
-        Write-Success "$ProjectName published successfully in $($stopwatch.Elapsed.TotalSeconds.ToString('F2'))s"
-        Write-Host "   Published to: $Destination" -ForegroundColor Gray
+        Write-Success "$ProjectName published locally in $($stopwatch.Elapsed.TotalSeconds.ToString('F2'))s"
         return $true
     } else {
         Write-Error "$ProjectName publish failed"
         Write-Host $result -ForegroundColor Red
+        return $false
+    }
+}
+
+function Copy-PublishedFiles {
+    param(
+        [string]$ProjectName,
+        [string]$SourcePath,
+        [string]$DestinationPath
+    )
+    
+    Write-Step "Copying $ProjectName to remote server..."
+    Write-Host "   Source: $SourcePath" -ForegroundColor Gray
+    Write-Host "   Destination: $DestinationPath" -ForegroundColor Gray
+    
+    try {
+        # Test if destination is accessible
+        if (-not (Test-Path $DestinationPath)) {
+            Write-Host "   Creating destination directory..." -ForegroundColor Gray
+            New-Item -ItemType Directory -Path $DestinationPath -Force | Out-Null
+        }
+        
+        # Copy files with robocopy for better performance and reliability
+        $robocopyArgs = @(
+            $SourcePath,
+            $DestinationPath,
+            '/MIR',           # Mirror directory (delete extra files in destination)
+            '/R:3',           # Retry 3 times on failed copies
+            '/W:5',           # Wait 5 seconds between retries
+            '/NP',            # No progress (less output)
+            '/NDL',           # No directory list
+            '/NFL',           # No file list
+            '/NJH',           # No job header
+            '/NJS'            # No job summary
+        )
+        
+        $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+        $robocopyOutput = & robocopy @robocopyArgs 2>&1
+        $stopwatch.Stop()
+        
+        # Robocopy exit codes: 0-7 are success, 8+ are errors
+        if ($LASTEXITCODE -lt 8) {
+            Write-Success "$ProjectName copied successfully in $($stopwatch.Elapsed.TotalSeconds.ToString('F2'))s"
+            return $true
+        } else {
+            Write-Error "Failed to copy $ProjectName (Robocopy exit code: $LASTEXITCODE)"
+            Write-Host $robocopyOutput -ForegroundColor Red
+            return $false
+        }
+    } catch {
+        Write-Error "Failed to copy $ProjectName`: $_"
         return $false
     }
 }
@@ -442,11 +498,18 @@ try {
             }
         }
         
-        # Publish
-        if (Invoke-ProjectPublish -ProjectPath $project.Path `
-                                  -ProjectName $project.Name `
-                                  -ProfileName $project.Profile `
-                                  -Destination $project.Destination) {
+        # Publish locally
+        if (-not (Invoke-ProjectPublish -ProjectPath $project.Path `
+                                        -ProjectName $project.Name `
+                                        -LocalPublishPath $project.LocalPublishPath)) {
+            $failCount++
+            continue
+        }
+        
+        # Copy to remote server
+        if (Copy-PublishedFiles -ProjectName $project.Name `
+                                -SourcePath $project.LocalPublishPath `
+                                -DestinationPath $project.Destination) {
             $successCount++
         } else {
             $failCount++

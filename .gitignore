@@ -3,6 +3,7 @@ bin/
 obj/
 **/bin/
 **/obj/
+publish/
 
 # Visual Studio user data
 .vs/
@@ -40,3 +41,6 @@ Thumbs.db
 
 # External repositories (kept as Git submodule/reference)
 external/
+
+# Client package (generated build artifact)
+client-package/SecureBootWatcher-Client.zip

@@ -8,20 +8,24 @@ namespace SecureBootDashboard.Api.Services;
 
 /// <summary>
 /// Service for managing Windows version tracking and build security verification
+/// Uses Office Versions API as primary source with configuration fallback
 /// </summary>
 public class WindowsVersionService : IWindowsVersionService
 {
     private readonly SecureBootDbContext _dbContext;
     private readonly WindowsSecurityOptions _securityOptions;
+    private readonly IOfficeVersionsApiClient _officeVersionsClient;
     private readonly ILogger<WindowsVersionService> _logger;
 
     public WindowsVersionService(
         SecureBootDbContext dbContext,
         IOptions<WindowsSecurityOptions> securityOptions,
+        IOfficeVersionsApiClient officeVersionsClient,
         ILogger<WindowsVersionService> logger)
     {
         _dbContext = dbContext;
         _securityOptions = securityOptions.Value;
+        _officeVersionsClient = officeVersionsClient;
         _logger = logger;
     }
 
@@ -30,12 +34,115 @@ public class WindowsVersionService : IWindowsVersionService
         CancellationToken cancellationToken = default)
     {
         _logger.LogDebug("CheckBuildSecurityAsync: Checking build security for {BuildNumber}", buildNumber);
+        
+        // STRATEGY 1: Try Office Versions API first (primary source)
+        var apiStatus = await CheckBuildSecurityFromApiAsync(buildNumber, cancellationToken);
+        if (apiStatus != null)
+        {
+            _logger.LogInformation("CheckBuildSecurityAsync: Used Office Versions API for build {BuildNumber}", buildNumber);
+            return apiStatus;
+        }
+
+        _logger.LogWarning("CheckBuildSecurityAsync: Office Versions API unavailable, falling back to configuration");
+
+        // STRATEGY 2: Fallback to local configuration
+        return CheckBuildSecurityFromConfiguration(buildNumber);
+    }
+
+    private async Task<WindowsBuildSecurityStatus?> CheckBuildSecurityFromApiAsync(
+        string buildNumber,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var (major, _) = ParseBuildNumber(buildNumber);
+            
+            // Determine which Windows version to query
+            var versionsResponse = major switch
+            {
+                19045 or 19044 or 19043 or 19042 or 19041 => 
+                    await _officeVersionsClient.GetWindows10VersionsAsync(cancellationToken),
+                22000 or 22621 or 22631 or 26100 => 
+                    await _officeVersionsClient.GetWindows11VersionsAsync(cancellationToken),
+                _ => null
+            };
+
+            if (versionsResponse == null || !versionsResponse.IsSuccess || versionsResponse.Data == null)
+            {
+                _logger.LogDebug("CheckBuildSecurityFromApiAsync: No data from API for build {BuildNumber}", buildNumber);
+                return null;
+            }
+
+            // Find the build in the versions
+            WindowsBuildInfo? matchedBuild = null;
+            WindowsVersionInfo? matchedVersion = null;
+
+            foreach (var version in versionsResponse.Data)
+            {
+                matchedBuild = version.Builds?.FirstOrDefault(b => b.BuildNumber == buildNumber);
+                if (matchedBuild != null)
+                {
+                    matchedVersion = version;
+                    break;
+                }
+            }
+
+            if (matchedBuild == null || matchedVersion == null)
+            {
+                _logger.LogDebug("CheckBuildSecurityFromApiAsync: Build {BuildNumber} not found in API data", buildNumber);
+                return null;
+            }
+
+            // Find latest build for comparison
+            var latestBuild = matchedVersion.Builds?
+                .Where(b => b.IsLatest)
+                .OrderByDescending(b => b.ReleaseDate)
+                .FirstOrDefault();
+
+            var isSecure = matchedBuild.IsLatest || matchedBuild.SecurityUpdate;
+            var securityNotes = matchedBuild.IsLatest
+                ? "? This is the latest build for this Windows version"
+                : $"? Latest build available: {latestBuild?.BuildNumber ?? "Unknown"} (released {latestBuild?.ReleaseDate:yyyy-MM-dd})";
+
+            if (matchedBuild.SecurityUpdate)
+            {
+                securityNotes = "? Security update applied. " + securityNotes;
+            }
+
+            if (matchedBuild.Notes != null)
+            {
+                securityNotes += $"\nNotes: {matchedBuild.Notes}";
+            }
+
+            _logger.LogInformation(
+                "CheckBuildSecurityFromApiAsync: Build {BuildNumber} security status - IsSecure={IsSecure}, IsLatest={IsLatest}",
+                buildNumber, isSecure, matchedBuild.IsLatest);
+
+            return new WindowsBuildSecurityStatus(
+                BuildNumber: buildNumber,
+                IsSecure: isSecure,
+                IsLatest: matchedBuild.IsLatest,
+                SecurityNotes: securityNotes,
+                ReleaseDate: matchedBuild.ReleaseDate,
+                LatestSecureBuild: matchedBuild.IsLatest ? null : latestBuild?.BuildNumber,
+                KbArticle: matchedBuild.KbArticle
+            );
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "CheckBuildSecurityFromApiAsync: Error checking build {BuildNumber} via API", buildNumber);
+            return null;
+        }
+    }
+
+    private WindowsBuildSecurityStatus CheckBuildSecurityFromConfiguration(string buildNumber)
+    {
         var (major, minor) = ParseBuildNumber(buildNumber);
-        _logger.LogTrace("CheckBuildSecurityAsync: Parsed build number - Major={Major}, Minor={Minor}", major, minor);
+        _logger.LogTrace("CheckBuildSecurityFromConfiguration: Parsed build number - Major={Major}, Minor={Minor}", major, minor);
 
         // Try to determine Windows version from build number
         var windowsVersion = DetermineWindowsVersionFromBuild(major);
-        _logger.LogDebug("CheckBuildSecurityAsync: Determined Windows version as {Version} from build {Major}", 
+        _logger.LogDebug("CheckBuildSecurityFromConfiguration: Determined Windows version as {Version} from build {Major}", 
             windowsVersion ?? "Unknown", major);
 
         // Check against configured minimum build
@@ -43,12 +150,12 @@ public class WindowsVersionService : IWindowsVersionService
         {
             var isSecure = _securityOptions.IsBuildSecure(windowsVersion, buildNumber);
             var minimumBuild = _securityOptions.GetMinimumBuildNumber(windowsVersion);
-            _logger.LogDebug("CheckBuildSecurityAsync: Build security check - IsSecure={IsSecure}, MinimumBuild={MinBuild}", 
+            _logger.LogDebug("CheckBuildSecurityFromConfiguration: Build security check - IsSecure={IsSecure}, MinimumBuild={MinBuild}", 
                 isSecure, minimumBuild);
 
             if (_securityOptions.MinimumSecureBuilds.TryGetValue(windowsVersion, out var buildInfo))
             {
-                _logger.LogTrace("CheckBuildSecurityAsync: Found build info - Name={Name}, KB={KB}, ReleaseDate={Date}", 
+                _logger.LogTrace("CheckBuildSecurityFromConfiguration: Found build info - Name={Name}, KB={KB}, ReleaseDate={Date}", 
                     buildInfo.Name, buildInfo.KBArticle, buildInfo.ReleaseDate);
                 
                 var result = new WindowsBuildSecurityStatus(
@@ -56,35 +163,37 @@ public class WindowsVersionService : IWindowsVersionService
                     IsSecure: isSecure,
                     IsLatest: false, // We don't track "latest" in config
                     SecurityNotes: isSecure 
-                        ? $"Build meets or exceeds minimum secure build {minimumBuild}"
-                        : $"Build is older than minimum secure build {minimumBuild} ({buildInfo.Name}). Update to {buildInfo.KBArticle} or later.",
+                        ? $"? Build meets or exceeds minimum secure build {minimumBuild} (from local configuration)"
+                        : $"? Build is older than minimum secure build {minimumBuild} ({buildInfo.Name}). Update to {buildInfo.KBArticle} or later.",
                     ReleaseDate: buildInfo.ReleaseDate,
-                    LatestSecureBuild: isSecure ? null : minimumBuild
+                    LatestSecureBuild: isSecure ? null : minimumBuild,
+                    KbArticle: buildInfo.KBArticle
                 );
                 
-                _logger.LogInformation("CheckBuildSecurityAsync: Build {BuildNumber} for {Version} is {Status}", 
+                _logger.LogInformation("CheckBuildSecurityFromConfiguration: Build {BuildNumber} for {Version} is {Status} (configuration-based)", 
                     buildNumber, windowsVersion, isSecure ? "SECURE" : "OUTDATED");
                 return result;
             }
             else
             {
-                _logger.LogWarning("CheckBuildSecurityAsync: No build info found in configuration for {Version}", windowsVersion);
+                _logger.LogWarning("CheckBuildSecurityFromConfiguration: No build info found in configuration for {Version}", windowsVersion);
             }
         }
         else
         {
-            _logger.LogWarning("CheckBuildSecurityAsync: Could not determine Windows version from build {BuildNumber}", buildNumber);
+            _logger.LogWarning("CheckBuildSecurityFromConfiguration: Could not determine Windows version from build {BuildNumber}", buildNumber);
         }
 
         // Build not found in configuration
-        _logger.LogWarning("CheckBuildSecurityAsync: Build {BuildNumber} not found in configuration", buildNumber);
+        _logger.LogWarning("CheckBuildSecurityFromConfiguration: Build {BuildNumber} not found in configuration", buildNumber);
         return new WindowsBuildSecurityStatus(
             BuildNumber: buildNumber,
             IsSecure: false,
             IsLatest: false,
-            SecurityNotes: "Build not found in configuration. Please verify Windows version and update configuration.",
+            SecurityNotes: "? Build not found in API or configuration. Please verify Windows version and update sources.",
             ReleaseDate: null,
-            LatestSecureBuild: null
+            LatestSecureBuild: null,
+            KbArticle: null
         );
     }
 

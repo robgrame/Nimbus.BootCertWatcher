@@ -32,7 +32,8 @@ public record WindowsBuildSecurityStatus(
     bool IsLatest,
     string? SecurityNotes = null,
     DateTime? ReleaseDate = null,
-    string? LatestSecureBuild = null
+    string? LatestSecureBuild = null,
+    string? KbArticle = null
 );
 
 /// <summary>

@@ -579,6 +579,22 @@ try
 
     // Configure Windows Version Service (Configuration-based, no WindowsVersionsCore dependency)
     Log.Information("Configuring Windows Version Service...");
+    
+    // Register Office Versions API Client
+    builder.Services.AddHttpClient<IOfficeVersionsApiClient, OfficeVersionsApiClient>(client =>
+    {
+        client.BaseAddress = new Uri("https://officeversions.azurewebsites.net/api");
+        client.Timeout = TimeSpan.FromSeconds(30);
+        client.DefaultRequestHeaders.Add("User-Agent", "SecureBootDashboard/1.14");
+    })
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate
+    })
+    .AddStandardResilienceHandler(); // Add automatic retry and circuit breaker
+    
+    Log.Information("Office Versions API Client registered (Primary source: officeversions.azurewebsites.net)");
+    
     builder.Services.AddScoped<SecureBootDashboard.Api.Services.IWindowsVersionService, SecureBootDashboard.Api.Services.WindowsVersionService>();
 
     // Configure Windows Security Options
