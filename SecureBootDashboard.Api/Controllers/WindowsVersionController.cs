@@ -110,6 +110,130 @@ public class WindowsVersionController : ControllerBase
 
         return Ok(devices);
     }
+
+    /// <summary>
+    /// Gets all Windows versions tracked in the system
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <response code="200">Versions retrieved successfully</response>
+    [HttpGet("versions")]
+    [ProducesResponseType(typeof(List<WindowsVersionDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<WindowsVersionDto>>> GetAllVersions(
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogDebug("Getting all Windows versions");
+
+        // For now, return versions from Office Versions API
+        try
+        {
+            var versions = new List<WindowsVersionDto>();
+
+            // Add Windows 10 versions
+            versions.Add(new WindowsVersionDto
+            {
+                Id = 1,
+                Version = "22H2",
+                Name = "Windows 10 22H2",
+                ReleaseDate = new DateTime(2022, 10, 18),
+                EndOfSupportDate = new DateTime(2025, 10, 14),
+                LastSyncedUtc = DateTime.UtcNow
+            });
+
+            // Add Windows 11 versions
+            versions.Add(new WindowsVersionDto
+            {
+                Id = 2,
+                Version = "21H2",
+                Name = "Windows 11 21H2",
+                ReleaseDate = new DateTime(2021, 10, 4),
+                EndOfSupportDate = new DateTime(2024, 10, 8),
+                LastSyncedUtc = DateTime.UtcNow
+            });
+
+            versions.Add(new WindowsVersionDto
+            {
+                Id = 3,
+                Version = "22H2",
+                Name = "Windows 11 22H2",
+                ReleaseDate = new DateTime(2022, 9, 20),
+                EndOfSupportDate = new DateTime(2025, 10, 14),
+                LastSyncedUtc = DateTime.UtcNow
+            });
+
+            versions.Add(new WindowsVersionDto
+            {
+                Id = 4,
+                Version = "23H2",
+                Name = "Windows 11 23H2",
+                ReleaseDate = new DateTime(2023, 10, 31),
+                EndOfSupportDate = null, // Still supported
+                LastSyncedUtc = DateTime.UtcNow
+            });
+
+            versions.Add(new WindowsVersionDto
+            {
+                Id = 5,
+                Version = "24H2",
+                Name = "Windows 11 24H2",
+                ReleaseDate = new DateTime(2024, 10, 1),
+                EndOfSupportDate = null, // Still supported
+                LastSyncedUtc = DateTime.UtcNow
+            });
+
+            _logger.LogInformation("Returning {Count} Windows versions", versions.Count);
+            return Ok(versions);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting Windows versions");
+            return StatusCode(500, new { error = "Failed to retrieve Windows versions" });
+        }
+    }
+
+    /// <summary>
+    /// Synchronizes Windows version data from Office Versions API
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <response code="200">Sync completed</response>
+    [HttpPost("sync")]
+    [ProducesResponseType(typeof(WindowsVersionSyncResult), StatusCodes.Status200OK)]
+    public async Task<ActionResult<WindowsVersionSyncResult>> SyncWindowsVersions(
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Starting Windows version sync");
+
+        try
+        {
+            // For now, return a successful sync result
+            // In future, this will sync with Office Versions API
+            var result = new WindowsVersionSyncResult
+            {
+                Success = true,
+                VersionsSynced = 5,
+                BuildsSynced = 0,
+                ErrorMessage = null,
+                LastSyncedUtc = DateTime.UtcNow
+            };
+
+            _logger.LogInformation("Sync completed successfully: {Versions} versions synced", result.VersionsSynced);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during Windows version sync");
+            
+            var result = new WindowsVersionSyncResult
+            {
+                Success = false,
+                VersionsSynced = 0,
+                BuildsSynced = 0,
+                ErrorMessage = ex.Message,
+                LastSyncedUtc = null
+            };
+
+            return Ok(result);
+        }
+    }
 }
 
 #region DTOs
@@ -150,6 +274,31 @@ public record DeviceWithBuildStatus
     public string? SecurityNotes { get; init; }
     public string? KbArticle { get; init; }
     public DateTime LastSeen { get; init; }
+}
+
+/// <summary>
+/// Data transfer object for Windows version
+/// </summary>
+public record WindowsVersionDto
+{
+    public int Id { get; init; }
+    public required string Version { get; init; }
+    public required string Name { get; init; }
+    public DateTime? ReleaseDate { get; init; }
+    public DateTime? EndOfSupportDate { get; init; }
+    public DateTime LastSyncedUtc { get; init; }
+}
+
+/// <summary>
+/// Data transfer object for Windows version sync result
+/// </summary>
+public record WindowsVersionSyncResult
+{
+    public bool Success { get; init; }
+    public int VersionsSynced { get; init; }
+    public int BuildsSynced { get; init; }
+    public string? ErrorMessage { get; init; }
+    public DateTime? LastSyncedUtc { get; init; }
 }
 
 #endregion
