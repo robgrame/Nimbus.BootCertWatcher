@@ -5,6 +5,13 @@ public sealed class ApiSettings
     public string BaseUrl { get; set; } = string.Empty;
 
     /// <summary>
+    /// Bypass SSL certificate validation (useful for staging/testing with self-signed certs).
+    /// WARNING: Only enable in non-production environments!
+    /// Default: false
+    /// </summary>
+    public bool BypassSslValidation { get; set; }
+
+    /// <summary>
     /// Enable client certificate authentication for mutual TLS.
     /// Default: false
     /// </summary>

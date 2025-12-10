@@ -211,12 +211,16 @@ try
             var apiSettings = builder.Configuration.GetSection("ApiSettings").Get<ApiSettings>();
             var handler = new HttpClientHandler();
 
-            // In development, ignore SSL certificate validation errors
-            if (builder.Environment.IsDevelopment())
+            // Check for bypass SSL setting (useful for staging/testing with self-signed certs)
+            var bypassSsl = builder.Configuration.GetValue<bool>("ApiSettings:BypassSslValidation");
+            
+            // In development OR if explicitly configured, ignore SSL certificate validation errors
+            if (builder.Environment.IsDevelopment() || bypassSsl)
             {
                 handler.ServerCertificateCustomValidationCallback =
                     HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
-                Log.Information("Development mode: SSL certificate validation disabled for API client");
+                Log.Information("SSL certificate validation disabled for API client (Development={IsDev}, BypassSsl={Bypass})", 
+                    builder.Environment.IsDevelopment(), bypassSsl);
             }
 
             // Configure certificate authentication if enabled
@@ -311,12 +315,16 @@ try
             var apiSettings = builder.Configuration.GetSection("ApiSettings").Get<ApiSettings>();
             var handler = new HttpClientHandler();
 
-            // In development, ignore SSL certificate validation errors
-            if (builder.Environment.IsDevelopment())
+            // Check for bypass SSL setting (useful for staging/testing with self-signed certs)
+            var bypassSsl = builder.Configuration.GetValue<bool>("ApiSettings:BypassSslValidation");
+            
+            // In development OR if explicitly configured, ignore SSL certificate validation errors
+            if (builder.Environment.IsDevelopment() || bypassSsl)
             {
                 handler.ServerCertificateCustomValidationCallback =
                     HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
-                Log.Information("Development mode: SSL certificate validation disabled for named HttpClient 'SecureBootApi'");
+                Log.Information("SSL certificate validation disabled for named HttpClient 'SecureBootApi' (Development={IsDev}, BypassSsl={Bypass})",
+                    builder.Environment.IsDevelopment(), bypassSsl);
             }
 
             // Configure certificate authentication if enabled
