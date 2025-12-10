@@ -186,9 +186,12 @@
                                                 </small>
                                             </td>
                                             <td class="text-center">
-                                                <span class="badge bg-info" title="Build information will be available in a future update">
-                                                    <i class="fas fa-info-circle"></i> Coming Soon
-                                                </span>
+                                                <a asp-page="/Windows/Builds" 
+                                                   asp-route-version="@version.Version" 
+                                                   class="btn btn-sm btn-outline-primary"
+                                                   title="View details for @version.Name">
+                                                    <i class="fas fa-info-circle"></i> View Details
+                                                </a>
                                             </td>
                                         </tr>
                                     }
