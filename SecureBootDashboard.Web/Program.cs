@@ -304,6 +304,87 @@ try
             return handler;
         });
 
+    // Register named HttpClient for backward compatibility (used by Command pages)
+    builder.Services.AddHttpClient("SecureBootApi")
+        .ConfigurePrimaryHttpMessageHandler(sp =>
+        {
+            var apiSettings = builder.Configuration.GetSection("ApiSettings").Get<ApiSettings>();
+            var handler = new HttpClientHandler();
+
+            // In development, ignore SSL certificate validation errors
+            if (builder.Environment.IsDevelopment())
+            {
+                handler.ServerCertificateCustomValidationCallback =
+                    HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+                Log.Information("Development mode: SSL certificate validation disabled for named HttpClient 'SecureBootApi'");
+            }
+
+            // Configure certificate authentication if enabled
+            if (apiSettings?.UseCertificateAuth == true)
+            {
+                System.Security.Cryptography.X509Certificates.X509Certificate2? certificate = null;
+
+                try
+                {
+                    // Try to load from certificate store first
+                    if (!string.IsNullOrEmpty(apiSettings.CertificateThumbprint))
+                    {
+                        var storeLocation = apiSettings.CertificateStoreLocation.Equals("LocalMachine", StringComparison.OrdinalIgnoreCase)
+                            ? System.Security.Cryptography.X509Certificates.StoreLocation.LocalMachine
+                            : System.Security.Cryptography.X509Certificates.StoreLocation.CurrentUser;
+
+                        var storeName = apiSettings.CertificateStoreName.Equals("Root", StringComparison.OrdinalIgnoreCase)
+                            ? System.Security.Cryptography.X509Certificates.StoreName.Root
+                            : System.Security.Cryptography.X509Certificates.StoreName.My;
+
+#pragma warning disable SYSLIB0057
+                        using (var store = new System.Security.Cryptography.X509Certificates.X509Store(storeName, storeLocation))
+                        {
+                            store.Open(System.Security.Cryptography.X509Certificates.OpenFlags.ReadOnly);
+                            var certificates = store.Certificates.Find(
+                                System.Security.Cryptography.X509Certificates.X509FindType.FindByThumbprint,
+                                apiSettings.CertificateThumbprint,
+                                false);
+
+                            if (certificates.Count > 0)
+                            {
+                                certificate = certificates[0];
+                            }
+                        }
+#pragma warning restore SYSLIB0057
+                    }
+                    else if (!string.IsNullOrEmpty(apiSettings.CertificatePath))
+                    {
+                        if (!string.IsNullOrEmpty(apiSettings.CertificatePassword))
+                        {
+                            certificate = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadPkcs12FromFile(
+                                apiSettings.CertificatePath,
+                                apiSettings.CertificatePassword,
+                                System.Security.Cryptography.X509Certificates.X509KeyStorageFlags.DefaultKeySet);
+                        }
+                        else
+                        {
+                            certificate = System.Security.Cryptography.X509Certificates.X509CertificateLoader.LoadCertificateFromFile(
+                                apiSettings.CertificatePath);
+                        }
+                    }
+
+                    if (certificate != null)
+                    {
+                        handler.ClientCertificates.Add(certificate);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Failed to load API client certificate for named HttpClient 'SecureBootApi'");
+                }
+            }
+
+            return handler;
+        });
+
+    Log.Information("HttpClient 'SecureBootApi' registered for command management pages");
+
     var app = builder.Build();
 
     // Log URLs configuration
@@ -373,3 +454,4 @@ finally
     Log.Information("Application shutting down...");
     Log.CloseAndFlush();
 }
+
