@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "value": "prod"
+    },
+    "deploymentScenario": {
+      "value": "hybrid"
+    },
+    "sqlAdminLogin": {
+      "value": "sqladmin"
+    },
+    "sqlAdminPassword": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.KeyVault/vaults/{keyvault-name}"
+        },
+        "secretName": "SqlAdminPassword"
+      }
+    },
+    "sqlDatabaseSku": {
+      "value": "S2"
+    },
+    "appServicePlanSku": {
+      "value": "P1v3"
+    },
+    "enableApplicationInsights": {
+      "value": true
+    },
+    "enableAutoScaling": {
+      "value": false
+    },
+    "allowedIpAddresses": {
+      "value": [
+        "203.0.113.50",
+        "203.0.113.51"
+      ]
+    },
+    "tags": {
+      "value": {
+        "Environment": "Production",
+        "Application": "SecureBootDashboard",
+        "ManagedBy": "Bicep",
+        "CostCenter": "IT-Security",
+        "Owner": "SecOps Team"
+      }
+    }
+  }
+}
