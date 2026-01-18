@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SecureBootWatcher.Shared.Configuration;
 using SecureBootWatcher.Shared.Models;
+using System.Net.Sockets;
 
 namespace SecureBootWatcher.Client.Sinks
 {
@@ -43,6 +45,23 @@ namespace SecureBootWatcher.Client.Sinks
             var client = _httpClientFactory.CreateClient("SecureBootIngestion");
             client.BaseAddress = sinkOptions.BaseAddress;
             client.Timeout = sinkOptions.HttpTimeout;
+
+            // Pre-flight DNS check to avoid repeated failures when host is not resolvable
+            try
+            {
+                var host = client.BaseAddress.Host;
+                var dnsTask = Dns.GetHostAddressesAsync(host);
+                var completed = await Task.WhenAny(dnsTask, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken)).ConfigureAwait(false);
+                if (completed != dnsTask)
+                {
+                    throw new TaskCanceledException("DNS resolution timeout");
+                }
+                _ = await dnsTask.ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is SocketException || ex is TaskCanceledException || ex is HttpRequestException)
+            {
+                throw new HttpRequestException($"DNS resolution failed for {client.BaseAddress.Host}", ex);
+            }
 
             _logger.LogTrace("WebApiReportSink: HTTP client configured - Timeout={Timeout}", sinkOptions.HttpTimeout);
 

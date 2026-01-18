@@ -182,7 +182,7 @@ namespace SecureBootWatcher.Client.Services
                 {
                     MicrosoftUpdateManagedOptIn = registrySnapshot.MicrosoftUpdateManagedOptIn,
                     AllowTelemetry = telemetrySnapshot?.AllowTelemetry,
-                    WindowsUEFICA2023Capable = registrySnapshot.WindowsUEFICA2023CapableCode,
+                    WindowsUEFICA2023Capable = registrySnapshot.Servicing.WindowsUEFICA2023Capable,
                     SnapshotTimestampUtc = DateTimeOffset.UtcNow
                 };
             }

@@ -70,9 +70,9 @@ namespace SecureBootWatcher.Client
 			}
 			
 			// Choose output template based on format setting
-			string fileOutputTemplate;
-			Serilog.Formatting.ITextFormatter textFormatter = null;
-		
+			string? fileOutputTemplate;
+			Serilog.Formatting.ITextFormatter? textFormatter = null;
+	
 			if (logFormat.Equals("CMTrace", StringComparison.OrdinalIgnoreCase))
 			{
 				// Use custom CMTrace formatter for proper compatibility
@@ -133,7 +133,7 @@ namespace SecureBootWatcher.Client
 						retainedFileCountLimit: retainedFileCountLimit,
 						fileSizeLimitBytes: fileSizeLimitBytes.Value,
 						rollOnFileSizeLimit: rollOnFileSizeLimit,
-						outputTemplate: fileOutputTemplate);
+						outputTemplate: fileOutputTemplate!);
 				}
 				else
 				{
@@ -141,7 +141,7 @@ namespace SecureBootWatcher.Client
 						path: logPath,
 						rollingInterval: rollingInterval,
 						retainedFileCountLimit: retainedFileCountLimit,
-						outputTemplate: fileOutputTemplate);
+						outputTemplate: fileOutputTemplate!);
 				}
 			}
 			
@@ -160,7 +160,7 @@ namespace SecureBootWatcher.Client
 				{
 					// Remove commit hash (everything after '+') if present
 					// Example: "1.1.1.48182+a1b2c3d" -> "1.1.1.48182"
-					var plusIndex = informationalVersion.IndexOf('+');
+					var plusIndex = informationalVersion!.IndexOf('+');
 					version = plusIndex > 0 
 						? informationalVersion.Substring(0, plusIndex) 
 						: informationalVersion;

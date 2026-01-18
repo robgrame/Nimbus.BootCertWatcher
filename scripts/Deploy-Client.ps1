@@ -18,6 +18,9 @@ param(
     
     [Parameter(Mandatory = $false)]
     [switch]$CreateScheduledTask,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$InstallOnly,
     
     [Parameter(Mandatory = $false)]
     [string]$InstallPath = "C:\Program Files\SecureBootWatcher",
@@ -216,118 +219,180 @@ if (-not $usePrecompiledPackage) {
 }
 Write-Host ""
 
-# Step 4: Install Client (optional)
-if ($CreateScheduledTask) {
-    Write-Host "[4/4] Installing client to: $InstallPath" -ForegroundColor Yellow
+# Step 4: Install Client (always copy files; scheduled task optional)
+Write-Host "[4/4] Installing client to: $InstallPath" -ForegroundColor Yellow
     
-    try {
-        # Create install directory
-        if (-not (Test-Path $InstallPath)) {
-            New-Item -ItemType Directory -Path $InstallPath -Force | Out-Null
-        }
-        
-        # Copy files from publish/temp path to install directory
-        Copy-Item -Path "$publishPath\*" -Destination $InstallPath -Recurse -Force
-        
-        Write-Host "  Client installed" -ForegroundColor Green
-        Write-Host "     Location: $InstallPath" -ForegroundColor Gray
-        
-        # Create scheduled task
+try {
+    # Create install directory
+    if (-not (Test-Path $InstallPath)) {
+        New-Item -ItemType Directory -Path $InstallPath -Force | Out-Null
+    }
+    
+    # Copy files from publish/temp path to install directory
+    Copy-Item -Path "$publishPath\*" -Destination $InstallPath -Recurse -Force
+    
+    Write-Host "  Client installed" -ForegroundColor Green
+    Write-Host "     Location: $InstallPath" -ForegroundColor Gray
+    
+    # Check if Azure certificate is present and install it
+    $certPath = Join-Path $InstallPath "certificates\AzureAppRegistration.pfx"
+    if (Test-Path $certPath) {
         Write-Host ""
-        Write-Host "  Creating scheduled task..." -ForegroundColor Yellow
+        Write-Host "  Installing Azure Storage authentication certificate..." -ForegroundColor Yellow
         
-        $exePath = Join-Path $InstallPath "SecureBootWatcher.Client.exe"
-        
-        if (-not (Test-Path $exePath)) {
-            throw "Client executable not found at: $exePath"
-        }
-        
-        # Check if task already exists
-        $existingTask = Get-ScheduledTask -TaskName "SecureBootWatcher" -ErrorAction SilentlyContinue
-        
-        if ($existingTask) {
-            Write-Host "  Scheduled task already exists, removing..." -ForegroundColor Yellow
-            Unregister-ScheduledTask -TaskName "SecureBootWatcher" -Confirm:$false
-        }
-        
-        # Create action
-        $action = New-ScheduledTaskAction -Execute $exePath -WorkingDirectory $InstallPath
-        
-        # Add random delay (0-60 minutes) to prevent flooding
-        # This distributes the load when many clients start at the same time
-        $randomDelay = Get-Random -Minimum 0 -Maximum 60
-        $randomDelayTimeSpan = New-TimeSpan -Minutes $randomDelay
-        
-        Write-Host "  Random delay: $randomDelay minutes (to prevent API flooding)" -ForegroundColor Gray
-        
-        # Create trigger based on schedule type
-        $trigger = $null
-        $scheduleDescription = ""
-        
-        # Parse TaskTime to ensure it's a valid DateTime
         try {
-            $taskDateTime = [DateTime]::Parse($TaskTime)
+            # Read certificate password from instruction file if available
+            $certInstructionsPath = Join-Path $InstallPath "certificates\INSTALL-CERTIFICATE.txt"
+            $certPassword = $null
+            
+            if (Test-Path $certInstructionsPath) {
+                $instructions = Get-Content $certInstructionsPath -Raw
+                if ($instructions -match "Password:\s*(.+)") {
+                    $certPassword = $matches[1].Trim()
+                }
+            }
+            
+            if ([string]::IsNullOrEmpty($certPassword)) {
+                Write-Host "  Warning: Certificate password not found in instructions file" -ForegroundColor Yellow
+                Write-Host "  Please install certificate manually using:" -ForegroundColor Yellow
+                Write-Host "  See: $InstallPath\certificates\INSTALL-CERTIFICATE.txt" -ForegroundColor Cyan
+            } else {
+                # Install certificate
+                $securePassword = ConvertTo-SecureString -String $certPassword -Force -AsPlainText
+                $cert = Import-PfxCertificate `
+                    -FilePath $certPath `
+                    -CertStoreLocation "Cert:\LocalMachine\My" `
+                    -Password $securePassword `
+                    -Exportable
+                
+                Write-Host "  Azure certificate installed successfully" -ForegroundColor Green
+                Write-Host "     Thumbprint: $($cert.Thumbprint)" -ForegroundColor Gray
+                Write-Host "     Subject: $($cert.Subject)" -ForegroundColor Gray
+                Write-Host "     Store: LocalMachine\My" -ForegroundColor Gray
+                
+                # Update appsettings.json with certificate thumbprint if needed
+                $appsettingsPath = Join-Path $InstallPath "appsettings.json"
+                if (Test-Path $appsettingsPath) {
+                    try {
+                        $appsettings = Get-Content $appsettingsPath -Raw | ConvertFrom-Json
+                        
+                        # Update Azure Queue sink configuration if present
+                        if ($appsettings.SecureBootWatcher.Sinks.AzureQueue) {
+                            $appsettings.SecureBootWatcher.Sinks.AzureQueue.CertificateThumbprint = $cert.Thumbprint
+                            $appsettings | ConvertTo-Json -Depth 10 | Set-Content $appsettingsPath -Encoding UTF8
+                            Write-Host "  appsettings.json updated with certificate thumbprint" -ForegroundColor Green
+                        }
+                    } catch {
+                        Write-Host "  Warning: Could not update appsettings.json with certificate thumbprint" -ForegroundColor Yellow
+                    }
+                }
+                
+                # Clean up certificate file after installation (security best practice)
+                Write-Host "  Removing certificate file from disk (security)..." -ForegroundColor Gray
+                Remove-Item -Path $certPath -Force -ErrorAction SilentlyContinue
+                Remove-Item -Path $certInstructionsPath -Force -ErrorAction SilentlyContinue
+                
+                # Remove certificates folder if empty
+                $certFolder = Join-Path $InstallPath "certificates"
+                if ((Get-ChildItem $certFolder -Force | Measure-Object).Count -eq 0) {
+                    Remove-Item -Path $certFolder -Force -ErrorAction SilentlyContinue
+                }
+            }
+        } catch {
+            Write-Host "  Warning: Failed to install Azure certificate: $_" -ForegroundColor Yellow
+            Write-Host "  Certificate can be installed manually later." -ForegroundColor Yellow
+            Write-Host "  See: $InstallPath\certificates\INSTALL-CERTIFICATE.txt" -ForegroundColor Cyan
         }
-        catch {
-            Write-Host "  Warning: Invalid TaskTime '$TaskTime', using 09:00AM" -ForegroundColor Yellow
-            $taskDateTime = [DateTime]::Parse("09:00AM")
-        }
-        
-        switch ($ScheduleType) {
-            "Once" {
-                $trigger = New-ScheduledTaskTrigger -Once -At $taskDateTime -RandomDelay $randomDelayTimeSpan
-                $scheduleDescription = "Once at $TaskTime (�$randomDelay min)"
-            }
-            "Daily" {
-                $trigger = New-ScheduledTaskTrigger -Daily -At $taskDateTime -RandomDelay $randomDelayTimeSpan
-                $scheduleDescription = "Daily at $TaskTime (�$randomDelay min)"
-            }
-            "Hourly" {
-                # Create a trigger that repeats every hour
-                $trigger = New-ScheduledTaskTrigger -Once -At $taskDateTime -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration ((New-TimeSpan -Days 3650)) -RandomDelay $randomDelayTimeSpan
-                $scheduleDescription = "Every hour starting at $TaskTime (�$randomDelay min)"
-            }
-            "Custom" {
-                # Create a trigger that repeats every N hours
-                $trigger = New-ScheduledTaskTrigger -Once -At $taskDateTime -RepetitionInterval (New-TimeSpan -Hours $RepeatEveryHours) -RepetitionDuration ((New-TimeSpan -Days 3650)) -RandomDelay $randomDelayTimeSpan
-                $scheduleDescription = "Every $RepeatEveryHours hours starting at $TaskTime (�$randomDelay min)"
-            }
-        }
-        
-        # Create principal and settings
-        $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-        $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew
-        
-        # Register task
-        Register-ScheduledTask `
-            -TaskName "SecureBootWatcher" `
-            -Action $action `
-            -Trigger $trigger `
-            -Principal $principal `
-            -Settings $settings `
-            -Description "Monitors Secure Boot certificate status and reports to dashboard" | Out-Null
-        
-        Write-Host "  Scheduled task created" -ForegroundColor Green
-        Write-Host "     Task Name: SecureBootWatcher" -ForegroundColor Gray
-        Write-Host "     Run As: SYSTEM" -ForegroundColor Gray
-        Write-Host "     Schedule: $scheduleDescription" -ForegroundColor Gray
-        Write-Host "     Executable: $exePath" -ForegroundColor Gray
     }
-    catch {
-        Write-Host "  Installation/Scheduled task failed: $_" -ForegroundColor Red
-        exit 1
-    }
-    finally {
-        # Cleanup temp directory if using precompiled package
-        if ($usePrecompiledPackage -and (Test-Path $tempExtractPath)) {
-            Write-Host ""
-            Write-Host "  Cleaning up temporary files..." -ForegroundColor Gray
-            Remove-Item -Path $tempExtractPath -Recurse -Force -ErrorAction SilentlyContinue
-        }
-    }
-} else {
-    Write-Host "[4/4] Skipping installation (use -CreateScheduledTask to install)" -ForegroundColor Yellow
     
+    if ($CreateScheduledTask) {
+            # Create scheduled task
+            Write-Host ""
+            Write-Host "  Creating scheduled task..." -ForegroundColor Yellow
+            
+            $exePath = Join-Path $InstallPath "SecureBootWatcher.Client.exe"
+            
+            if (-not (Test-Path $exePath)) {
+                throw "Client executable not found at: $exePath"
+            }
+            
+            # Check if task already exists
+            $existingTask = Get-ScheduledTask -TaskName "SecureBootWatcher" -ErrorAction SilentlyContinue
+            
+            if ($existingTask) {
+                Write-Host "  Scheduled task already exists, removing..." -ForegroundColor Yellow
+                Unregister-ScheduledTask -TaskName "SecureBootWatcher" -Confirm:$false
+            }
+            
+            # Create action
+            $action = New-ScheduledTaskAction -Execute $exePath -WorkingDirectory $InstallPath
+            
+            # Add random delay (0-60 minutes) to prevent flooding
+            # This distributes the load when many clients start at the same time
+            $randomDelay = Get-Random -Minimum 0 -Maximum 60
+            $randomDelayTimeSpan = New-TimeSpan -Minutes $randomDelay
+            
+            Write-Host "  Random delay: $randomDelay minutes (to prevent API flooding)" -ForegroundColor Gray
+            
+            # Create trigger based on schedule type
+            $trigger = $null
+            $scheduleDescription = ""
+            
+            # Parse TaskTime to ensure it's a valid DateTime
+            try {
+                $taskDateTime = [DateTime]::Parse($TaskTime)
+            }
+            catch {
+                Write-Host "  Warning: Invalid TaskTime '$TaskTime', using 09:00AM" -ForegroundColor Yellow
+                $taskDateTime = [DateTime]::Parse("09:00AM")
+            }
+            
+            switch ($ScheduleType) {
+                "Once" {
+                    $trigger = New-ScheduledTaskTrigger -Once -At $taskDateTime -RandomDelay $randomDelayTimeSpan
+                    $scheduleDescription = "Once at $TaskTime (�$randomDelay min)"
+                }
+                "Daily" {
+                    $trigger = New-ScheduledTaskTrigger -Daily -At $taskDateTime -RandomDelay $randomDelayTimeSpan
+                    $scheduleDescription = "Daily at $TaskTime (�$randomDelay min)"
+                }
+                "Hourly" {
+                    # Create a trigger that repeats every hour
+                    $trigger = New-ScheduledTaskTrigger -Once -At $taskDateTime -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration ((New-TimeSpan -Days 3650)) -RandomDelay $randomDelayTimeSpan
+                    $scheduleDescription = "Every hour starting at $TaskTime (�$randomDelay min)"
+                }
+                "Custom" {
+                    # Create a trigger that repeats every N hours
+                    $trigger = New-ScheduledTaskTrigger -Once -At $taskDateTime -RepetitionInterval (New-TimeSpan -Hours $RepeatEveryHours) -RepetitionDuration ((New-TimeSpan -Days 3650)) -RandomDelay $randomDelayTimeSpan
+                    $scheduleDescription = "Every $RepeatEveryHours hours starting at $TaskTime (�$randomDelay min)"
+                }
+            }
+            
+            # Create principal and settings
+            $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+            $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew
+            
+            # Register task
+            Register-ScheduledTask `
+                -TaskName "SecureBootWatcher" `
+                -Action $action `
+                -Trigger $trigger `
+                -Principal $principal `
+                -Settings $settings `
+                -Description "Monitors Secure Boot certificate status and reports to dashboard" | Out-Null
+            
+            Write-Host "  Scheduled task created" -ForegroundColor Green
+            Write-Host "     Task Name: SecureBootWatcher" -ForegroundColor Gray
+            Write-Host "     Run As: SYSTEM" -ForegroundColor Gray
+            Write-Host "     Schedule: $scheduleDescription" -ForegroundColor Gray
+            Write-Host "     Executable: $exePath" -ForegroundColor Gray
+        }
+}
+catch {
+    Write-Host "  Installation/Scheduled task failed: $_" -ForegroundColor Red
+    exit 1
+}
+finally {
     # Cleanup temp directory if using precompiled package
     if ($usePrecompiledPackage -and (Test-Path $tempExtractPath)) {
         Write-Host ""

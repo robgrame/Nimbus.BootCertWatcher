@@ -31,7 +31,7 @@
     @if (Model.Devices.Any())
     {
         <!-- Statistics Cards (Mini) -->
-        <div class="row mb-4">
+        <div class="row mb-3">
             <div class="col-md-2">
                 <div class="card text-center border-primary">
                     <div class="card-body py-2">
@@ -78,6 +78,29 @@
                         <small class="text-muted d-block">Inattivi (>7d)</small>
                         <h4 class="mb-0 text-secondary">@Model.InactiveDevices</h4>
                     </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Additional Statistics Row -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center border-warning">
+                    <div class="card-body py-2">
+                        <small class="text-muted d-block">
+                            <i class="fas fa-exclamation-triangle"></i> Need Update (April 2026)
+                        </small>
+                        <h4 class="mb-0 text-warning">@Model.NeedUpdate2026Devices</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-9">
+                <div class="alert alert-warning mb-0 py-2">
+                    <small>
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>@Model.NeedUpdate2026Devices</strong> device(s) have legacy Microsoft certificates (e.g., Production PCA 2011) 
+                        expiring <strong>April 2026</strong> and require Windows UEFI CA 2023 update before the deadline.
+                    </small>
                 </div>
             </div>
         </div>
@@ -153,6 +176,8 @@
                                 <th><i class="fas fa-industry"></i> Manufacturer / Model</th>
                                 <th><i class="fas fa-shield-alt"></i> Secure Boot</th>
                                 <th><i class="fas fa-certificate"></i> OEM Cert</th>
+                                <th><i class="fas fa-exclamation-triangle"></i> Need Update (2026)</th>
+                                <th><i class="fas fa-microchip"></i> Firmware</th>
                                 <th><i class="fas fa-file-alt"></i> Reports</th>
                                 <th><i class="fas fa-traffic-light"></i> State</th>
                                 <th><i class="fas fa-check-circle"></i> Ready to Update</th>
@@ -383,6 +408,66 @@
                                         }
                                     </td>
                                     <td>
+                                        @* Need Update (2026) - Legacy Microsoft certificates expiring April 2026 *@
+                                        @if (device.HasLegacyCertificatesExpiring2026)
+                                        {
+                                            <span class="badge bg-warning text-dark" 
+                                                  title="@device.LegacyCertificateCount2026 legacy Microsoft certificate(s) (e.g., Production PCA 2011) expiring April 2026. Device needs Windows UEFI CA 2023 update before deadline.">
+                                                <i class="fas fa-exclamation-triangle"></i> Update Required (@device.LegacyCertificateCount2026)
+                                            </span>
+                                        }
+                                        else if (device.HasWindowsUEFICA2023)
+                                        {
+                                            <span class="badge bg-success" 
+                                                  title="Windows UEFI CA 2023 already installed - device is prepared for April 2026 deadline">
+                                                <i class="fas fa-check-circle"></i> Already Updated
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary" 
+                                                  title="No legacy certificates found expiring in 2026. May need verification.">
+                                                <i class="fas fa-question-circle"></i> Unknown
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @* Firmware Confidence indicator based on release date *@
+                                        @{
+                                            var fwColorClass = "secondary";
+                                            var fwIconClass = "fa-question-circle";
+                                            var fwLabel = "Unknown";
+                                            var fwTooltip = device.FirmwareEvaluationDetails;
+                                            
+                                            switch (device.FirmwareConfidence)
+                                            {
+                                                case SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.High:
+                                                    fwColorClass = "success";
+                                                    fwIconClass = "fa-circle-check";
+                                                    fwLabel = "High";
+                                                    break;
+                                                case SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.Medium:
+                                                    fwColorClass = "warning text-dark";
+                                                    fwIconClass = "fa-triangle-exclamation";
+                                                    fwLabel = "Medium";
+                                                    break;
+                                                case SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.Low:
+                                                    fwColorClass = "danger";
+                                                    fwIconClass = "fa-circle-xmark";
+                                                    fwLabel = "Low";
+                                                    break;
+                                                default:
+                                                    fwColorClass = "secondary";
+                                                    fwIconClass = "fa-circle-question";
+                                                    fwLabel = "Unknown";
+                                                    break;
+                                            }
+                                        }
+                                        <span class="badge bg-@fwColorClass" title="@fwTooltip">
+                                            <i class="fa-solid @fwIconClass"></i> @fwLabel
+                                        </span>
+                                    </td>
+                                    <td>
                                         <span class="badge bg-secondary">@device.ReportCount</span>
                                     </td>
                                     <td>
@@ -419,7 +504,7 @@
                                         @if (device.IsReadyToUpdate)
                                         {
                                             <span class="badge bg-success" 
-                                                  title="@device.CertificateEvaluationDetails&#10;@device.OSEvaluationDetails">
+                                                  title="@device.CertificateEvaluationDetails&#10;@device.OSEvaluationDetails&#10;@device.FirmwareEvaluationDetails">
                                                 <i class="fas fa-check-circle"></i> Ready
                                             </span>
                                         }
@@ -468,6 +553,19 @@
                                                 }
                                             }
                                             
+                                            // Check firmware confidence - LOW means not ready
+                                            if (device.FirmwareConfidence == SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.Low)
+                                            {
+                                                tooltipParts.Add("? Firmware released before 2024 - update recommended");
+                                                badgeClass = "bg-danger";
+                                                badgeIcon = "fa-times-circle";
+                                            }
+                                            else if (device.FirmwareConfidence == SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.Unknown)
+                                            {
+                                                tooltipParts.Add("? Firmware release date unknown");
+                                            }
+                                            
+
                                             // Show warning count if present
                                             if (device.WarningOemCertificateCount > 0)
                                             {

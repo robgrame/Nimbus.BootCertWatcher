@@ -105,11 +105,18 @@ public class CertificatesModel : PageModel
 
             var response = await _apiClient.PostFormDataAsync<TrustedCADto>("/api/CertificateAuthorities/upload", content);
 
-            StatusMessage = $"Certificate '{response.CommonName}' uploaded successfully";
+            if (response == null)
+            {
+                StatusMessage = "Failed to upload certificate: No response from server";
+                IsError = true;
+                return RedirectToPage();
+            }
+
+            StatusMessage = $"Certificate '{response.CommonName ?? "Unknown"}' uploaded successfully";
             IsError = false;
 
             _logger.LogInformation("Uploaded CA certificate: {CommonName} by {User}", 
-                response.CommonName, User.Identity?.Name ?? "Anonymous");
+                response.CommonName ?? "Unknown", User.Identity?.Name ?? "Anonymous");
 
             return RedirectToPage();
         }

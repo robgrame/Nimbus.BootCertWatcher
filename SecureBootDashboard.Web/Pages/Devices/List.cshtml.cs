@@ -33,6 +33,7 @@ public class ListModel : PageModel
     public int DeployedDevices => FilteredDevices.Count(d => d.LatestDeploymentState == "Deployed");
     public int PendingDevices => FilteredDevices.Count(d => d.LatestDeploymentState == "Pending");
     public int ErrorDevices => FilteredDevices.Count(d => d.LatestDeploymentState == "Error");
+    public int NeedUpdate2026Devices => FilteredDevices.Count(d => d.HasLegacyCertificatesExpiring2026);
 
     public IReadOnlyList<DeviceSummary> FilteredDevices
     {
@@ -73,7 +74,8 @@ public class ListModel : PageModel
             .Select(d => d.FleetId)
             .Where(f => !string.IsNullOrEmpty(f))
             .Distinct()
-            .OrderBy(f => f);
+            .OrderBy(f => f)
+            .Select(f => f!);
 
     public async Task OnGetAsync(string? state = null, string? fleet = null, string? search = null)
     {

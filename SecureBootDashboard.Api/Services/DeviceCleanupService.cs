@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -12,12 +13,14 @@ namespace SecureBootDashboard.Api.Services
 {
     /// <summary>
     /// Background service that automatically cleans up inactive devices based on configuration.
+    /// NOTE: Only supported on Windows platforms due to SQL Server provider limitations.
     /// </summary>
     public sealed class DeviceCleanupService : BackgroundService
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<DeviceCleanupService> _logger;
         private readonly TimeSpan _checkInterval = TimeSpan.FromHours(1); // Check config every hour
+        private readonly bool _isWindowsPlatform;
 
         public DeviceCleanupService(
             IServiceProvider serviceProvider,
@@ -25,17 +28,39 @@ namespace SecureBootDashboard.Api.Services
         {
             _serviceProvider = serviceProvider;
             _logger = logger;
+            _isWindowsPlatform = IsRunningOnWindows();
+            _logger.LogInformation("[DeviceCleanup] Platform detection: IsWindows={IsWindows} (OSDescription={OS})", _isWindowsPlatform, RuntimeInformation.OSDescription);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("[DeviceCleanup] Service started");
 
+            // Check platform compatibility
+            if (!_isWindowsPlatform)
+            {
+                _logger.LogWarning(
+                    "[DeviceCleanup] Service is not supported on {OS} platform. " +
+                    "Microsoft.Data.SqlClient (SQL Server provider) only works on Windows. " +
+                    "Service will be disabled.",
+                    RuntimeInformation.OSDescription);
+                return;
+            }
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
                     await ProcessCleanupAsync(stoppingToken);
+                }
+                catch (PlatformNotSupportedException ex)
+                {
+                    _logger.LogError(
+                        ex,
+                        "[DeviceCleanup] Platform not supported error. " +
+                        "This service requires Windows platform. " +
+                        "Disabling service.");
+                    return;
                 }
                 catch (Exception ex)
                 {
@@ -153,6 +178,27 @@ namespace SecureBootDashboard.Api.Services
                 trackedConfig.UpdatedAtUtc = DateTimeOffset.UtcNow;
                 await dbContext.SaveChangesAsync(cancellationToken);
             }
+        }
+
+        private static bool IsRunningOnWindows()
+        {
+#if WINDOWS
+            return true;
+#else
+            // Use multiple heuristics to avoid false negatives under IIS/self-contained publish
+            if (OperatingSystem.IsWindows())
+            {
+                return true;
+            }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return true;
+            }
+
+            // Legacy check as last resort
+            return Environment.OSVersion.Platform == PlatformID.Win32NT;
+#endif
         }
     }
 }

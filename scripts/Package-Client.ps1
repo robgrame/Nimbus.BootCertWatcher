@@ -31,6 +31,11 @@ Write-Host ""
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $rootDir = Split-Path -Parent $scriptDir
 
+# Normalize output path relative to repo root for consistency
+if (-not [System.IO.Path]::IsPathRooted($OutputPath)) {
+    $OutputPath = Join-Path $rootDir $OutputPath
+}
+
 # Step 1: Build Client
 if (-not $SkipBuild) {
     Write-Host "[1/3] Building SecureBootWatcher Client..." -ForegroundColor Yellow

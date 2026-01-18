@@ -178,7 +178,7 @@ public class CertificateValidationService : ICertificateValidationService
                     try
                     {
                         var caBytes = Convert.FromBase64String(ca.CertificateDataBase64);
-                        var caCert = X509CertificateLoader.LoadCertificate(caBytes);
+                        var caCert = new X509Certificate2(caBytes);
                         chain.ChainPolicy.ExtraStore.Add(caCert);
                     }
                     catch (Exception ex)
@@ -275,7 +275,7 @@ public class CertificateValidationService : ICertificateValidationService
         
         try
         {
-            certificate = X509CertificateLoader.LoadCertificate(certificateData);
+            certificate = new X509Certificate2(certificateData);
         }
         catch (Exception ex)
         {

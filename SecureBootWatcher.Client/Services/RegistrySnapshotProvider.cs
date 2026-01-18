@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Win32;
 using Microsoft.Extensions.Logging;
 using SecureBootWatcher.Shared.Models;
+using System.IO;
 
 namespace SecureBootWatcher.Client.Services
 {
@@ -24,62 +25,82 @@ namespace SecureBootWatcher.Client.Services
             
             var snapshot = new SecureBootRegistrySnapshot
             {
-                CollectedAtUtc = DateTimeOffset.UtcNow
+                CollectedAtUtc = DateTimeOffset.UtcNow,
+                Servicing = new SecureBootServicingRegistrySnapshot(),
+                State = new SecureBootStateRegistrySnapshot(),
+                Sbat = new SecureBootSbatRegistrySnapshot()
             };
 
             try
             {
                 _logger.LogTrace("RegistrySnapshotProvider.CaptureAsync: Opening registry key at {Path}", SecureBootRegistrySnapshot.RegistryRootPath);
-                using var baseKey = Registry.LocalMachine.OpenSubKey(SecureBootRegistrySnapshot.RegistryRootPath, false);
-                if (baseKey == null)
+                using var secureBootRegistryRoot = Registry.LocalMachine.OpenSubKey(SecureBootRegistrySnapshot.RegistryRootPath, false);
+                if (secureBootRegistryRoot == null)
                 {
                     _logger.LogDebug("RegistrySnapshotProvider.CaptureAsync: Secure Boot base registry path not found at {Path}. This is normal for devices without Secure Boot servicing configured.", SecureBootRegistrySnapshot.RegistryRootPath);
                     return Task.FromResult(snapshot);
                 }
 
                 _logger.LogTrace("RegistrySnapshotProvider.CaptureAsync: Reading base key values");
-                snapshot.AvailableUpdates = ReadUInt(baseKey, "AvailableUpdates");
-                snapshot.UpdateType = ReadUInt(baseKey, "UpdateType");
-                snapshot.HighConfidenceOptOut = ReadBool(baseKey, "HighConfidenceOptOut");
-                snapshot.MicrosoftUpdateManagedOptIn = ReadBool(baseKey, "MicrosoftUpdateManagedOptIn");
+                snapshot.AvailableUpdates = ReadUInt(secureBootRegistryRoot, "AvailableUpdates");                
+                snapshot.HighConfidenceOptOut = ReadBool(secureBootRegistryRoot, "HighConfidenceOptOut");
+                snapshot.MicrosoftUpdateManagedOptIn = ReadBool(secureBootRegistryRoot, "MicrosoftUpdateManagedOptIn");
                 
                 _logger.LogTrace("RegistrySnapshotProvider.CaptureAsync: Base values - AvailableUpdates={AvailableUpdates}, UpdateType={UpdateType}, MicrosoftUpdateManagedOptIn={OptIn}",
-                    snapshot.AvailableUpdates, snapshot.UpdateType, snapshot.MicrosoftUpdateManagedOptIn);
+                    snapshot.AvailableUpdates, snapshot.MicrosoftUpdateManagedOptIn);
 
-                using var servicingKey = baseKey.OpenSubKey("Servicing", false);
+                //using var servicingKey = secureBootRegistryRoot.OpenSubKey("Servicing", false);
+                using var servicingKey = Registry.LocalMachine.OpenSubKey(SecureBootServicingRegistrySnapshot.RegistryRootPath, false);
                 if (servicingKey != null)
                 {
                     _logger.LogTrace("RegistrySnapshotProvider.CaptureAsync: Reading Servicing subkey");
-                    snapshot.UefiCa2023Status = (SecureBootDeploymentState?)ReadUInt(servicingKey, "UEFICA2023Status") ?? SecureBootDeploymentState.Unknown;
-                    snapshot.UefiCa2023Error = ReadUInt(servicingKey, "UefiCa2023Error");
-                    snapshot.WindowsUEFICA2023CapableCode = ReadUInt(servicingKey, "WindowsUEFICA2023CapableCode");
+                    snapshot.Servicing.UefiCa2023Status = (SecureBootDeploymentState?)ReadUInt(servicingKey, "UEFICA2023Status") ?? SecureBootDeploymentState.Unknown;
+                    snapshot.Servicing.UefiCa2023Error = ReadUInt(servicingKey, "UefiCa2023Error");
+                    snapshot.Servicing.WindowsUEFICA2023Capable = ReadUInt(servicingKey, "WindowsUEFICA2023Capable");
+                    snapshot.Servicing.BucketHash = ReadString(servicingKey, "BucketHash");
+                    snapshot.Servicing.ConfidenceLevel = ReadString(servicingKey, "ConfidenceLevel");
                     
-                    _logger.LogDebug("RegistrySnapshotProvider.CaptureAsync: Servicing values - UefiCa2023Status={Status}, WindowsUEFICA2023CapableCode={Capable}",
-                        snapshot.UefiCa2023Status, snapshot.WindowsUEFICA2023CapableCode);
+                    _logger.LogDebug("RegistrySnapshotProvider.CaptureAsync: Servicing values - UefiCa2023Status={Status}, WindowsUEFICA2023Capable={Capable}, BucketHash={Hash}, ConfidenceLevel={Confidence}",
+                        snapshot.Servicing.UefiCa2023Status, snapshot.Servicing.WindowsUEFICA2023Capable, snapshot.Servicing.BucketHash, snapshot.Servicing.ConfidenceLevel);
                 }
                 else
                 {
                     _logger.LogDebug("RegistrySnapshotProvider.CaptureAsync: Servicing subkey not found. Device may not have Secure Boot servicing registry keys.");
                 }
 
-                using var stateKey = baseKey.OpenSubKey("State", false);
+                using var stateKey = Registry.LocalMachine.OpenSubKey(SecureBootStateRegistrySnapshot.RegistryRootPath, false);
                 if (stateKey != null)
                 {
                     _logger.LogTrace("RegistrySnapshotProvider.CaptureAsync: Reading State subkey");
-                    snapshot.PolicyPublisher = ReadString(stateKey, "PolicyPublisher");
-                    snapshot.PolicyVersion = ReadUInt(stateKey, "PolicyVersion");
-                    snapshot.UEFISecureBootEnabled = ReadBool(stateKey, "UEFISecureBootEnabled");
+                    snapshot.State.PolicyPublisher = ReadString(stateKey, "PolicyPublisher");
+                    snapshot.State.PolicyVersion = ReadUInt(stateKey, "PolicyVersion");
+                    snapshot.State.UEFISecureBootEnabled = ReadBool(stateKey, "UEFISecureBootEnabled");
                     
                     _logger.LogDebug("RegistrySnapshotProvider.CaptureAsync: State values - UEFISecureBootEnabled={Enabled}, PolicyPublisher={Publisher}",
-                        snapshot.UEFISecureBootEnabled, snapshot.PolicyPublisher);
+                        snapshot.State.UEFISecureBootEnabled, snapshot.State.PolicyPublisher);
                 }
                 else
                 {
                     _logger.LogDebug("RegistrySnapshotProvider.CaptureAsync: State subkey not found. UEFI Secure Boot status will be unavailable.");
                 }
-                
+
+                using var sbatKey = Registry.LocalMachine.OpenSubKey(SecureBootSbatRegistrySnapshot.RegistryRootPath, false);
+                if (sbatKey != null)
+                {
+                    _logger.LogTrace("RegistrySnapshotProvider.CaptureAsync: Reading SBAT subkey");
+                    snapshot.Sbat.SbatLevel = ReadBinary(sbatKey, "SbatLevel");
+                    snapshot.Sbat.UpdateStatus = ReadUInt(sbatKey, "UpdateStatus");
+                    
+                    _logger.LogDebug("RegistrySnapshotProvider.CaptureAsync: SBAT values - SbatLevel={Version}, UpdateStatus={Status}",
+                        snapshot.Sbat.SbatLevel, snapshot.Sbat.UpdateStatus);
+                }
+                else
+                {
+                    _logger.LogDebug("RegistrySnapshotProvider.CaptureAsync: SBAT subkey not found. SBAT information will be unavailable.");
+                }
+
                 _logger.LogInformation("RegistrySnapshotProvider.CaptureAsync: Successfully captured Secure Boot registry snapshot - InferredDeploymentState={State}", 
-                    snapshot.InferredDeploymentState);
+                    snapshot.State);
             }
             catch (SecurityException ex)
             {
@@ -258,6 +279,12 @@ namespace SecureBootWatcher.Client.Services
             {
                 return null;
             }
+        }
+
+        private static byte[]? ReadBinary(RegistryKey key, string valueName)
+        {
+            var value = key.GetValue(valueName) as byte[];
+            return value;
         }
     }
 }

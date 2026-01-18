@@ -18,6 +18,11 @@ using Microsoft.AspNetCore.Authentication.Certificate;
 using System.Security.Cryptography.X509Certificates;
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
+using Azure.Identity;
+using System.Runtime.InteropServices;
+
+// Configure SqlClient to use managed networking stack (avoids native SNI platform issues)
+AppContext.SetSwitch("Switch.Microsoft.Data.SqlClient.UseManagedNetworkingOnWindows", true);
 
 // Configure Serilog before building the app
 
@@ -380,19 +385,35 @@ try
     var perfConfig = builder.Configuration.GetSection("Performance").Get<PerformanceOptions>();
     
     // Build connection string with performance settings
-    var connectionStringBuilder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(connectionString);
-    if (perfConfig?.Database != null)
+    try
     {
-        connectionStringBuilder.MaxPoolSize = perfConfig.Database.MaxPoolSize;
-        connectionStringBuilder.MinPoolSize = perfConfig.Database.MinPoolSize;
-        connectionStringBuilder.ConnectTimeout = perfConfig.Database.CommandTimeout;
-        connectionStringBuilder.MultipleActiveResultSets = true;
-        connectionString = connectionStringBuilder.ConnectionString;
-        
-        Log.Information("Database Performance Settings:");
-        Log.Information("  Max Pool Size: {MaxPoolSize}", perfConfig.Database.MaxPoolSize);
-        Log.Information("  Min Pool Size: {MinPoolSize}", perfConfig.Database.MinPoolSize);
-        Log.Information("  Command Timeout: {CommandTimeout}s", perfConfig.Database.CommandTimeout);
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            var connectionStringBuilder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(connectionString);
+            if (perfConfig?.Database != null)
+            {
+                connectionStringBuilder.MaxPoolSize = perfConfig.Database.MaxPoolSize;
+                connectionStringBuilder.MinPoolSize = perfConfig.Database.MinPoolSize;
+                connectionStringBuilder.ConnectTimeout = perfConfig.Database.CommandTimeout;
+                connectionStringBuilder.MultipleActiveResultSets = true;
+                connectionString = connectionStringBuilder.ConnectionString;
+                
+                Log.Information("Database Performance Settings:");
+                Log.Information("  Max Pool Size: {MaxPoolSize}", perfConfig.Database.MaxPoolSize);
+                Log.Information("  Min Pool Size: {MinPoolSize}", perfConfig.Database.MinPoolSize);
+                Log.Information("  Command Timeout: {CommandTimeout}s", perfConfig.Database.CommandTimeout);
+            }
+        }
+        else
+        {
+            Log.Information("SQL Server connection string optimization skipped on {OS} platform", 
+                RuntimeInformation.OSDescription);
+        }
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "Failed to configure connection string with SqlConnectionStringBuilder. Using original connection string. Error: {ErrorMessage}", ex.Message);
+        // Continue with the original connection string
     }
     
     builder.Services.AddDbContext<SecureBootDbContext>(options =>
@@ -415,13 +436,30 @@ try
 
     // Configure Health Checks with database connectivity
     Log.Information("Configuring Health Checks...");
-    builder.Services.AddHealthChecks()
-        .AddSqlServer(
-            connectionString: connectionString ?? throw new InvalidOperationException("SQL Server connection string is required"),
-            name: "database",
-            timeout: TimeSpan.FromSeconds(5),
-            tags: new[] { "db", "sql", "sqlserver" });
-    Log.Information("Health checks configured with SQL Server connectivity check");
+    var healthCheckBuilder = builder.Services.AddHealthChecks();
+    
+    // Only add SQL Server health check on Windows platform
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+    {
+        try
+        {
+            healthCheckBuilder.AddSqlServer(
+                connectionString: connectionString ?? throw new InvalidOperationException("SQL Server connection string is required"),
+                name: "database",
+                timeout: TimeSpan.FromSeconds(5),
+                tags: new[] { "db", "sql", "sqlserver" });
+            Log.Information("Health checks configured with SQL Server connectivity check");
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to add SQL Server health check. Continuing without database health check.");
+        }
+    }
+    else
+    {
+        Log.Warning("SQL Server health check not available on {OS} platform. Database health check will be skipped.", 
+            RuntimeInformation.OSDescription);
+    }
 
     // Configure Response Compression
     if (perfConfig?.Compression?.Enabled == true)

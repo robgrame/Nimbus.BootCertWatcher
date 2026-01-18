@@ -37,7 +37,7 @@ namespace SecureBootWatcher.Client.Services
                         
                         if (!string.IsNullOrEmpty(wmiVersion))
                         {
-                            var versionParts = wmiVersion.Split('.');
+                            var versionParts = wmiVersion!.Split('.');
                             
                             // If WMI already has 4 parts, use it
                             if (versionParts.Length >= 4)

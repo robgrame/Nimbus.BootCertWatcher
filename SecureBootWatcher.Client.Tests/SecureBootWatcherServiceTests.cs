@@ -71,7 +71,7 @@ public sealed class SecureBootWatcherServiceTests
         await service.RunAsync(cts.Token);
 
         // Assert
-        Assert.IsTrue(executionCount > 1, $"Service should execute multiple times in 'Continuous' mode, but executed {executionCount} times");
+        Assert.IsGreaterThan(executionCount, 1);
     }
 
     // Mock implementations

@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SecureBootDashboard.Api.Data;
 using SecureBootDashboard.Api.Services;
+using SecureBootWatcher.Shared.Models;
 using SecureBootWatcher.Shared.Storage;
 
 namespace SecureBootDashboard.Api.Controllers
@@ -74,7 +75,7 @@ namespace SecureBootDashboard.Api.Controllers
                         {
                             // Extract from Registry snapshot
                             microsoftUpdateManagedOptIn = report.Registry?.MicrosoftUpdateManagedOptIn;
-                            windowsUEFICA2023Capable = report.Registry?.WindowsUEFICA2023CapableCode;
+                            windowsUEFICA2023Capable = report.Registry?.WindowsUEFICA2023Capable;
                             
                             // Extract from TelemetryPolicy snapshot
                             allowTelemetry = report.TelemetryPolicy?.AllowTelemetry;
@@ -109,7 +110,8 @@ namespace SecureBootDashboard.Api.Controllers
                 var readinessEvaluation = _readinessService.EvaluateReadiness(
                     certificates,
                     d.OSVersion,
-                    d.OSBuildNumber);
+                    d.OSBuildNumber,
+                    d.FirmwareReleaseDate);
                 
                 return new DeviceSummaryResponse(
                     d.Id,
@@ -143,12 +145,16 @@ namespace SecureBootDashboard.Api.Controllers
                     AreOemCertificatesValid = readinessEvaluation.AreOemCertificatesValid,
                     HasWindowsUEFICA2023 = readinessEvaluation.HasWindowsUEFICA2023,
                     HasNoOemCertificates = readinessEvaluation.HasNoOemCertificates,
+                    HasLegacyCertificatesExpiring2026 = readinessEvaluation.HasLegacyCertificatesExpiring2026,
+                    LegacyCertificateCount2026 = readinessEvaluation.LegacyCertificateCount2026,
                     ExpiredOemCertificateCount = readinessEvaluation.ExpiredOemCertificateCount,
                     CriticalOemCertificateCount = readinessEvaluation.CriticalOemCertificateCount,
                     WarningOemCertificateCount = readinessEvaluation.WarningOemCertificateCount,
                     ValidOemCertificateCount = readinessEvaluation.ValidOemCertificateCount,
                     OSEvaluationDetails = readinessEvaluation.OSEvaluationDetails,
-                    CertificateEvaluationDetails = readinessEvaluation.CertificateEvaluationDetails
+                    CertificateEvaluationDetails = readinessEvaluation.CertificateEvaluationDetails,
+                    FirmwareConfidence = readinessEvaluation.FirmwareConfidence,
+                    FirmwareEvaluationDetails = readinessEvaluation.FirmwareEvaluationDetails
                 };
             }).ToArray();
         }
@@ -306,7 +312,8 @@ namespace SecureBootDashboard.Api.Controllers
             var readinessEvaluation = _readinessService.EvaluateReadiness(
                 certificates,
                 device.OSVersion,
-                device.OSBuildNumber);
+                device.OSBuildNumber,
+                device.FirmwareReleaseDate);
 
             return new DeviceDetailResponse(
                 device.Id,
@@ -335,12 +342,16 @@ namespace SecureBootDashboard.Api.Controllers
                 AreOemCertificatesValid = readinessEvaluation.AreOemCertificatesValid,
                 HasWindowsUEFICA2023 = readinessEvaluation.HasWindowsUEFICA2023,
                 HasNoOemCertificates = readinessEvaluation.HasNoOemCertificates,
+                HasLegacyCertificatesExpiring2026 = readinessEvaluation.HasLegacyCertificatesExpiring2026,
+                LegacyCertificateCount2026 = readinessEvaluation.LegacyCertificateCount2026,
                 ExpiredOemCertificateCount = readinessEvaluation.ExpiredOemCertificateCount,
                 CriticalOemCertificateCount = readinessEvaluation.CriticalOemCertificateCount,
                 WarningOemCertificateCount = readinessEvaluation.WarningOemCertificateCount,
                 ValidOemCertificateCount = readinessEvaluation.ValidOemCertificateCount,
                 OSEvaluationDetails = readinessEvaluation.OSEvaluationDetails,
-                CertificateEvaluationDetails = readinessEvaluation.CertificateEvaluationDetails
+                CertificateEvaluationDetails = readinessEvaluation.CertificateEvaluationDetails,
+                FirmwareConfidence = readinessEvaluation.FirmwareConfidence,
+                FirmwareEvaluationDetails = readinessEvaluation.FirmwareEvaluationDetails
             };
         }
 
@@ -438,6 +449,17 @@ namespace SecureBootDashboard.Api.Controllers
         public bool HasNoOemCertificates { get; init; }
 
         /// <summary>
+        /// Indicates if device has legacy Microsoft certificates (e.g., Windows Production PCA 2011) 
+        /// that will expire in April 2026 and needs to be updated to Windows UEFI CA 2023
+        /// </summary>
+        public bool HasLegacyCertificatesExpiring2026 { get; init; }
+
+        /// <summary>
+        /// Number of legacy Microsoft certificates expiring in 2026
+        /// </summary>
+        public int LegacyCertificateCount2026 { get; init; }
+
+        /// <summary>
         /// Number of expired OEM certificates
         /// </summary>
         public int ExpiredOemCertificateCount { get; init; }
@@ -466,6 +488,20 @@ namespace SecureBootDashboard.Api.Controllers
         /// Detailed certificate evaluation message
         /// </summary>
         public string CertificateEvaluationDetails { get; init; } = string.Empty;
+
+        /// <summary>
+        /// Firmware compatibility confidence level based on release date.
+        /// HIGH: Released after Jan 1, 2025 (Green)
+        /// MEDIUM: Released during 2024 (Yellow)
+        /// LOW: Released before 2024 (Red)
+        /// UNKNOWN: Release date not available (Gray)
+        /// </summary>
+        public FirmwareConfidenceLevel FirmwareConfidence { get; init; }
+
+        /// <summary>
+        /// Detailed firmware evaluation message including confidence level explanation
+        /// </summary>
+        public string FirmwareEvaluationDetails { get; init; } = string.Empty;
     }
 
     public sealed record DeviceDetailResponse(
@@ -511,6 +547,17 @@ namespace SecureBootDashboard.Api.Controllers
         public bool HasNoOemCertificates { get; init; }
 
         /// <summary>
+        /// Indicates if device has legacy Microsoft certificates (e.g., Windows Production PCA 2011) 
+        /// that will expire in April 2026 and needs to be updated to Windows UEFI CA 2023
+        /// </summary>
+        public bool HasLegacyCertificatesExpiring2026 { get; init; }
+
+        /// <summary>
+        /// Number of legacy Microsoft certificates expiring in 2026
+        /// </summary>
+        public int LegacyCertificateCount2026 { get; init; }
+
+        /// <summary>
         /// Number of expired OEM certificates
         /// </summary>
         public int ExpiredOemCertificateCount { get; init; }
@@ -539,6 +586,20 @@ namespace SecureBootDashboard.Api.Controllers
         /// Detailed certificate evaluation message
         /// </summary>
         public string CertificateEvaluationDetails { get; init; } = string.Empty;
+
+        /// <summary>
+        /// Firmware compatibility confidence level based on release date.
+        /// HIGH: Released after Jan 1, 2025 (Green)
+        /// MEDIUM: Released during 2024 (Yellow)
+        /// LOW: Released before 2024 (Red)
+        /// UNKNOWN: Release date not available (Gray)
+        /// </summary>
+        public FirmwareConfidenceLevel FirmwareConfidence { get; init; }
+
+        /// <summary>
+        /// Detailed firmware evaluation message including confidence level explanation
+        /// </summary>
+        public string FirmwareEvaluationDetails { get; init; } = string.Empty;
     }
 
     public sealed record ReportHistoryItem(
@@ -547,3 +608,4 @@ namespace SecureBootDashboard.Api.Controllers
         string? DeploymentState,
         string? ClientVersion);
 }
+

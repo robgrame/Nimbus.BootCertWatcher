@@ -1,5 +1,7 @@
 using System;
+using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -77,6 +79,24 @@ namespace SecureBootWatcher.Client.Services
             if (_fallbackOptions.WebApi?.BaseAddress == null)
             {
                 _logger.LogDebug("WebApi BaseAddress not configured, cannot fetch from database");
+                return null;
+            }
+
+            // Basic DNS sanity check to avoid repeated failed calls when host is not resolvable
+            try
+            {
+                var host = _fallbackOptions.WebApi.BaseAddress.Host;
+                var dnsTask = Dns.GetHostAddressesAsync(host);
+                var completed = await Task.WhenAny(dnsTask, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken)).ConfigureAwait(false);
+                if (completed != dnsTask)
+                {
+                    throw new TaskCanceledException("DNS resolution timeout");
+                }
+                _ = await dnsTask.ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is SocketException || ex is TaskCanceledException || ex is HttpRequestException)
+            {
+                _logger.LogWarning(ex, "DNS resolution failed for {Host}. Skipping database sink config fetch and using fallback.", _fallbackOptions.WebApi.BaseAddress.Host);
                 return null;
             }
 
