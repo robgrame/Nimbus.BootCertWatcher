@@ -54,8 +54,11 @@ namespace SecureBootWatcher.Client.Services
                 if (servicingKey != null)
                 {
                     _logger.LogTrace("RegistrySnapshotProvider.CaptureAsync: Reading Servicing subkey");
-                    snapshot.Servicing.UefiCa2023Status = (SecureBootDeploymentState?)ReadUInt(servicingKey, "UEFICA2023Status") ?? SecureBootDeploymentState.Unknown;
+                    snapshot.Servicing.UefiCa2023Status = ParseDeploymentState(ReadString(servicingKey, "UEFICA2023Status"));
                     snapshot.Servicing.UefiCa2023Error = ReadUInt(servicingKey, "UefiCa2023Error");
+                    snapshot.Servicing.RebootRequestedDB = ReadUInt(servicingKey, "RebootRequestedDB");
+                    snapshot.Servicing.RebootRequestedDBX = ReadUInt(servicingKey, "RebootRequestedDBX");
+                    snapshot.Servicing.RebootRequestedKEK = ReadUInt(servicingKey, "RebootRequestedKEK");
                     snapshot.Servicing.WindowsUEFICA2023Capable = ReadUInt(servicingKey, "WindowsUEFICA2023Capable");
                     snapshot.Servicing.BucketHash = ReadString(servicingKey, "BucketHash");
                     snapshot.Servicing.ConfidenceLevel = ReadString(servicingKey, "ConfidenceLevel");
@@ -285,6 +288,22 @@ namespace SecureBootWatcher.Client.Services
         {
             var value = key.GetValue(valueName) as byte[];
             return value;
+        }
+
+        private static SecureBootDeploymentState? ParseDeploymentState(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            return value switch
+            {
+                "NotStarted" => SecureBootDeploymentState.NotStarted,
+                "InProgress" => SecureBootDeploymentState.InProgress,
+                "Updated" => SecureBootDeploymentState.Updated,
+                _ => SecureBootDeploymentState.Unknown
+            };
         }
     }
 }

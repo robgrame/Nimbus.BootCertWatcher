@@ -186,6 +186,10 @@ namespace SecureBootWatcher.Shared.Models
         /// </summary>
         public uint? WindowsUEFICA2023Capable { get; set; }
 
+        public uint? RebootRequestedKEK { get; set; }   
+        public uint? RebootRequestedDB { get; set; }
+        public uint? RebootRequestedDBX { get; set; }
+
 
         public DateTimeOffset CollectedAtUtc { get; set; } = DateTimeOffset.UtcNow;
 
