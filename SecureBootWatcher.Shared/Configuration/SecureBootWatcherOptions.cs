@@ -1,7 +1,28 @@
 using System;
+using System.Collections.Generic;
 
 namespace SecureBootWatcher.Shared.Configuration
 {
+    /// <summary>
+    /// Configuration for a Certificate Authority (CA) certificate.
+    /// Used to validate certificate chains against expected CA certificates.
+    /// </summary>
+    public sealed class CertificateAuthorityConfig
+    {
+        /// <summary>
+        /// Name or Subject of the CA certificate (e.g., "CN=Contoso Root CA, O=Contoso, C=US").
+        /// Used for identification and logging purposes.
+        /// </summary>
+        public string? Name { get; set; }
+
+        /// <summary>
+        /// SHA-1 thumbprint of the CA certificate.
+        /// Format: "ABC123DEF456..." (no spaces or colons).
+        /// Used to validate the certificate chain against expected CAs.
+        /// </summary>
+        public string? Thumbprint { get; set; }
+    }
+
     public sealed class SecureBootWatcherOptions
     {
         public string? FleetId { get; set; }
@@ -300,6 +321,27 @@ namespace SecureBootWatcher.Shared.Configuration
         /// Default: false (can cause delays if CRL server is unavailable)
         /// </summary>
         public bool CheckCertificateRevocation { get; set; } = false;
+
+        /// <summary>
+        /// Expected CA Root certificate name (Subject).
+        /// If specified, the certificate chain will be validated to ensure it's signed by this CA Root.
+        /// Example: "CN=Contoso Root CA, O=Contoso, C=US"
+        /// </summary>
+        public string? ExpectedCARootName { get; set; }
+
+        /// <summary>
+        /// Expected CA Root certificate thumbprint.
+        /// If specified, the root certificate in the chain must match this thumbprint.
+        /// Format: "ABC123DEF456..." (SHA-1 thumbprint, no spaces or colons)
+        /// </summary>
+        public string? ExpectedCARootThumbprint { get; set; }
+
+        /// <summary>
+        /// Expected Subordinate (Intermediate) CA certificates.
+        /// List of subordinate CAs that should be present in the certificate chain.
+        /// Each entry should contain the CA name and thumbprint for validation.
+        /// </summary>
+        public List<CertificateAuthorityConfig> ExpectedSubordinateCAs { get; set; } = new List<CertificateAuthorityConfig>();
     }
 
     public sealed class AzureFunctionSinkOptions
@@ -380,5 +422,26 @@ namespace SecureBootWatcher.Shared.Configuration
         /// Default: false (can cause delays if CRL server is unavailable)
         /// </summary>
         public bool CheckCertificateRevocation { get; set; } = false;
+
+        /// <summary>
+        /// Expected CA Root certificate name (Subject).
+        /// If specified, the certificate chain will be validated to ensure it's signed by this CA Root.
+        /// Example: "CN=Contoso Root CA, O=Contoso, C=US"
+        /// </summary>
+        public string? ExpectedCARootName { get; set; }
+
+        /// <summary>
+        /// Expected CA Root certificate thumbprint.
+        /// If specified, the root certificate in the chain must match this thumbprint.
+        /// Format: "ABC123DEF456..." (SHA-1 thumbprint, no spaces or colons)
+        /// </summary>
+        public string? ExpectedCARootThumbprint { get; set; }
+
+        /// <summary>
+        /// Expected Subordinate (Intermediate) CA certificates.
+        /// List of subordinate CAs that should be present in the certificate chain.
+        /// Each entry should contain the CA name and thumbprint for validation.
+        /// </summary>
+        public List<CertificateAuthorityConfig> ExpectedSubordinateCAs { get; set; } = new List<CertificateAuthorityConfig>();
     }
 }

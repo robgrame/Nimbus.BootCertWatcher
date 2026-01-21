@@ -282,6 +282,9 @@ namespace SecureBootWatcher.Client
 							webApiOptions.CertificateStoreName,
 							webApiOptions.ValidateCertificateChain,
 							webApiOptions.CheckCertificateRevocation,
+							webApiOptions.ExpectedCARootName,
+							webApiOptions.ExpectedCARootThumbprint,
+							webApiOptions.ExpectedSubordinateCAs,
 							"WebApi");
 						
 						if (certificate != null)
@@ -306,6 +309,9 @@ namespace SecureBootWatcher.Client
 							azureFunctionOptions.CertificateStoreName,
 							azureFunctionOptions.ValidateCertificateChain,
 							azureFunctionOptions.CheckCertificateRevocation,
+							azureFunctionOptions.ExpectedCARootName,
+							azureFunctionOptions.ExpectedCARootThumbprint,
+							azureFunctionOptions.ExpectedSubordinateCAs,
 							"AzureFunction");
 						
 						if (certificate != null)
@@ -512,6 +518,9 @@ namespace SecureBootWatcher.Client
 			string storeName,
 			bool validateChain,
 			bool checkRevocation,
+			string? expectedCARootName,
+			string? expectedCARootThumbprint,
+			System.Collections.Generic.List<SecureBootWatcher.Shared.Configuration.CertificateAuthorityConfig> expectedSubordinateCAs,
 			string sinkName)
 		{
 			System.Security.Cryptography.X509Certificates.X509Certificate2? certificate = null;
@@ -660,6 +669,113 @@ namespace SecureBootWatcher.Client
 							var element = chain.ChainElements[i];
 							Log.Debug("  [{Index}] Subject={Subject}, Issuer={Issuer}", 
 								i, element.Certificate.Subject, element.Certificate.Issuer);
+						}
+
+						// Validate expected CA Root if configured
+						if (!string.IsNullOrWhiteSpace(expectedCARootName) || !string.IsNullOrWhiteSpace(expectedCARootThumbprint))
+						{
+							Log.Information("Validating expected CA Root for {SinkName}...", sinkName);
+							
+							// Get the root certificate from the chain (last element)
+							if (chain.ChainElements.Count > 0)
+							{
+								var rootCert = chain.ChainElements[chain.ChainElements.Count - 1].Certificate;
+								bool rootValid = true;
+
+								if (!string.IsNullOrWhiteSpace(expectedCARootName))
+								{
+									if (!rootCert.Subject.Contains(expectedCARootName, StringComparison.OrdinalIgnoreCase))
+									{
+										Log.Error("CA Root name validation failed for {SinkName}. Expected: {Expected}, Actual: {Actual}",
+											sinkName, expectedCARootName, rootCert.Subject);
+										rootValid = false;
+									}
+									else
+									{
+										Log.Information("CA Root name validation passed for {SinkName}: {Subject}", sinkName, rootCert.Subject);
+									}
+								}
+
+								if (!string.IsNullOrWhiteSpace(expectedCARootThumbprint))
+								{
+									var normalizedExpected = expectedCARootThumbprint.Replace(":", "").Replace(" ", "").ToUpperInvariant();
+									var normalizedActual = rootCert.Thumbprint.Replace(":", "").Replace(" ", "").ToUpperInvariant();
+									
+									if (normalizedExpected != normalizedActual)
+									{
+										Log.Error("CA Root thumbprint validation failed for {SinkName}. Expected: {Expected}, Actual: {Actual}",
+											sinkName, expectedCARootThumbprint, rootCert.Thumbprint);
+										rootValid = false;
+									}
+									else
+									{
+										Log.Information("CA Root thumbprint validation passed for {SinkName}: {Thumbprint}", sinkName, rootCert.Thumbprint);
+									}
+								}
+
+								if (!rootValid)
+								{
+									Log.Error("CA Root validation failed for {SinkName}", sinkName);
+									return null;
+								}
+							}
+							else
+							{
+								Log.Warning("No certificates in chain to validate CA Root for {SinkName}", sinkName);
+							}
+						}
+
+						// Validate expected Subordinate CAs if configured
+						if (expectedSubordinateCAs != null && expectedSubordinateCAs.Count > 0)
+						{
+							Log.Information("Validating {Count} expected Subordinate CAs for {SinkName}...", expectedSubordinateCAs.Count, sinkName);
+							
+							foreach (var expectedCA in expectedSubordinateCAs)
+							{
+								if (string.IsNullOrWhiteSpace(expectedCA.Name) && string.IsNullOrWhiteSpace(expectedCA.Thumbprint))
+								{
+									continue; // Skip empty configurations
+								}
+
+								bool caFound = false;
+								
+								// Search for the CA in the chain (excluding the leaf certificate at index 0)
+								for (int i = 1; i < chain.ChainElements.Count - 1; i++)
+								{
+									var chainCert = chain.ChainElements[i].Certificate;
+									bool nameMatches = true;
+									bool thumbprintMatches = true;
+
+									if (!string.IsNullOrWhiteSpace(expectedCA.Name))
+									{
+										nameMatches = chainCert.Subject.Contains(expectedCA.Name, StringComparison.OrdinalIgnoreCase);
+									}
+
+									if (!string.IsNullOrWhiteSpace(expectedCA.Thumbprint))
+									{
+										var normalizedExpected = expectedCA.Thumbprint.Replace(":", "").Replace(" ", "").ToUpperInvariant();
+										var normalizedActual = chainCert.Thumbprint.Replace(":", "").Replace(" ", "").ToUpperInvariant();
+										thumbprintMatches = normalizedExpected == normalizedActual;
+									}
+
+									if (nameMatches && thumbprintMatches)
+									{
+										caFound = true;
+										Log.Information("Subordinate CA found in chain for {SinkName}: Subject={Subject}, Thumbprint={Thumbprint}",
+											sinkName, chainCert.Subject, chainCert.Thumbprint);
+										break;
+									}
+								}
+
+								if (!caFound)
+								{
+									Log.Error("Expected Subordinate CA not found in certificate chain for {SinkName}. Expected Name: {Name}, Thumbprint: {Thumbprint}",
+										sinkName, expectedCA.Name ?? "(not specified)", expectedCA.Thumbprint ?? "(not specified)");
+									return null;
+								}
+							}
+							
+							Log.Information("All expected Subordinate CAs validated successfully for {SinkName}", sinkName);
 						}
 					}
 

@@ -266,6 +266,36 @@ public sealed class ClientSinkConfigEntity
     /// </summary>
     public bool WebApiCheckCertRevocation { get; set; } = false;
 
+    /// <summary>
+    /// Expected CA Root certificate name for Web API (e.g., "CN=Contoso Root CA")
+    /// </summary>
+    public string? WebApiExpectedCARootName { get; set; }
+
+    /// <summary>
+    /// Expected CA Root certificate thumbprint for Web API
+    /// </summary>
+    public string? WebApiExpectedCARootThumbprint { get; set; }
+
+    /// <summary>
+    /// Expected Subordinate CA certificates for Web API (JSON array: [{"name":"...", "thumbprint":"..."}])
+    /// </summary>
+    public string? WebApiExpectedSubordinateCAsJson { get; set; }
+
+    /// <summary>
+    /// Expected CA Root certificate name for Azure Function (e.g., "CN=Contoso Root CA")
+    /// </summary>
+    public string? AzureFunctionExpectedCARootName { get; set; }
+
+    /// <summary>
+    /// Expected CA Root certificate thumbprint for Azure Function
+    /// </summary>
+    public string? AzureFunctionExpectedCARootThumbprint { get; set; }
+
+    /// <summary>
+    /// Expected Subordinate CA certificates for Azure Function (JSON array: [{"name":"...", "thumbprint":"..."}])
+    /// </summary>
+    public string? AzureFunctionExpectedSubordinateCAsJson { get; set; }
+
     // === Metadata ===
 
     /// <summary>
