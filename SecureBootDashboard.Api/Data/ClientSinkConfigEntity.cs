@@ -29,14 +29,19 @@ public sealed class ClientSinkConfigEntity
     public bool EnableWebApi { get; set; }
 
     /// <summary>
+    /// Enable Azure Function sink
+    /// </summary>
+    public bool EnableAzureFunction { get; set; }
+
+    /// <summary>
     /// Sink execution strategy: "StopOnFirstSuccess" or "TryAll"
     /// </summary>
     public string ExecutionStrategy { get; set; } = "StopOnFirstSuccess";
 
     /// <summary>
-    /// Priority order for sinks (e.g., "AzureQueue,WebApi,FileShare")
+    /// Priority order for sinks (e.g., "AzureFunction,AzureQueue,WebApi,FileShare")
     /// </summary>
-    public string SinkPriority { get; set; } = "AzureQueue,WebApi,FileShare";
+    public string SinkPriority { get; set; } = "AzureFunction,AzureQueue,WebApi,FileShare";
 
     /// <summary>
     /// Maximum retry attempts per sink
@@ -188,6 +193,78 @@ public sealed class ClientSinkConfigEntity
     /// Web API certificate store name (My, Root, CA, etc.)
     /// </summary>
     public string WebApiCertStoreName { get; set; } = "My";
+
+    // === Azure Function Sink Settings ===
+
+    /// <summary>
+    /// Azure Function URL for report ingestion (e.g., https://your-function-app.azurewebsites.net/api/reports)
+    /// </summary>
+    public string? AzureFunctionUrl { get; set; }
+
+    /// <summary>
+    /// API Key for authenticating with the Azure Function (sensitive)
+    /// </summary>
+    public string? AzureFunctionApiKey { get; set; }
+
+    /// <summary>
+    /// Azure Function HTTP timeout in seconds
+    /// </summary>
+    public int AzureFunctionTimeoutSeconds { get; set; } = 30;
+
+    /// <summary>
+    /// Whether to send API key as query parameter (true) or header (false)
+    /// </summary>
+    public bool AzureFunctionUseApiKeyAsQueryParam { get; set; } = false;
+
+    /// <summary>
+    /// Enable client certificate authentication for Azure Function
+    /// </summary>
+    public bool AzureFunctionUseCertAuth { get; set; }
+
+    /// <summary>
+    /// Azure Function certificate path (for certificate auth)
+    /// </summary>
+    public string? AzureFunctionCertPath { get; set; }
+
+    /// <summary>
+    /// Azure Function certificate password (sensitive)
+    /// </summary>
+    public string? AzureFunctionCertPassword { get; set; }
+
+    /// <summary>
+    /// Azure Function certificate thumbprint (for certificate auth from store)
+    /// </summary>
+    public string? AzureFunctionCertThumbprint { get; set; }
+
+    /// <summary>
+    /// Azure Function certificate store location (CurrentUser or LocalMachine)
+    /// </summary>
+    public string AzureFunctionCertStoreLocation { get; set; } = "LocalMachine";
+
+    /// <summary>
+    /// Azure Function certificate store name (My, Root, CA, etc.)
+    /// </summary>
+    public string AzureFunctionCertStoreName { get; set; } = "My";
+
+    /// <summary>
+    /// Validate certificate chain for Azure Function
+    /// </summary>
+    public bool AzureFunctionValidateCertChain { get; set; } = true;
+
+    /// <summary>
+    /// Check Certificate Revocation List (CRL) for Azure Function
+    /// </summary>
+    public bool AzureFunctionCheckCertRevocation { get; set; } = false;
+
+    /// <summary>
+    /// Validate certificate chain for Web API
+    /// </summary>
+    public bool WebApiValidateCertChain { get; set; } = true;
+
+    /// <summary>
+    /// Check Certificate Revocation List (CRL) for Web API
+    /// </summary>
+    public bool WebApiCheckCertRevocation { get; set; } = false;
 
     // === Metadata ===
 

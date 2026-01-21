@@ -267,87 +267,55 @@ namespace SecureBootWatcher.Client
 				{
 					var options = sp.GetRequiredService<IOptionsMonitor<SecureBootWatcherOptions>>();
 					var webApiOptions = options.CurrentValue.Sinks.WebApi;
+					var azureFunctionOptions = options.CurrentValue.Sinks.AzureFunction;
 					
 					var handler = new System.Net.Http.HttpClientHandler();
 					
-					// Configure certificate authentication if enabled
+					// Configure certificate authentication for WebApi sink if enabled
 					if (webApiOptions.UseCertificateAuth)
 					{
-						System.Security.Cryptography.X509Certificates.X509Certificate2? certificate = null;
+						var certificate = LoadAndValidateCertificate(
+							webApiOptions.CertificateThumbprint,
+							webApiOptions.CertificatePath,
+							webApiOptions.CertificatePassword,
+							webApiOptions.CertificateStoreLocation,
+							webApiOptions.CertificateStoreName,
+							webApiOptions.ValidateCertificateChain,
+							webApiOptions.CheckCertificateRevocation,
+							"WebApi");
 						
-						try
+						if (certificate != null)
 						{
-							// Try to load from certificate store first
-							if (!string.IsNullOrEmpty(webApiOptions.CertificateThumbprint))
-							{
-								Log.Information("Loading client certificate from store: {Thumbprint}", webApiOptions.CertificateThumbprint);
-								
-								var storeLocation = webApiOptions.CertificateStoreLocation.Equals("LocalMachine", StringComparison.OrdinalIgnoreCase)
-									? System.Security.Cryptography.X509Certificates.StoreLocation.LocalMachine
-									: System.Security.Cryptography.X509Certificates.StoreLocation.CurrentUser;
-								
-								var storeName = webApiOptions.CertificateStoreName.Equals("Root", StringComparison.OrdinalIgnoreCase)
-									? System.Security.Cryptography.X509Certificates.StoreName.Root
-									: System.Security.Cryptography.X509Certificates.StoreName.My;
-								
-								using (var store = new System.Security.Cryptography.X509Certificates.X509Store(storeName, storeLocation))
-								{
-									store.Open(System.Security.Cryptography.X509Certificates.OpenFlags.ReadOnly);
-									var certificates = store.Certificates.Find(
-										System.Security.Cryptography.X509Certificates.X509FindType.FindByThumbprint,
-										webApiOptions.CertificateThumbprint,
-										false);
-									
-									if (certificates.Count > 0)
-									{
-										certificate = certificates[0];
-										Log.Information("Client certificate loaded from store: Subject={Subject}, Issuer={Issuer}", 
-											certificate.Subject, certificate.Issuer);
-									}
-									else
-									{
-										Log.Error("Client certificate not found in store with thumbprint: {Thumbprint}", 
-											webApiOptions.CertificateThumbprint);
-									}
-								}
-							}
-							// Otherwise try to load from file
-							else if (!string.IsNullOrEmpty(webApiOptions.CertificatePath))
-							{
-								Log.Information("Loading client certificate from file: {Path}", webApiOptions.CertificatePath);
-								
-								// Note: Using old constructors for .NET Framework 4.8 compatibility
-								#pragma warning disable SYSLIB0057 // X509Certificate2 constructors are obsolete
-								if (!string.IsNullOrEmpty(webApiOptions.CertificatePassword))
-								{
-									certificate = new System.Security.Cryptography.X509Certificates.X509Certificate2(
-										webApiOptions.CertificatePath,
-										webApiOptions.CertificatePassword);
-								}
-								else
-								{
-									certificate = new System.Security.Cryptography.X509Certificates.X509Certificate2(
-										webApiOptions.CertificatePath);
-								}
-								#pragma warning restore SYSLIB0057
-								
-								Log.Information("Client certificate loaded from file: Subject={Subject}, Issuer={Issuer}", 
-									certificate.Subject, certificate.Issuer);
-							}
-							
-							if (certificate != null)
-							{
-								handler.ClientCertificates.Add(certificate);
-								Log.Information("Client certificate added to HttpClient handler");
-							}
-							else
-							{
-								Log.Warning("Certificate authentication enabled but no certificate could be loaded");
-							}
+							handler.ClientCertificates.Add(certificate);
+							Log.Information("Client certificate added to HttpClient handler for WebApi sink");
 						}
-						catch (Exception ex)
+						else
 						{
-							Log.Error(ex, "Failed to load client certificate for mutual TLS");
+							Log.Warning("WebApi certificate authentication enabled but no certificate could be loaded");
+						}
+					}
+					
+					// Configure certificate authentication for AzureFunction sink if enabled
+					if (azureFunctionOptions.UseCertificateAuth)
+					{
+						var certificate = LoadAndValidateCertificate(
+							azureFunctionOptions.CertificateThumbprint,
+							azureFunctionOptions.CertificatePath,
+							azureFunctionOptions.CertificatePassword,
+							azureFunctionOptions.CertificateStoreLocation,
+							azureFunctionOptions.CertificateStoreName,
+							azureFunctionOptions.ValidateCertificateChain,
+							azureFunctionOptions.CheckCertificateRevocation,
+							"AzureFunction");
+						
+						if (certificate != null)
+						{
+							handler.ClientCertificates.Add(certificate);
+							Log.Information("Client certificate added to HttpClient handler for AzureFunction sink");
+						}
+						else
+						{
+							Log.Warning("AzureFunction certificate authentication enabled but no certificate could be loaded");
 						}
 					}
 					
@@ -384,6 +352,7 @@ namespace SecureBootWatcher.Client
 			services.AddSingleton<FileShareReportSink>();
 			services.AddSingleton<AzureQueueReportSink>();
 			services.AddSingleton<WebApiReportSink>();
+			services.AddSingleton<AzureFunctionReportSink>();
 
 			// Register SinkCoordinator as the main IReportSink
 			services.AddSingleton<IReportSink>(sp =>
@@ -396,7 +365,8 @@ namespace SecureBootWatcher.Client
 				{
 					sp.GetRequiredService<FileShareReportSink>(),
 					sp.GetRequiredService<AzureQueueReportSink>(),
-					sp.GetRequiredService<WebApiReportSink>()
+					sp.GetRequiredService<WebApiReportSink>(),
+					sp.GetRequiredService<AzureFunctionReportSink>()
 				};
 
                 return new SinkCoordinator(logger, configProvider, allSinks);
@@ -470,6 +440,31 @@ namespace SecureBootWatcher.Client
 				Log.Information("    Ingestion Route: {Route}", options.Sinks.WebApi.IngestionRoute);
 				Log.Information("    HTTP Timeout: {Timeout}", options.Sinks.WebApi.HttpTimeout);
 			}
+
+			Log.Information("  Azure Function Sink: {Enabled}", options.Sinks.EnableAzureFunction ? "Enabled" : "Disabled");
+			if (options.Sinks.EnableAzureFunction)
+			{
+				Log.Information("    Function URL: {Url}", options.Sinks.AzureFunction.FunctionUrl?.ToString() ?? "NOT SET");
+				Log.Information("    HTTP Timeout: {Timeout}", options.Sinks.AzureFunction.HttpTimeout);
+				Log.Information("    API Key Configured: {KeyConfigured}", !string.IsNullOrWhiteSpace(options.Sinks.AzureFunction.ApiKey) ? "Yes" : "No");
+				Log.Information("    Certificate Auth: {CertAuth}", options.Sinks.AzureFunction.UseCertificateAuth ? "Enabled" : "Disabled");
+				
+				if (options.Sinks.AzureFunction.UseCertificateAuth)
+				{
+					Log.Information("    Certificate Store: {Location}\\{Store}", 
+						options.Sinks.AzureFunction.CertificateStoreLocation, 
+						options.Sinks.AzureFunction.CertificateStoreName);
+					
+					if (!string.IsNullOrEmpty(options.Sinks.AzureFunction.CertificateThumbprint))
+					{
+						Log.Information("    Certificate Thumbprint: {Thumbprint}", 
+							options.Sinks.AzureFunction.CertificateThumbprint);
+					}
+					
+					Log.Information("    Validate Certificate Chain: {ValidateChain}", options.Sinks.AzureFunction.ValidateCertificateChain);
+					Log.Information("    Check Certificate Revocation: {CheckRevocation}", options.Sinks.AzureFunction.CheckCertificateRevocation);
+				}
+			}
 			
 			Log.Information("----------------------------------------");
 			Log.Information("Command Processing Configuration:");
@@ -489,6 +484,7 @@ namespace SecureBootWatcher.Client
 			if (options.Sinks.EnableFileShare) activeSinks.Add("FileShare");
 			if (options.Sinks.EnableAzureQueue) activeSinks.Add("AzureQueue");
 			if (options.Sinks.EnableWebApi) activeSinks.Add("WebApi");
+			if (options.Sinks.EnableAzureFunction) activeSinks.Add("AzureFunction");
 
 			if (activeSinks.Count > 0)
 			{
@@ -502,9 +498,196 @@ namespace SecureBootWatcher.Client
 				Log.Warning("   - EnableFileShare: true");
 				Log.Warning("   - EnableAzureQueue: true");
 				Log.Warning("   - EnableWebApi: true");
+				Log.Warning("   - EnableAzureFunction: true");
 			}
 			
 			Log.Information("========================================");
+		}
+
+		private static System.Security.Cryptography.X509Certificates.X509Certificate2? LoadAndValidateCertificate(
+			string? thumbprint,
+			string? path,
+			string? password,
+			string storeLocation,
+			string storeName,
+			bool validateChain,
+			bool checkRevocation,
+			string sinkName)
+		{
+			System.Security.Cryptography.X509Certificates.X509Certificate2? certificate = null;
+
+			try
+			{
+				// Try to load from certificate store first
+				if (!string.IsNullOrEmpty(thumbprint))
+				{
+					Log.Information("Loading client certificate for {SinkName} from store: {Thumbprint}", sinkName, thumbprint);
+					
+					var location = storeLocation.Equals("LocalMachine", StringComparison.OrdinalIgnoreCase)
+						? System.Security.Cryptography.X509Certificates.StoreLocation.LocalMachine
+						: System.Security.Cryptography.X509Certificates.StoreLocation.CurrentUser;
+					
+					var store = storeName.Equals("Root", StringComparison.OrdinalIgnoreCase)
+						? System.Security.Cryptography.X509Certificates.StoreName.Root
+						: System.Security.Cryptography.X509Certificates.StoreName.My;
+					
+					using (var certStore = new System.Security.Cryptography.X509Certificates.X509Store(store, location))
+					{
+						certStore.Open(System.Security.Cryptography.X509Certificates.OpenFlags.ReadOnly);
+						var certificates = certStore.Certificates.Find(
+							System.Security.Cryptography.X509Certificates.X509FindType.FindByThumbprint,
+							thumbprint,
+							false);
+						
+						if (certificates.Count > 0)
+						{
+							certificate = certificates[0];
+							Log.Information("Client certificate for {SinkName} loaded from store: Subject={Subject}, Issuer={Issuer}", 
+								sinkName, certificate.Subject, certificate.Issuer);
+						}
+						else
+						{
+							Log.Error("Client certificate for {SinkName} not found in store with thumbprint: {Thumbprint}", 
+								sinkName, thumbprint);
+							return null;
+						}
+					}
+				}
+				// Otherwise try to load from file
+				else if (!string.IsNullOrEmpty(path))
+				{
+					Log.Information("Loading client certificate for {SinkName} from file: {Path}", sinkName, path);
+					
+					// Note: Using old constructors for .NET Framework 4.8 compatibility
+					#pragma warning disable SYSLIB0057 // X509Certificate2 constructors are obsolete
+					if (!string.IsNullOrEmpty(password))
+					{
+						certificate = new System.Security.Cryptography.X509Certificates.X509Certificate2(path, password);
+					}
+					else
+					{
+						certificate = new System.Security.Cryptography.X509Certificates.X509Certificate2(path);
+					}
+					#pragma warning restore SYSLIB0057
+					
+					Log.Information("Client certificate for {SinkName} loaded from file: Subject={Subject}, Issuer={Issuer}", 
+						sinkName, certificate.Subject, certificate.Issuer);
+				}
+				else
+				{
+					Log.Warning("No certificate path or thumbprint specified for {SinkName}", sinkName);
+					return null;
+				}
+
+				if (certificate == null)
+				{
+					return null;
+				}
+
+				// Validate certificate validity (expiration dates)
+				var now = DateTime.Now;
+				if (now < certificate.NotBefore || now > certificate.NotAfter)
+				{
+					Log.Error("Client certificate for {SinkName} is not valid. NotBefore={NotBefore}, NotAfter={NotAfter}, Current={Now}",
+						sinkName, certificate.NotBefore, certificate.NotAfter, now);
+					return null;
+				}
+
+				Log.Information("Client certificate for {SinkName} validity check passed. Valid from {NotBefore} to {NotAfter}",
+					sinkName, certificate.NotBefore, certificate.NotAfter);
+
+				// Validate certificate chain if requested
+				if (validateChain)
+				{
+					Log.Information("Validating certificate chain for {SinkName}...", sinkName);
+					
+					using (var chain = new System.Security.Cryptography.X509Certificates.X509Chain())
+					{
+						// Configure chain validation options
+						chain.ChainPolicy.RevocationMode = checkRevocation
+							? System.Security.Cryptography.X509Certificates.X509RevocationMode.Online
+							: System.Security.Cryptography.X509Certificates.X509RevocationMode.NoCheck;
+						
+						chain.ChainPolicy.RevocationFlag = System.Security.Cryptography.X509Certificates.X509RevocationFlag.EntireChain;
+						chain.ChainPolicy.UrlRetrievalTimeout = TimeSpan.FromSeconds(30);
+						chain.ChainPolicy.VerificationFlags = System.Security.Cryptography.X509Certificates.X509VerificationFlags.NoFlag;
+
+						// Build and validate the certificate chain
+						bool chainIsValid = chain.Build(certificate);
+
+						if (!chainIsValid)
+						{
+							Log.Warning("Certificate chain validation for {SinkName} reported issues:", sinkName);
+							
+							foreach (var chainStatus in chain.ChainStatus)
+							{
+								Log.Warning("  Chain Status: {Status} - {Information}", 
+									chainStatus.Status, chainStatus.StatusInformation);
+							}
+
+							// Check if errors are critical
+							bool hasCriticalError = false;
+							foreach (var chainStatus in chain.ChainStatus)
+							{
+								// Allow some non-critical warnings
+								if (chainStatus.Status != System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.NoError &&
+									chainStatus.Status != System.Security.Cryptography.X509Certificates.X509ChainStatusFlags.UntrustedRoot)
+								{
+									hasCriticalError = true;
+									break;
+								}
+							}
+
+							if (hasCriticalError)
+							{
+								Log.Error("Certificate chain validation for {SinkName} failed with critical errors", sinkName);
+								return null;
+							}
+							else
+							{
+								Log.Warning("Certificate chain validation for {SinkName} has warnings but no critical errors. Proceeding...", sinkName);
+							}
+						}
+						else
+						{
+							Log.Information("Certificate chain validation for {SinkName} passed successfully", sinkName);
+						}
+
+						// Log chain information
+						Log.Information("Certificate chain for {SinkName} has {Count} certificates:", sinkName, chain.ChainElements.Count);
+						for (int i = 0; i < chain.ChainElements.Count; i++)
+						{
+							var element = chain.ChainElements[i];
+							Log.Debug("  [{Index}] Subject={Subject}, Issuer={Issuer}", 
+								i, element.Certificate.Subject, element.Certificate.Issuer);
+						}
+					}
+
+					if (checkRevocation)
+					{
+						Log.Information("Certificate revocation check was performed for {SinkName} as part of chain validation", sinkName);
+					}
+				}
+				else
+				{
+					Log.Warning("Certificate chain validation is disabled for {SinkName}. This is NOT recommended for production.", sinkName);
+				}
+
+				// Verify certificate has private key (required for client authentication)
+				if (!certificate.HasPrivateKey)
+				{
+					Log.Error("Client certificate for {SinkName} does not have a private key. Client authentication will not work.", sinkName);
+					return null;
+				}
+
+				Log.Information("Client certificate for {SinkName} has private key and is ready for use", sinkName);
+				return certificate;
+			}
+			catch (Exception ex)
+			{
+				Log.Error(ex, "Failed to load and validate client certificate for {SinkName}", sinkName);
+				return null;
+			}
 		}
 	}
 }

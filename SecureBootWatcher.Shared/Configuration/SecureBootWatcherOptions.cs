@@ -112,6 +112,10 @@ namespace SecureBootWatcher.Shared.Configuration
 
         public WebApiSinkOptions WebApi { get; set; } = new WebApiSinkOptions();
 
+        public bool EnableAzureFunction { get; set; }
+
+        public AzureFunctionSinkOptions AzureFunction { get; set; } = new AzureFunctionSinkOptions();
+
         /// <summary>
         /// Sink execution strategy: "StopOnFirstSuccess" or "TryAll".
         /// - "StopOnFirstSuccess": Stops after the first sink succeeds (default, faster).
@@ -120,11 +124,11 @@ namespace SecureBootWatcher.Shared.Configuration
         public string ExecutionStrategy { get; set; } = "StopOnFirstSuccess";
 
         /// <summary>
-        /// Priority order for sinks. Format: "AzureQueue,WebApi,FileShare".
-        /// Sinks are tried in this order. If not specified, default order is: AzureQueue, WebApi, FileShare.
+        /// Priority order for sinks. Format: "AzureFunction,AzureQueue,WebApi,FileShare".
+        /// Sinks are tried in this order. If not specified, default order is: AzureFunction, AzureQueue, WebApi, FileShare.
         /// Only enabled sinks are executed.
         /// </summary>
-        public string SinkPriority { get; set; } = "AzureQueue,WebApi,FileShare";
+        public string SinkPriority { get; set; } = "AzureFunction,AzureQueue,WebApi,FileShare";
 
         /// <summary>
         /// Maximum number of retry attempts for each sink before moving to the next one.
@@ -284,5 +288,97 @@ namespace SecureBootWatcher.Shared.Configuration
         /// Default: "My" (Personal certificates)
         /// </summary>
         public string CertificateStoreName { get; set; } = "My";
+
+        /// <summary>
+        /// Validate certificate chain when using certificate authentication.
+        /// Default: true (recommended for production)
+        /// </summary>
+        public bool ValidateCertificateChain { get; set; } = true;
+
+        /// <summary>
+        /// Check Certificate Revocation List (CRL) for certificate revocation.
+        /// Default: false (can cause delays if CRL server is unavailable)
+        /// </summary>
+        public bool CheckCertificateRevocation { get; set; } = false;
+    }
+
+    public sealed class AzureFunctionSinkOptions
+    {
+        /// <summary>
+        /// Azure Function URL for report ingestion.
+        /// Example: https://your-function-app.azurewebsites.net/api/reports
+        /// </summary>
+        public Uri? FunctionUrl { get; set; }
+
+        /// <summary>
+        /// API Key for authenticating with the Azure Function.
+        /// This key should be stored securely (e.g., Azure Key Vault).
+        /// Can be used alone or in combination with certificate authentication.
+        /// </summary>
+        public string? ApiKey { get; set; }
+
+        /// <summary>
+        /// HTTP timeout for requests to the Azure Function.
+        /// Default: 30 seconds
+        /// </summary>
+        public TimeSpan HttpTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
+        /// <summary>
+        /// Whether to send the API key as a query parameter (true) or header (false).
+        /// Default: false (send as X-API-Key header - more secure)
+        /// </summary>
+        public bool UseApiKeyAsQueryParameter { get; set; } = false;
+
+        /// <summary>
+        /// Enable client certificate authentication for mutual TLS with the Azure Function.
+        /// Can be used alone or in combination with API key for defense-in-depth.
+        /// Default: false
+        /// </summary>
+        public bool UseCertificateAuth { get; set; }
+
+        /// <summary>
+        /// Path to client certificate file (.pfx or .p12) for certificate-based authentication.
+        /// More secure than API key alone - recommended for production environments.
+        /// </summary>
+        public string? CertificatePath { get; set; }
+
+        /// <summary>
+        /// Password for the certificate file (if the .pfx is password-protected).
+        /// Should be stored securely, not in config files.
+        /// </summary>
+        public string? CertificatePassword { get; set; }
+
+        /// <summary>
+        /// Certificate thumbprint for certificate-based authentication from certificate store.
+        /// Alternative to CertificatePath - looks for certificate in Windows Certificate Store.
+        /// Format: "ABC123DEF456..." (SHA-1 thumbprint, no spaces or colons)
+        /// </summary>
+        public string? CertificateThumbprint { get; set; }
+
+        /// <summary>
+        /// Certificate store location when using CertificateThumbprint.
+        /// Values: "CurrentUser" or "LocalMachine"
+        /// Default: "LocalMachine"
+        /// </summary>
+        public string CertificateStoreLocation { get; set; } = "LocalMachine";
+
+        /// <summary>
+        /// Certificate store name when using CertificateThumbprint.
+        /// Values: "My" (Personal), "Root", "CA", etc.
+        /// Default: "My" (Personal certificates)
+        /// </summary>
+        public string CertificateStoreName { get; set; } = "My";
+
+        /// <summary>
+        /// Validate certificate chain when using certificate authentication.
+        /// Default: true (recommended for production)
+        /// </summary>
+        public bool ValidateCertificateChain { get; set; } = true;
+
+        /// <summary>
+        /// Check Certificate Revocation List (CRL) for certificate revocation.
+        /// Default: false (can cause delays if CRL server is unavailable)
+        /// </summary>
+        public bool CheckCertificateRevocation { get; set; } = false;
     }
 }

@@ -210,7 +210,7 @@ namespace SecureBootWatcher.Client.Sinks
         private List<IReportSink> GetOrderedSinks(SinkOptions sinkOptions)
         {
             // Parse priority string
-            var priorityOrder = (sinkOptions.SinkPriority ?? "AzureQueue,WebApi,FileShare")
+            var priorityOrder = (sinkOptions.SinkPriority ?? "AzureFunction,AzureQueue,WebApi,FileShare")
                 .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(s => s.Trim())
                 .ToList();
@@ -218,6 +218,7 @@ namespace SecureBootWatcher.Client.Sinks
             // Map sink names to actual sink instances and filter by enabled status
             var sinkMap = new Dictionary<string, SinkInfo>
             {
+                ["AzureFunction"] = new SinkInfo(_sinks.OfType<AzureFunctionReportSink>().FirstOrDefault(), sinkOptions.EnableAzureFunction),
                 ["AzureQueue"] = new SinkInfo(_sinks.OfType<AzureQueueReportSink>().FirstOrDefault(), sinkOptions.EnableAzureQueue),
                 ["WebApi"] = new SinkInfo(_sinks.OfType<WebApiReportSink>().FirstOrDefault(), sinkOptions.EnableWebApi),
                 ["FileShare"] = new SinkInfo(_sinks.OfType<FileShareReportSink>().FirstOrDefault(), sinkOptions.EnableFileShare)
