@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureBootDashboard.Api.Tes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureBootDashboard.Web.Tests", "SecureBootDashboard.Web.Tests\SecureBootDashboard.Web.Tests.csproj", "{1DF385AC-BFF3-4D91-8DB9-0A552F5669D8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SecureBootReportProxy.Functions", "SecureBootReportProxy.Functions\SecureBootReportProxy.Functions.csproj", "{A82072F8-1BE7-4B50-A700-CBCBB423EF9E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -125,6 +127,18 @@ Global
 		{1DF385AC-BFF3-4D91-8DB9-0A552F5669D8}.Release|x64.Build.0 = Release|Any CPU
 		{1DF385AC-BFF3-4D91-8DB9-0A552F5669D8}.Release|x86.ActiveCfg = Release|Any CPU
 		{1DF385AC-BFF3-4D91-8DB9-0A552F5669D8}.Release|x86.Build.0 = Release|Any CPU
+		{A82072F8-1BE7-4B50-A700-CBCBB423EF9E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A82072F8-1BE7-4B50-A700-CBCBB423EF9E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A82072F8-1BE7-4B50-A700-CBCBB423EF9E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A82072F8-1BE7-4B50-A700-CBCBB423EF9E}.Debug|x64.Build.0 = Debug|Any CPU
+		{A82072F8-1BE7-4B50-A700-CBCBB423EF9E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A82072F8-1BE7-4B50-A700-CBCBB423EF9E}.Debug|x86.Build.0 = Debug|Any CPU
+		{A82072F8-1BE7-4B50-A700-CBCBB423EF9E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A82072F8-1BE7-4B50-A700-CBCBB423EF9E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A82072F8-1BE7-4B50-A700-CBCBB423EF9E}.Release|x64.ActiveCfg = Release|Any CPU
+		{A82072F8-1BE7-4B50-A700-CBCBB423EF9E}.Release|x64.Build.0 = Release|Any CPU
+		{A82072F8-1BE7-4B50-A700-CBCBB423EF9E}.Release|x86.ActiveCfg = Release|Any CPU
+		{A82072F8-1BE7-4B50-A700-CBCBB423EF9E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
