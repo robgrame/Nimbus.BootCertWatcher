@@ -7,6 +7,8 @@ using Azure.Storage.Queues;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using SecureBootReportProxy.Functions.Configuration;
 using SecureBootWatcher.Shared.Models;
 using SecureBootWatcher.Shared.Transport;
 
@@ -21,12 +23,16 @@ namespace SecureBootReportProxy.Functions;
 public class SecureBootReportProxyFunction
 {
     private readonly ILogger<SecureBootReportProxyFunction> _logger;
+    private readonly ProxyFunctionOptions _options;
     private static QueueClient? _queueClient;
     private static readonly object _queueClientLock = new object();
 
-    public SecureBootReportProxyFunction(ILogger<SecureBootReportProxyFunction> logger)
+    public SecureBootReportProxyFunction(
+        ILogger<SecureBootReportProxyFunction> logger,
+        IOptions<ProxyFunctionOptions> options)
     {
         _logger = logger;
+        _options = options.Value;
     }
 
     [Function("SecureBootReportIngestion")]
@@ -39,17 +45,8 @@ public class SecureBootReportProxyFunction
 
         try
         {
-            // Get configuration from environment variables
-            var apiKey = Environment.GetEnvironmentVariable("ApiKey");
-            var queueStorageUri = Environment.GetEnvironmentVariable("QueueStorageUri");
-            var queueName = Environment.GetEnvironmentVariable("QueueName") ?? "secureboot-reports";
-            var requireCertAuth = bool.Parse(Environment.GetEnvironmentVariable("RequireCertificateAuthentication") ?? "false");
-            var allowedThumbprints = Environment.GetEnvironmentVariable("CertificateThumbprints")
-                ?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                ?? Array.Empty<string>();
-
             // Validate API key authentication
-            if (!ValidateApiKey(req, apiKey))
+            if (!ValidateApiKey(req))
             {
                 _logger.LogWarning("API key authentication failed. CorrelationId={CorrelationId}", correlationId);
                 var response = req.CreateResponse(HttpStatusCode.Unauthorized);
@@ -60,9 +57,9 @@ public class SecureBootReportProxyFunction
             _logger.LogInformation("API key authentication successful. CorrelationId={CorrelationId}", correlationId);
 
             // Validate certificate authentication if required
-            if (requireCertAuth)
+            if (_options.RequireCertificateAuthentication)
             {
-                if (!ValidateCertificate(req, allowedThumbprints))
+                if (!ValidateCertificate(req))
                 {
                     _logger.LogWarning("Certificate authentication failed. CorrelationId={CorrelationId}", correlationId);
                     var response = req.CreateResponse(HttpStatusCode.Forbidden);
@@ -111,7 +108,7 @@ public class SecureBootReportProxyFunction
             }
 
             // Validate queue configuration
-            if (string.IsNullOrWhiteSpace(queueStorageUri))
+            if (string.IsNullOrWhiteSpace(_options.QueueStorageUri))
             {
                 _logger.LogError("QueueStorageUri is not configured. CorrelationId={CorrelationId}", correlationId);
                 var response = req.CreateResponse(HttpStatusCode.InternalServerError);
@@ -120,7 +117,7 @@ public class SecureBootReportProxyFunction
             }
 
             // Get or create queue client (with caching for performance)
-            var queueClient = GetOrCreateQueueClient(queueStorageUri, queueName);
+            var queueClient = GetOrCreateQueueClient();
 
             // Create queue envelope
             var envelope = new SecureBootQueueEnvelope
@@ -140,7 +137,7 @@ public class SecureBootReportProxyFunction
             {
                 await queueClient.SendMessageAsync(payload);
                 _logger.LogInformation("Report forwarded to Azure Queue successfully. Device={DeviceName}, Queue={QueueName}, CorrelationId={CorrelationId}",
-                    report.Device?.MachineName ?? "Unknown", queueName, correlationId);
+                    report.Device?.MachineName ?? "Unknown", _options.QueueName, correlationId);
 
                 var successResponse = req.CreateResponse(HttpStatusCode.Accepted);
                 await successResponse.WriteAsJsonAsync(new
@@ -154,7 +151,7 @@ public class SecureBootReportProxyFunction
             catch (RequestFailedException ex)
             {
                 _logger.LogError(ex, "Failed to send message to Azure Queue. Queue={QueueName}, CorrelationId={CorrelationId}",
-                    queueName, correlationId);
+                    _options.QueueName, correlationId);
                 var response = req.CreateResponse(HttpStatusCode.ServiceUnavailable);
                 await response.WriteStringAsync($"Failed to queue report: {ex.Message}");
                 return response;
@@ -169,9 +166,9 @@ public class SecureBootReportProxyFunction
         }
     }
 
-    private bool ValidateApiKey(HttpRequestData req, string? expectedApiKey)
+    private bool ValidateApiKey(HttpRequestData req)
     {
-        if (string.IsNullOrWhiteSpace(expectedApiKey))
+        if (string.IsNullOrWhiteSpace(_options.ApiKey))
         {
             _logger.LogWarning("API key is not configured in function settings");
             return false;
@@ -181,7 +178,7 @@ public class SecureBootReportProxyFunction
         if (req.Headers.TryGetValues("X-API-Key", out var headerValues))
         {
             var providedKey = headerValues.FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(providedKey) && providedKey == expectedApiKey)
+            if (!string.IsNullOrWhiteSpace(providedKey) && providedKey == _options.ApiKey)
             {
                 return true;
             }
@@ -190,7 +187,7 @@ public class SecureBootReportProxyFunction
         // Check query parameter (less secure, but supported for compatibility)
         var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
         var codeParam = query["code"];
-        if (!string.IsNullOrWhiteSpace(codeParam) && codeParam == expectedApiKey)
+        if (!string.IsNullOrWhiteSpace(codeParam) && codeParam == _options.ApiKey)
         {
             return true;
         }
@@ -198,7 +195,7 @@ public class SecureBootReportProxyFunction
         return false;
     }
 
-    private bool ValidateCertificate(HttpRequestData req, string[] allowedThumbprints)
+    private bool ValidateCertificate(HttpRequestData req)
     {
         // Note: In Azure Functions, client certificates are validated by Azure App Service
         // if mutual TLS is enabled. The certificate information is passed via headers.
@@ -223,20 +220,125 @@ public class SecureBootReportProxyFunction
                     certificate.Subject, certificate.Issuer, certificate.Thumbprint);
 
                 // Validate certificate expiration
-                var now = DateTime.Now;
-                if (now < certificate.NotBefore || now > certificate.NotAfter)
+                if (_options.CertificateAuthentication.ValidateExpiration)
                 {
-                    _logger.LogWarning("Client certificate is expired or not yet valid. NotBefore={NotBefore}, NotAfter={NotAfter}",
-                        certificate.NotBefore, certificate.NotAfter);
-                    return false;
+                    var now = DateTime.Now;
+                    if (now < certificate.NotBefore || now > certificate.NotAfter)
+                    {
+                        _logger.LogWarning("Client certificate is expired or not yet valid. NotBefore={NotBefore}, NotAfter={NotAfter}",
+                            certificate.NotBefore, certificate.NotAfter);
+                        return false;
+                    }
+                }
+
+                // Validate certificate chain
+                if (_options.CertificateAuthentication.ValidateCertificateChain)
+                {
+                    var chain = new X509Chain
+                    {
+                        ChainPolicy =
+                        {
+                            RevocationMode = _options.CertificateAuthentication.CheckCertificateRevocation 
+                                ? X509RevocationMode.Online 
+                                : X509RevocationMode.NoCheck
+                        }
+                    };
+
+                    if (!chain.Build(certificate))
+                    {
+                        _logger.LogWarning("Certificate chain validation failed. ChainStatus={ChainStatus}",
+                            string.Join(", ", chain.ChainStatus.Select(s => s.StatusInformation)));
+                        return false;
+                    }
+
+                    // Validate Root CA if specified
+                    if (!string.IsNullOrWhiteSpace(_options.CertificateAuthentication.ExpectedCARootName) ||
+                        !string.IsNullOrWhiteSpace(_options.CertificateAuthentication.ExpectedCARootThumbprint))
+                    {
+                        var rootCert = chain.ChainElements[chain.ChainElements.Count - 1].Certificate;
+                        
+                        // Validate Root CA name
+                        if (!string.IsNullOrWhiteSpace(_options.CertificateAuthentication.ExpectedCARootName))
+                        {
+                            if (!rootCert.Subject.Equals(_options.CertificateAuthentication.ExpectedCARootName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                _logger.LogWarning("Root CA name mismatch. Expected={Expected}, Actual={Actual}",
+                                    _options.CertificateAuthentication.ExpectedCARootName, rootCert.Subject);
+                                return false;
+                            }
+                            _logger.LogDebug("Root CA name validated: {RootCAName}", rootCert.Subject);
+                        }
+
+                        // Validate Root CA thumbprint
+                        if (!string.IsNullOrWhiteSpace(_options.CertificateAuthentication.ExpectedCARootThumbprint))
+                        {
+                            var expectedThumbprint = _options.CertificateAuthentication.ExpectedCARootThumbprint
+                                .Replace(":", "").Replace(" ", "").ToUpperInvariant();
+                            var actualThumbprint = rootCert.Thumbprint.ToUpperInvariant();
+
+                            if (actualThumbprint != expectedThumbprint)
+                            {
+                                _logger.LogWarning("Root CA thumbprint mismatch. Expected={Expected}, Actual={Actual}",
+                                    expectedThumbprint, actualThumbprint);
+                                return false;
+                            }
+                            _logger.LogDebug("Root CA thumbprint validated: {Thumbprint}", actualThumbprint);
+                        }
+                    }
+
+                    // Validate Subordinate CAs if specified
+                    var expectedSubordinateCAs = _options.CertificateAuthentication.ExpectedSubordinateCAs;
+                    if (expectedSubordinateCAs.Count > 0)
+                    {
+                        _logger.LogDebug("Validating {Count} expected Subordinate CAs", expectedSubordinateCAs.Count);
+
+                        // Build list of intermediate CAs in chain (exclude root and leaf)
+                        var intermediateCerts = new List<X509Certificate2>();
+                        for (int i = 1; i < chain.ChainElements.Count - 1; i++)
+                        {
+                            intermediateCerts.Add(chain.ChainElements[i].Certificate);
+                        }
+
+                        foreach (var expectedCA in expectedSubordinateCAs)
+                        {
+                            var found = false;
+
+                            foreach (var intermediateCert in intermediateCerts)
+                            {
+                                var nameMatch = string.IsNullOrWhiteSpace(expectedCA.Name) ||
+                                    intermediateCert.Subject.Equals(expectedCA.Name, StringComparison.OrdinalIgnoreCase);
+
+                                var thumbprintMatch = string.IsNullOrWhiteSpace(expectedCA.Thumbprint) ||
+                                    intermediateCert.Thumbprint.Replace(":", "").Replace(" ", "").ToUpperInvariant() ==
+                                    expectedCA.Thumbprint.Replace(":", "").Replace(" ", "").ToUpperInvariant();
+
+                                if (nameMatch && thumbprintMatch)
+                                {
+                                    found = true;
+                                    _logger.LogDebug("Subordinate CA found in chain: {Subject}, Thumbprint={Thumbprint}",
+                                        intermediateCert.Subject, intermediateCert.Thumbprint);
+                                    break;
+                                }
+                            }
+
+                            if (!found)
+                            {
+                                _logger.LogWarning("Expected Subordinate CA not found in chain: Name={Name}, Thumbprint={Thumbprint}",
+                                    expectedCA.Name ?? "Not specified", expectedCA.Thumbprint ?? "Not specified");
+                                return false;
+                            }
+                        }
+
+                        _logger.LogInformation("All expected Subordinate CAs validated successfully");
+                    }
                 }
 
                 // Validate thumbprint if allowlist is configured
+                var allowedThumbprints = _options.CertificateAuthentication.AllowedThumbprintsArray;
                 if (allowedThumbprints.Length > 0)
                 {
                     var thumbprint = certificate.Thumbprint.Replace(":", "").Replace(" ", "").ToUpperInvariant();
-                    var isAllowed = allowedThumbprints.Any(allowed =>
-                        allowed.Replace(":", "").Replace(" ", "").ToUpperInvariant() == thumbprint);
+                    var isAllowed = allowedThumbprints.Any(allowed => allowed == thumbprint);
 
                     if (!isAllowed)
                     {
@@ -260,7 +362,7 @@ public class SecureBootReportProxyFunction
         return false;
     }
 
-    private QueueClient GetOrCreateQueueClient(string queueStorageUri, string queueName)
+    private QueueClient GetOrCreateQueueClient()
     {
         if (_queueClient != null)
         {
@@ -274,31 +376,11 @@ public class SecureBootReportProxyFunction
                 return _queueClient;
             }
 
-            _logger.LogInformation("Creating Azure Queue client. QueueUri={QueueUri}, QueueName={QueueName}",
-                queueStorageUri, queueName);
+            // Use Managed Identity (DefaultAzureCredential) for Azure Queue authentication
+            var queueUri = new Uri(new Uri(_options.QueueStorageUri), _options.QueueName);
+            _queueClient = new QueueClient(queueUri, new DefaultAzureCredential());
 
-            var queueUri = new Uri(new Uri(queueStorageUri), queueName);
-            
-            // Use DefaultAzureCredential which supports Managed Identity, Azure CLI, Visual Studio, etc.
-            var credential = new DefaultAzureCredential();
-            
-            _queueClient = new QueueClient(queueUri, credential);
-            
-            // Create queue if it doesn't exist (requires appropriate permissions)
-            try
-            {
-                _queueClient.CreateIfNotExists();
-                _logger.LogInformation("Queue client created successfully. Queue={QueueName}", queueName);
-            }
-            catch (RequestFailedException ex) when (ex.Status == 409)
-            {
-                // Queue already exists, ignore
-                _logger.LogInformation("Queue already exists. Queue={QueueName}", queueName);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to create queue (might already exist or lack permissions). Queue={QueueName}", queueName);
-            }
+            _logger.LogInformation("QueueClient initialized. QueueUri={QueueUri}", queueUri);
 
             return _queueClient;
         }

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SecureBootDashboard.Api.Data;
 using SecureBootWatcher.Shared.Configuration;
+using System.Text.Json;
 
 namespace SecureBootDashboard.Api.Controllers;
 
@@ -330,6 +331,7 @@ public sealed class ClientSinkConfigController : ControllerBase
             EnableFileShare = config.EnableFileShare,
             EnableAzureQueue = config.EnableAzureQueue,
             EnableWebApi = config.EnableWebApi,
+            EnableAzureFunction = config.EnableAzureFunction,
             ExecutionStrategy = config.ExecutionStrategy,
             SinkPriority = config.SinkPriority,
             MaxRetryAttempts = config.MaxRetryAttempts,
@@ -375,8 +377,54 @@ public sealed class ClientSinkConfigController : ControllerBase
                 CertificatePassword = config.WebApiCertPassword,
                 CertificateThumbprint = config.WebApiCertThumbprint,
                 CertificateStoreLocation = config.WebApiCertStoreLocation,
-                CertificateStoreName = config.WebApiCertStoreName
+                CertificateStoreName = config.WebApiCertStoreName,
+                ValidateCertificateChain = config.WebApiValidateCertChain,
+                CheckCertificateRevocation = config.WebApiCheckCertRevocation,
+                ExpectedCARootName = config.WebApiExpectedCARootName,
+                ExpectedCARootThumbprint = config.WebApiExpectedCARootThumbprint,
+                ExpectedSubordinateCAs = ParseCertificateAuthorities(config.WebApiExpectedSubordinateCAsJson)
+            },
+
+            AzureFunction = new AzureFunctionSinkOptions
+            {
+                FunctionUrl = !string.IsNullOrWhiteSpace(config.AzureFunctionUrl)
+                    ? new Uri(config.AzureFunctionUrl)
+                    : null,
+                ApiKey = config.AzureFunctionApiKey,
+                HttpTimeout = TimeSpan.FromSeconds(config.AzureFunctionTimeoutSeconds),
+                UseApiKeyAsQueryParameter = config.AzureFunctionUseApiKeyAsQueryParam,
+                UseCertificateAuth = config.AzureFunctionUseCertAuth,
+                CertificatePath = config.AzureFunctionCertPath,
+                CertificatePassword = config.AzureFunctionCertPassword,
+                CertificateThumbprint = config.AzureFunctionCertThumbprint,
+                CertificateStoreLocation = config.AzureFunctionCertStoreLocation,
+                CertificateStoreName = config.AzureFunctionCertStoreName,
+                ValidateCertificateChain = config.AzureFunctionValidateCertChain,
+                CheckCertificateRevocation = config.AzureFunctionCheckCertRevocation,
+                ExpectedCARootName = config.AzureFunctionExpectedCARootName,
+                ExpectedCARootThumbprint = config.AzureFunctionExpectedCARootThumbprint,
+                ExpectedSubordinateCAs = ParseCertificateAuthorities(config.AzureFunctionExpectedSubordinateCAsJson)
             }
         };
+    }
+
+    private static List<CertificateAuthorityConfig> ParseCertificateAuthorities(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new List<CertificateAuthorityConfig>();
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<CertificateAuthorityConfig>>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            }) ?? new List<CertificateAuthorityConfig>();
+        }
+        catch
+        {
+            return new List<CertificateAuthorityConfig>();
+        }
     }
 }
