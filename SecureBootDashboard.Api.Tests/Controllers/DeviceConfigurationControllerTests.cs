@@ -429,8 +429,14 @@ namespace SecureBootDashboard.Api.Tests.Controllers
             var registrySnapshot = new SecureBootRegistrySnapshot
             {
                 MicrosoftUpdateManagedOptIn = optIn,
-                WindowsUEFICA2023Capable = windowsUefiCa2023Capable,
-                UEFISecureBootEnabled = true
+                State = new SecureBootStateRegistrySnapshot
+                {
+                    UEFISecureBootEnabled = true
+                },
+                Servicing = new SecureBootServicingRegistrySnapshot
+                {
+                    WindowsUEFICA2023Capable = windowsUefiCa2023Capable
+                }
             };
 
             var telemetrySnapshot = new TelemetryPolicySnapshot

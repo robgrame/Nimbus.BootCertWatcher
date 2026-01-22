@@ -82,6 +82,62 @@ namespace SecureBootWatcher.Shared.Models
         /// </summary>
         public IReadOnlyList<SecureBootUpdateStepInfo> UpdateSteps => SecureBootUpdateFlagsExtensions.GetUpdateSteps(AvailableUpdates);
 
+        /// <summary>
+        /// Convenience accessor for UEFI Secure Boot enabled status from State key.
+        /// </summary>
+        public bool? UEFISecureBootEnabled => State?.UEFISecureBootEnabled;
+
+        /// <summary>
+        /// Convenience accessor for UEFI CA 2023 deployment status from Servicing key.
+        /// </summary>
+        public SecureBootDeploymentState? UefiCa2023Status => Servicing?.UefiCa2023Status;
+
+        /// <summary>
+        /// Convenience accessor for UEFI CA 2023 error code from Servicing key.
+        /// </summary>
+        public uint? UefiCa2023Error => Servicing?.UefiCa2023Error;
+
+        /// <summary>
+        /// Convenience accessor for Windows UEFI CA 2023 capable status from Servicing key.
+        /// </summary>
+        public uint? WindowsUEFICA2023Capable => Servicing?.WindowsUEFICA2023Capable;
+
+        /// <summary>
+        /// Convenience accessor for confidence level from Servicing key.
+        /// </summary>
+        public string? ConfidenceLevel => Servicing?.ConfidenceLevel;
+
+        /// <summary>
+        /// Convenience accessor for bucket hash from Servicing key.
+        /// </summary>
+        public string? BucketHash => Servicing?.BucketHash;
+
+        /// <summary>
+        /// Gets the inferred deployment state based on AvailableUpdates flags.
+        /// </summary>
+        public SecureBootDeploymentState InferredDeploymentState
+        {
+            get
+            {
+                if (AvailableUpdates.HasValue)
+                {
+                    var availableUpdates = AvailableUpdates.Value;
+                    var completionPercentage = CompletionPercentage;
+
+                    return availableUpdates switch
+                    {
+                        0x0000 => SecureBootDeploymentState.Updated,
+                        0x4000 => SecureBootDeploymentState.Updated,
+                        0x5944 => SecureBootDeploymentState.NotStarted,
+                        _ => completionPercentage > 0 && completionPercentage < 100
+                            ? SecureBootDeploymentState.InProgress
+                            : SecureBootDeploymentState.Unknown,
+                    };
+                }
+
+                return UefiCa2023Status ?? SecureBootDeploymentState.Unknown;
+            }
+        }
     }
 
     public sealed class SecureBootSbatRegistrySnapshot
