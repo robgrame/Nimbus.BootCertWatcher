@@ -145,14 +145,50 @@ namespace SecureBootWatcher.Client.Services
             {
                 using (eventRecord)
                 {
+                    var message = TryRenderMessage(eventRecord);
+                    var rawXml = eventRecord.ToXml();
+
+                    // Parse structured event data
+                    SecureBootEventParser.ParseEventData(
+                        eventRecord.Id,
+                        message,
+                        rawXml,
+                        out var updateType,
+                        out var bucketConfidenceLevel,
+                        out var bucketId,
+                        out var hResult,
+                        out var firmwareManufacturer,
+                        out var firmwareVersion,
+                        out var oemModelNumber,
+                        out var oemManufacturerName,
+                        out var osArchitecture,
+                        out var updatesAvailable,
+                        out var errorCode,
+                        out var rebootRequired,
+                        out var additionalData);
+
                     yield return new SecureBootEventRecord
                     {
                         EventId = eventRecord.Id,
                         ProviderName = eventRecord.ProviderName ?? string.Empty,
                         TimestampUtc = eventRecord.TimeCreated?.ToUniversalTime() ?? DateTimeOffset.UtcNow,
                         Level = eventRecord.LevelDisplayName ?? eventRecord.Level?.ToString() ?? string.Empty,
-                        Message = TryRenderMessage(eventRecord),
-                        RawXml = eventRecord.ToXml()
+                        Message = message,
+                        RawXml = rawXml,
+                        // Structured data
+                        UpdateType = updateType,
+                        BucketConfidenceLevel = bucketConfidenceLevel,
+                        BucketId = bucketId,
+                        HResult = hResult,
+                        FirmwareManufacturer = firmwareManufacturer,
+                        FirmwareVersion = firmwareVersion,
+                        OEMModelNumber = oemModelNumber,
+                        OEMManufacturerName = oemManufacturerName,
+                        OSArchitecture = osArchitecture,
+                        UpdatesAvailable = updatesAvailable,
+                        ErrorCode = errorCode,
+                        RebootRequired = rebootRequired,
+                        AdditionalData = additionalData
                     };
                 }
             }
