@@ -982,9 +982,66 @@ function Send-ReportToAzureQueue {
     )
     
     Write-Log -Message "Azure Queue sink is not implemented in PowerShell client" -Level Warning
-    Write-Log -Message "Please use WebApi or FileShare sink instead" -Level Warning
+    Write-Log -Message "Reason: PowerShell lacks Azure.Storage.Queues SDK and complex authentication support" -Level Warning
+    Write-Log -Message "Please use AzureFunction, WebApi, or FileShare sink instead" -Level Warning
     
     return $false
+}
+
+function Send-ReportToAzureFunction {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [PSCustomObject]$Report
+    )
+    
+    $config = $script:Config.SecureBootWatcher.Sinks.AzureFunction
+    
+    if (-not $config.FunctionUrl) {
+        throw "AzureFunction FunctionUrl is not configured"
+    }
+    
+    if (-not $config.ApiKey) {
+        Write-Log -Message "AzureFunction ApiKey is not configured" -Level Warning
+        return $false
+    }
+    
+    Write-Log -Message "Sending report to Azure Function: $($config.FunctionUrl)"
+    
+    try {
+        $json = $Report | ConvertTo-Json -Depth 10 -Compress
+        $timeout = [TimeSpan]::Parse($config.HttpTimeout)
+        
+        # Build request URL (with or without API key as query parameter)
+        $url = $config.FunctionUrl
+        if ($config.UseApiKeyAsQueryParameter) {
+            $separator = if ($url -like '*?*') { '&' } else { '?' }
+            $url = "$url$separator`code=$([Uri]::EscapeDataString($config.ApiKey))"
+            Write-Log -Message "API key will be sent as query parameter" -Level Verbose
+        }
+        else {
+            Write-Log -Message "API key will be sent as X-API-Key header" -Level Verbose
+        }
+        
+        $headers = @{
+            'Content-Type' = 'application/json'
+            'User-Agent' = "SecureBootWatcher-PowerShell/$script:ClientVersion"
+        }
+        
+        # Add API key as header if not using query parameter
+        if (-not $config.UseApiKeyAsQueryParameter) {
+            $headers['X-API-Key'] = $config.ApiKey
+        }
+        
+        $response = Invoke-RestMethod -Uri $url -Method Post -Body $json -Headers $headers -TimeoutSec $timeout.TotalSeconds
+        
+        Write-Log -Message "Report sent successfully to Azure Function" -Level Information
+        return $true
+    }
+    catch {
+        Write-Log -Message "Failed to send report to Azure Function: $_" -Level Error -Exception $_
+        return $false
+    }
 }
 
 function Send-Report {
@@ -1007,6 +1064,7 @@ function Send-Report {
         $sinkName = $sinkName.Trim()
         
         $enabled = switch ($sinkName) {
+            'AzureFunction' { $sinks.EnableAzureFunction }
             'WebApi' { $sinks.EnableWebApi }
             'FileShare' { $sinks.EnableFileShare }
             'AzureQueue' { $sinks.EnableAzureQueue }
@@ -1020,6 +1078,7 @@ function Send-Report {
         
         try {
             $result = switch ($sinkName) {
+                'AzureFunction' { Send-ReportToAzureFunction -Report $Report }
                 'WebApi' { Send-ReportToWebApi -Report $Report }
                 'FileShare' { Send-ReportToFileShare -Report $Report }
                 'AzureQueue' { Send-ReportToAzureQueue -Report $Report }

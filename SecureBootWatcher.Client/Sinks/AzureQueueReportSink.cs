@@ -83,43 +83,43 @@ namespace SecureBootWatcher.Client.Sinks
         {
             try
   {
-     // Metodo 1: Connection String (non raccomandato per produzione)
-    if (options.AuthenticationMethod.Equals("ConnectionString", StringComparison.OrdinalIgnoreCase) &&
-        !string.IsNullOrWhiteSpace(options.ConnectionString))
-        {
-     _logger.LogWarning("Using Connection String authentication. This is NOT recommended for production. Use App Registration or Managed Identity instead.");
- return new QueueClient(options.ConnectionString, options.QueueName);
- }
+                // Method 1: Connection String (not recommended for production)
+                if (options.AuthenticationMethod.Equals("ConnectionString", StringComparison.OrdinalIgnoreCase) &&
+                    !string.IsNullOrWhiteSpace(options.ConnectionString))
+                {
+                    _logger.LogWarning("Using Connection String authentication. This is NOT recommended for production. Use App Registration or Managed Identity instead.");
+                    return new QueueClient(options.ConnectionString, options.QueueName);
+                }
 
-  // Valida che QueueServiceUri sia configurato per autenticazione Entra ID
-             if (options.QueueServiceUri == null)
-          {
-       _logger.LogError("QueueServiceUri is required for Entra ID authentication.");
-   return null;
-            }
+                // Validate that QueueServiceUri is configured for Entra ID authentication
+                if (options.QueueServiceUri == null)
+                {
+                    _logger.LogError("QueueServiceUri is required for Entra ID authentication.");
+                    return null;
+                }
 
   var queueUri = new Uri(options.QueueServiceUri, options.QueueName);
       TokenCredential credential;
 
-       // Metodo 2: App Registration con Client Secret (raccomandato per service-to-service)
-  if (options.AuthenticationMethod.Equals("AppRegistration", StringComparison.OrdinalIgnoreCase))
-           {
-      if (string.IsNullOrWhiteSpace(options.TenantId) ||
-      string.IsNullOrWhiteSpace(options.ClientId) ||
-      string.IsNullOrWhiteSpace(options.ClientSecret))
-        {
-   _logger.LogError("TenantId, ClientId, and ClientSecret are required for App Registration authentication.");
-return null;
-            }
+                // Method 2: App Registration with Client Secret (recommended for service-to-service)
+                if (options.AuthenticationMethod.Equals("AppRegistration", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (string.IsNullOrWhiteSpace(options.TenantId) ||
+                        string.IsNullOrWhiteSpace(options.ClientId) ||
+                        string.IsNullOrWhiteSpace(options.ClientSecret))
+                    {
+                        _logger.LogError("TenantId, ClientId, and ClientSecret are required for App Registration authentication.");
+                        return null;
+                    }
 
-        _logger.LogInformation("Using App Registration authentication with Client ID: {ClientId}", options.ClientId);
-          credential = new ClientSecretCredential(options.TenantId, options.ClientId, options.ClientSecret);
-       return new QueueClient(queueUri, credential);
-     }
+                    _logger.LogInformation("Using App Registration authentication with Client ID: {ClientId}", options.ClientId);
+                    credential = new ClientSecretCredential(options.TenantId, options.ClientId, options.ClientSecret);
+                    return new QueueClient(queueUri, credential);
+                }
 
-     // Metodo 3: Certificate-based authentication (PIÙ SICURO - raccomandato per produzione)
-       if (options.AuthenticationMethod.Equals("Certificate", StringComparison.OrdinalIgnoreCase))
-      {
+                // Method 3: Certificate-based authentication (MOST SECURE - recommended for production)
+                if (options.AuthenticationMethod.Equals("Certificate", StringComparison.OrdinalIgnoreCase))
+                {
                if (string.IsNullOrWhiteSpace(options.TenantId) || string.IsNullOrWhiteSpace(options.ClientId))
          {
               _logger.LogError("TenantId and ClientId are required for Certificate authentication.");
@@ -128,9 +128,9 @@ return null;
 
          X509Certificate2? certificate = null;
 
-          // Opzione A: Carica certificato da file
-     if (!string.IsNullOrWhiteSpace(options.CertificatePath))
-    {
+                    // Option A: Load certificate from file
+                    if (!string.IsNullOrWhiteSpace(options.CertificatePath))
+                    {
        try
       {
             if (!string.IsNullOrWhiteSpace(options.CertificatePassword))
@@ -150,9 +150,9 @@ return null;
               return null;
         }
          }
-          // Opzione B: Carica certificato da Windows Certificate Store
-        else if (!string.IsNullOrWhiteSpace(options.CertificateThumbprint))
-   {
+                    // Option B: Load certificate from Windows Certificate Store
+                    else if (!string.IsNullOrWhiteSpace(options.CertificateThumbprint))
+                    {
            try
            {
                var storeLocation = options.CertificateStoreLocation.Equals("LocalMachine", StringComparison.OrdinalIgnoreCase)
@@ -205,9 +205,9 @@ options.CertificateThumbprint, storeLocation, storeName);
   return new QueueClient(queueUri, credential);
       }
 
-      // Metodo 4: Managed Identity (raccomandato per Azure VMs, App Services, ecc.)
-   if (options.AuthenticationMethod.Equals("ManagedIdentity", StringComparison.OrdinalIgnoreCase))
-        {
+                // Method 4: Managed Identity (recommended for Azure VMs, App Services, etc.)
+                if (options.AuthenticationMethod.Equals("ManagedIdentity", StringComparison.OrdinalIgnoreCase))
+                {
               if (!string.IsNullOrWhiteSpace(options.ClientId))
       {
       // User-Assigned Managed Identity
@@ -224,24 +224,24 @@ options.CertificateThumbprint, storeLocation, storeName);
        return new QueueClient(queueUri, credential);
      }
 
-   // Metodo 5: DefaultAzureCredential (prova più metodi automaticamente)
-    if (options.AuthenticationMethod.Equals("DefaultAzureCredential", StringComparison.OrdinalIgnoreCase) ||
-     string.IsNullOrWhiteSpace(options.AuthenticationMethod))
-      {
-        _logger.LogInformation("Using DefaultAzureCredential (tries Managed Identity, Azure CLI, Visual Studio, Environment Variables, etc.)");
-           
-  var credentialOptions = new DefaultAzureCredentialOptions();
-       
-    // Se è specificato un ClientId, usa quello per Managed Identity
- if (!string.IsNullOrWhiteSpace(options.ClientId))
-      {
-             credentialOptions.ManagedIdentityClientId = options.ClientId;
-         _logger.LogInformation("Configured DefaultAzureCredential with Managed Identity Client ID: {ClientId}", options.ClientId);
-          }
+                // Method 5: DefaultAzureCredential (tries multiple methods automatically)
+                if (options.AuthenticationMethod.Equals("DefaultAzureCredential", StringComparison.OrdinalIgnoreCase) ||
+                    string.IsNullOrWhiteSpace(options.AuthenticationMethod))
+                {
+                    _logger.LogInformation("Using DefaultAzureCredential (tries Managed Identity, Azure CLI, Visual Studio, Environment Variables, etc.)");
+                    
+                    var credentialOptions = new DefaultAzureCredentialOptions();
+                    
+                    // If a ClientId is specified, use it for Managed Identity
+                    if (!string.IsNullOrWhiteSpace(options.ClientId))
+                    {
+                        credentialOptions.ManagedIdentityClientId = options.ClientId;
+                        _logger.LogInformation("Configured DefaultAzureCredential with Managed Identity Client ID: {ClientId}", options.ClientId);
+                    }
 
-        credential = new DefaultAzureCredential(credentialOptions);
-          return new QueueClient(queueUri, credential);
-     }
+                    credential = new DefaultAzureCredential(credentialOptions);
+                    return new QueueClient(queueUri, credential);
+                }
 
        _logger.LogError("Invalid AuthenticationMethod: {Method}. Valid values are: ManagedIdentity, AppRegistration, Certificate, DefaultAzureCredential, ConnectionString.", 
         options.AuthenticationMethod);
