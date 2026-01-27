@@ -385,55 +385,91 @@ function Get-SecureBootRegistrySnapshot {
     Write-Log -Message "Capturing Secure Boot registry snapshot"
     
     $basePath = 'HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot'
+    $servicingPath = "$basePath\Servicing"
     $statePath = "$basePath\State"
+    $sbatPath = "$basePath\SBAT"
     
+    # Initialize snapshot structure matching .NET client model
     $snapshot = @{
-        UefiCa2023Status = 0  # Unknown
-        UefiCa2023Error = $null
+        # Root level keys
         AvailableUpdates = $null
-        PendingDeploymentType = $null
         HighConfidenceOptOut = $null
         MicrosoftUpdateManagedOptIn = $null
-        WindowsUEFICA2023Capable = $null
+        CollectedAtUtc = (Get-Date).ToUniversalTime().ToString('o')
+        
+        # Servicing sub-key
+        Servicing = @{
+            UefiCa2023Status = 0  # Unknown/NotStarted
+            UefiCa2023Error = $null
+            WindowsUEFICA2023Capable = $null
+            BucketHash = $null
+            ConfidenceLevel = $null
+            RebootRequestedDB = $null
+            RebootRequestedDBX = $null
+            RebootRequestedKEK = $null
+            CollectedAtUtc = (Get-Date).ToUniversalTime().ToString('o')
+        }
+        
+        # State sub-key
+        State = @{
+            UEFISecureBootEnabled = $null
+            PolicyPublisher = $null
+            PolicyVersion = $null
+            CollectedAtUtc = (Get-Date).ToUniversalTime().ToString('o')
+        }
+        
+        # SBAT sub-key
+        Sbat = @{
+            SbatLevel = $null
+            UpdateStatus = $null
+            CollectedAtUtc = (Get-Date).ToUniversalTime().ToString('o')
+        }
     }
     
-    # Read UEFIDBUpdate registry values
-    $uefiDbUpdatePath = "$basePath\UEFIDBUpdate"
+    # Read root level keys
+    if (Test-Path $basePath) {
+        $snapshot.AvailableUpdates = Get-RegistryValue -Path $basePath -Name 'AvailableUpdates'
+        $snapshot.HighConfidenceOptOut = Get-RegistryValue -Path $basePath -Name 'HighConfidenceOptOut'
+        $snapshot.MicrosoftUpdateManagedOptIn = Get-RegistryValue -Path $basePath -Name 'MicrosoftUpdateManagedOptIn'
+    }
     
-    if (Test-Path $uefiDbUpdatePath) {
-        # Status: 0=Unknown, 1=NotStarted, 2=InProgress, 3=Updated, 4=Error (enum values)
-        $status = Get-RegistryValue -Path $uefiDbUpdatePath -Name 'Status'
-        if ($null -ne $status) {
-            # Map registry values to enum values
-            # Registry: 0=NotStarted, 1=InProgress, 2=Updated, 3=Error
-            # Enum: 0=Unknown, 1=NotStarted, 2=InProgress, 3=Updated, 4=Error
-            $snapshot.UefiCa2023Status = switch ($status) {
-                0 { 1 }  # NotStarted
-                1 { 2 }  # InProgress
-                2 { 3 }  # Updated
-                3 { 4 }  # Error
+    # Read Servicing sub-key
+    if (Test-Path $servicingPath) {
+        # Read UEFICA2023Status as string and map to enum
+        $statusString = Get-RegistryValue -Path $servicingPath -Name 'UEFICA2023Status'
+        if ($statusString) {
+            $snapshot.Servicing.UefiCa2023Status = switch ($statusString) {
+                'NotStarted' { 1 }
+                'InProgress' { 2 }
+                'Updated' { 3 }
+                'Error' { 4 }
                 default { 0 }  # Unknown
             }
         }
         
-        $snapshot.UefiCa2023Error = Get-RegistryValue -Path $uefiDbUpdatePath -Name 'LastError'
-        $snapshot.AvailableUpdates = Get-RegistryValue -Path $uefiDbUpdatePath -Name 'AvailableUpdates'
-        $snapshot.PendingDeploymentType = Get-RegistryValue -Path $uefiDbUpdatePath -Name 'PendingDeploymentType'
+        $snapshot.Servicing.UefiCa2023Error = Get-RegistryValue -Path $servicingPath -Name 'UefiCa2023Error'
+        $snapshot.Servicing.WindowsUEFICA2023Capable = Get-RegistryValue -Path $servicingPath -Name 'WindowsUEFICA2023Capable'
+        $snapshot.Servicing.BucketHash = Get-RegistryValue -Path $servicingPath -Name 'BucketHash'
+        $snapshot.Servicing.ConfidenceLevel = Get-RegistryValue -Path $servicingPath -Name 'ConfidenceLevel'
+        $snapshot.Servicing.RebootRequestedDB = Get-RegistryValue -Path $servicingPath -Name 'RebootRequestedDB'
+        $snapshot.Servicing.RebootRequestedDBX = Get-RegistryValue -Path $servicingPath -Name 'RebootRequestedDBX'
+        $snapshot.Servicing.RebootRequestedKEK = Get-RegistryValue -Path $servicingPath -Name 'RebootRequestedKEK'
     }
     
-    # Read policy values
-    $policyPath = "$basePath\Policy"
-    if (Test-Path $policyPath) {
-        $snapshot.HighConfidenceOptOut = Get-RegistryValue -Path $policyPath -Name 'HighConfidenceOptOut'
-        $snapshot.MicrosoftUpdateManagedOptIn = Get-RegistryValue -Path $policyPath -Name 'MicrosoftUpdateManagedOptIn'
-    }
-    
-    # Read capability flag
+    # Read State sub-key
     if (Test-Path $statePath) {
-        $snapshot.WindowsUEFICA2023Capable = Get-RegistryValue -Path $statePath -Name 'WindowsUEFICA2023Capable'
+        $snapshot.State.UEFISecureBootEnabled = Get-RegistryValue -Path $statePath -Name 'UEFISecureBootEnabled'
+        $snapshot.State.PolicyPublisher = Get-RegistryValue -Path $statePath -Name 'PolicyPublisher'
+        $snapshot.State.PolicyVersion = Get-RegistryValue -Path $statePath -Name 'PolicyVersion'
     }
     
-    Write-Log -Message "Registry snapshot captured: Status=$($snapshot.UefiCa2023Status)" -Level Verbose
+    # Read SBAT sub-key
+    if (Test-Path $sbatPath) {
+        $snapshot.Sbat.SbatLevel = Get-RegistryValue -Path $sbatPath -Name 'SbatLevel'
+        $snapshot.Sbat.UpdateStatus = Get-RegistryValue -Path $sbatPath -Name 'UpdateStatus'
+    }
+    
+    Write-Log -Message "Registry snapshot captured: UefiCa2023Status=$($snapshot.Servicing.UefiCa2023Status), UEFISecureBootEnabled=$($snapshot.State.UEFISecureBootEnabled)" -Level Verbose
     
     return [PSCustomObject]$snapshot
 }
@@ -444,14 +480,76 @@ function Get-DeviceAttributesSnapshot {
     
     Write-Log -Message "Capturing device attributes snapshot"
     
-    $deviceAttributesPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\DeviceAttributes'
+    # CORRECTED PATH: Aligned with .NET client RegistrySnapshotProvider.cs
+    # Was: HKLM:\SYSTEM\CurrentControlSet\Control\DeviceAttributes (incorrect)
+    # Now: HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot\Servicing\DeviceAttributes (correct)
+    $deviceAttributesPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot\Servicing\DeviceAttributes'
     
     $snapshot = @{
-        UpdateType = $null
+        CanAttemptUpdateAfter = $null
+        OEMManufacturerName = $null
+        OEMModelSystemVersion = $null
+        BaseBoardManufacturer = $null
+        FirmwareManufacturer = $null
+        OEMModelBaseBoard = $null
+        FirmwareVersion = $null
+        OEMModelNumber = $null
+        OEMModelSystemFamily = $null
+        OEMName = $null
+        OSArchitecture = $null
+        OEMModelSKU = $null
+        FirmwareReleaseDate = $null
+        OEMModelBaseBoardVersion = $null
+        StateAttributes = $null
+        CollectedAtUtc = (Get-Date).ToUniversalTime().ToString('o')
     }
     
     if (Test-Path $deviceAttributesPath) {
-        $snapshot.UpdateType = Get-RegistryValue -Path $deviceAttributesPath -Name 'UpdateType'
+        # Read CanAttemptUpdateAfter as binary FILETIME and convert to DateTime
+        $canAttemptUpdateAfterBytes = Get-RegistryValue -Path $deviceAttributesPath -Name 'CanAttemptUpdateAfter'
+        if ($canAttemptUpdateAfterBytes -and $canAttemptUpdateAfterBytes.Length -eq 8) {
+            try {
+                $fileTime = [BitConverter]::ToInt64($canAttemptUpdateAfterBytes, 0)
+                $snapshot.CanAttemptUpdateAfter = [DateTime]::FromFileTimeUtc($fileTime).ToString('o')
+            }
+            catch {
+                Write-Log -Message "Failed to parse CanAttemptUpdateAfter: $_" -Level Warning
+            }
+        }
+        
+        # Read string values
+        $snapshot.OEMManufacturerName = Get-RegistryValue -Path $deviceAttributesPath -Name 'OEMManufacturerName'
+        $snapshot.OEMModelSystemVersion = Get-RegistryValue -Path $deviceAttributesPath -Name 'OEMModelSystemVersion'
+        $snapshot.BaseBoardManufacturer = Get-RegistryValue -Path $deviceAttributesPath -Name 'BaseBoardManufacturer'
+        $snapshot.FirmwareManufacturer = Get-RegistryValue -Path $deviceAttributesPath -Name 'FirmwareManufacturer'
+        $snapshot.OEMModelBaseBoard = Get-RegistryValue -Path $deviceAttributesPath -Name 'OEMModelBaseBoard'
+        $snapshot.FirmwareVersion = Get-RegistryValue -Path $deviceAttributesPath -Name 'FirmwareVersion'
+        $snapshot.OEMModelNumber = Get-RegistryValue -Path $deviceAttributesPath -Name 'OEMModelNumber'
+        $snapshot.OEMModelSystemFamily = Get-RegistryValue -Path $deviceAttributesPath -Name 'OEMModelSystemFamily'
+        $snapshot.OEMName = Get-RegistryValue -Path $deviceAttributesPath -Name 'OEMName'
+        $snapshot.OSArchitecture = Get-RegistryValue -Path $deviceAttributesPath -Name 'OSArchitecture'
+        $snapshot.OEMModelSKU = Get-RegistryValue -Path $deviceAttributesPath -Name 'OEMModelSKU'
+        
+        # Read FirmwareReleaseDate as string (format: MM/DD/YYYY)
+        $firmwareReleaseDateStr = Get-RegistryValue -Path $deviceAttributesPath -Name 'FirmwareReleaseDate'
+        if ($firmwareReleaseDateStr) {
+            try {
+                $firmwareReleaseDate = [DateTime]::ParseExact($firmwareReleaseDateStr, 'MM/dd/yyyy', $null)
+                $snapshot.FirmwareReleaseDate = $firmwareReleaseDate.ToString('o')
+            }
+            catch {
+                # If parsing fails, store as-is
+                $snapshot.FirmwareReleaseDate = $firmwareReleaseDateStr
+            }
+        }
+        
+        $snapshot.OEMModelBaseBoardVersion = Get-RegistryValue -Path $deviceAttributesPath -Name 'OEMModelBaseBoardVersion'
+        $snapshot.StateAttributes = Get-RegistryValue -Path $deviceAttributesPath -Name 'StateAttributes'
+        
+        Write-Log -Message "Device attributes captured: Manufacturer=$($snapshot.OEMManufacturerName), FirmwareVersion=$($snapshot.FirmwareVersion)" -Level Verbose
+    }
+    else {
+        Write-Log -Message "Device attributes registry path not found at $deviceAttributesPath. This is normal for devices without Secure Boot servicing configured." -Level Debug
     }
     
     return [PSCustomObject]$snapshot
@@ -739,9 +837,13 @@ function Build-SecureBootReport {
     # Populate alerts
     $alerts = @()
     
+    # Access nested Servicing.UefiCa2023Status for status checks
+    $uefiCa2023Status = if ($registry.Servicing) { $registry.Servicing.UefiCa2023Status } else { 0 }
+    $uefiCa2023Error = if ($registry.Servicing) { $registry.Servicing.UefiCa2023Error } else { $null }
+    
     # Map enum values for readability
     # 0=Unknown, 1=NotStarted, 2=InProgress, 3=Updated, 4=Error
-    $statusName = switch ($registry.UefiCa2023Status) {
+    $statusName = switch ($uefiCa2023Status) {
         0 { 'Unknown' }
         1 { 'NotStarted' }
         2 { 'InProgress' }
@@ -750,11 +852,11 @@ function Build-SecureBootReport {
         default { 'Unknown' }
     }
     
-    if ($registry.UefiCa2023Status -eq 4) {  # Error
-        $alerts += "Secure Boot update reported error code $($registry.UefiCa2023Error ?? 0)."
+    if ($uefiCa2023Status -eq 4) {  # Error
+        $alerts += "Secure Boot update reported error code $($uefiCa2023Error ?? 0)."
     }
     
-    if ($registry.UefiCa2023Status -eq 1) {  # NotStarted
+    if ($uefiCa2023Status -eq 1) {  # NotStarted
         $alerts += "Secure Boot certificate update has not started on this device."
     }
     
@@ -773,7 +875,7 @@ function Build-SecureBootReport {
         $alerts += "✓ Telemetry level ($($telemetryPolicy.TelemetryLevelDescription)) meets CFR requirements."
     }
     
-    if ($events.Count -eq 0 -and $registry.UefiCa2023Status -ne 3) {  # Not Updated
+    if ($events.Count -eq 0 -and $uefiCa2023Status -ne 3) {  # Not Updated
         $alerts += "No Secure Boot events detected within the lookback window."
     }
     
@@ -880,9 +982,160 @@ function Send-ReportToAzureQueue {
     )
     
     Write-Log -Message "Azure Queue sink is not implemented in PowerShell client" -Level Warning
-    Write-Log -Message "Please use WebApi or FileShare sink instead" -Level Warning
+    Write-Log -Message "Reason: PowerShell lacks Azure.Storage.Queues SDK and complex authentication support" -Level Warning
+    Write-Log -Message "Please use AzureFunction, WebApi, or FileShare sink instead" -Level Warning
     
     return $false
+}
+
+function Send-ReportToAzureFunction {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [PSCustomObject]$Report
+    )
+    
+    $config = $script:Config.SecureBootWatcher.Sinks.AzureFunction
+    
+    if (-not $config.FunctionUrl) {
+        throw "AzureFunction FunctionUrl is not configured"
+    }
+    
+    if (-not $config.ApiKey) {
+        Write-Log -Message "AzureFunction ApiKey is not configured" -Level Warning
+        return $false
+    }
+    
+    Write-Log -Message "Sending report to Azure Function: $($config.FunctionUrl)"
+    
+    try {
+        $json = $Report | ConvertTo-Json -Depth 10 -Compress
+        $timeout = [TimeSpan]::Parse($config.HttpTimeout)
+        
+        # Build request URL (with or without API key as query parameter)
+        $url = $config.FunctionUrl
+        if ($config.UseApiKeyAsQueryParameter) {
+            $separator = if ($url -like '*?*') { '&' } else { '?' }
+            # Note: 'code' is the standard Azure Function API key parameter name
+            # See: https://docs.microsoft.com/azure/azure-functions/functions-bindings-http-webhook-trigger
+            $url = "$url$separator`code=$([Uri]::EscapeDataString($config.ApiKey))"
+            Write-Log -Message "API key will be sent as query parameter" -Level Verbose
+        }
+        else {
+            Write-Log -Message "API key will be sent as X-API-Key header" -Level Verbose
+        }
+        
+        $headers = @{
+            'Content-Type' = 'application/json'
+            'User-Agent' = "SecureBootWatcher-PowerShell/$script:ClientVersion"
+        }
+        
+        # Add API key as header if not using query parameter
+        if (-not $config.UseApiKeyAsQueryParameter) {
+            $headers['X-API-Key'] = $config.ApiKey
+        }
+        
+        $response = Invoke-RestMethod -Uri $url -Method Post -Body $json -Headers $headers -TimeoutSec $timeout.TotalSeconds
+        
+        Write-Log -Message "Report sent successfully to Azure Function" -Level Information
+        return $true
+    }
+    catch {
+        Write-Log -Message "Failed to send report to Azure Function: $_" -Level Error -Exception $_
+        return $false
+    }
+}
+
+function Test-SinkConfiguration {
+    <#
+    .SYNOPSIS
+        Validates sink configuration and warns about unsupported or problematic settings.
+    
+    .DESCRIPTION
+        Checks the configured sinks and provides warnings for:
+        - AzureQueue sink (not supported in PowerShell)
+        - Missing or invalid configuration values
+        - Recommended sink priorities for PowerShell
+    #>
+    [CmdletBinding()]
+    param()
+    
+    $sinks = $script:Config.SecureBootWatcher.Sinks
+    $hasAnySinkEnabled = $false
+    $warnings = @()
+    
+    Write-LogSection -Title "Validating Sink Configuration"
+    
+    # Check AzureQueue
+    if ($sinks.EnableAzureQueue) {
+        $warnings += "AzureQueue sink is enabled but NOT SUPPORTED in PowerShell client"
+        $warnings += "  Reason: PowerShell lacks Azure.Storage.Queues SDK and complex authentication"
+        $warnings += "  Recommendation: Use AzureFunction, WebApi, or FileShare instead"
+        $warnings += "  Action: Set EnableAzureQueue to false in configuration"
+    }
+    
+    # Check AzureFunction
+    if ($sinks.EnableAzureFunction) {
+        $hasAnySinkEnabled = $true
+        if (-not $sinks.AzureFunction.FunctionUrl) {
+            $warnings += "AzureFunction is enabled but FunctionUrl is not configured"
+        }
+        if (-not $sinks.AzureFunction.ApiKey) {
+            $warnings += "AzureFunction is enabled but ApiKey is not configured"
+        }
+        else {
+            Write-Log -Message "✓ AzureFunction sink: Enabled and configured" -Level Information
+        }
+    }
+    
+    # Check WebApi
+    if ($sinks.EnableWebApi) {
+        $hasAnySinkEnabled = $true
+        if (-not $sinks.WebApi.BaseAddress) {
+            $warnings += "WebApi is enabled but BaseAddress is not configured"
+        }
+        else {
+            Write-Log -Message "✓ WebApi sink: Enabled and configured" -Level Information
+        }
+    }
+    
+    # Check FileShare
+    if ($sinks.EnableFileShare) {
+        $hasAnySinkEnabled = $true
+        if (-not $sinks.FileShare.RootPath) {
+            $warnings += "FileShare is enabled but RootPath is not configured"
+        }
+        else {
+            Write-Log -Message "✓ FileShare sink: Enabled and configured" -Level Information
+        }
+    }
+    
+    # Check if at least one sink is enabled
+    if (-not $hasAnySinkEnabled) {
+        $warnings += "No sinks are enabled! Reports will not be sent anywhere."
+        $warnings += "  Recommendation: Enable at least one sink (AzureFunction, WebApi, or FileShare)"
+    }
+    
+    # Check sink priority
+    $priority = $sinks.SinkPriority
+    if ($priority -like '*AzureQueue*') {
+        $warnings += "SinkPriority includes 'AzureQueue' which is not supported in PowerShell"
+        $warnings += "  Recommended priority: 'AzureFunction,WebApi,FileShare'"
+    }
+    
+    # Display warnings
+    if ($warnings.Count -gt 0) {
+        Write-Log -Message "⚠ Sink configuration warnings found:" -Level Warning
+        foreach ($warning in $warnings) {
+            Write-Log -Message "  $warning" -Level Warning
+        }
+    }
+    else {
+        Write-Log -Message "✓ Sink configuration is valid" -Level Information
+    }
+    
+    Write-Log -Message "Execution Strategy: $($sinks.ExecutionStrategy)" -Level Information
+    Write-Log -Message "Sink Priority: $($sinks.SinkPriority)" -Level Information
 }
 
 function Send-Report {
@@ -905,6 +1158,7 @@ function Send-Report {
         $sinkName = $sinkName.Trim()
         
         $enabled = switch ($sinkName) {
+            'AzureFunction' { $sinks.EnableAzureFunction }
             'WebApi' { $sinks.EnableWebApi }
             'FileShare' { $sinks.EnableFileShare }
             'AzureQueue' { $sinks.EnableAzureQueue }
@@ -918,6 +1172,7 @@ function Send-Report {
         
         try {
             $result = switch ($sinkName) {
+                'AzureFunction' { Send-ReportToAzureFunction -Report $Report }
                 'WebApi' { Send-ReportToWebApi -Report $Report }
                 'FileShare' { Send-ReportToFileShare -Report $Report }
                 'AzureQueue' { Send-ReportToAzureQueue -Report $Report }
@@ -1208,6 +1463,9 @@ function Start-SecureBootWatcher {
     
     # Load configuration
     $script:Config = Get-Configuration -Path $ConfigPath
+    
+    # Validate sink configuration
+    Test-SinkConfiguration
     
     $runMode = $script:Config.SecureBootWatcher.RunMode
     $runOnce = $runMode -eq 'Once'
