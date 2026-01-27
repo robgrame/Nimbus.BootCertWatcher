@@ -48,7 +48,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 # Script version
-$script:ClientVersion = '1.7.0'
+$script:ClientVersion = '1.8.0'
 
 # Logging configuration
 $script:ScriptName = 'SecureBoot-LogAnalytics'
@@ -231,12 +231,56 @@ function Send-LogAnalyticsData {
         "time-generated-field" = "CollectedAtUtc"
     }
     
+    # Log request details
+    Write-Log -Message "Preparing HTTP request to Log Analytics..."
+    Write-Log -Message "  Endpoint: $uri"
+    Write-Log -Message "  Method: $method"
+    Write-Log -Message "  Content-Type: $contentType"
+    Write-Log -Message "  Log-Type: $LogType"
+    Write-Log -Message "  Payload size: $contentLength bytes ($([Math]::Round($contentLength / 1KB, 2)) KB)"
+    Write-Log -Message "  Request timestamp: $rfc1123date"
+    
     try {
+        Write-Log -Message "Sending request..."
+        $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+        
         $response = Invoke-RestMethod -Uri $uri -Method $method -ContentType $contentType -Headers $headers -Body $Body
+        
+        $stopwatch.Stop()
+        $elapsedMs = $stopwatch.ElapsedMilliseconds
+        
+        Write-Log -Message "Request completed successfully"
+        Write-Log -Message "  Response time: $elapsedMs ms"
+        Write-Log -Message "  Status: SUCCESS (HTTP 200 OK)"
         Write-Log -Message "Data successfully sent to Log Analytics workspace"
         return $true
     }
     catch {
+        $stopwatch.Stop()
+        $elapsedMs = $stopwatch.ElapsedMilliseconds
+        
+        Write-Log -Message "Request FAILED after $elapsedMs ms" -Level Error
+        
+        # Extract more details from the error
+        if ($_.Exception.Response) {
+            $statusCode = [int]$_.Exception.Response.StatusCode
+            $statusDescription = $_.Exception.Response.StatusDescription
+            Write-Log -Message "  HTTP Status: $statusCode $statusDescription" -Level Error
+            
+            # Try to read response body for more details
+            try {
+                $reader = [System.IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
+                $responseBody = $reader.ReadToEnd()
+                $reader.Close()
+                if ($responseBody) {
+                    Write-Log -Message "  Response Body: $responseBody" -Level Error
+                }
+            }
+            catch {
+                # Ignore errors reading response body
+            }
+        }
+        
         Write-Log -Message "Failed to send data to Log Analytics: $_" -Level Error -Exception $_
         return $false
     }
@@ -756,6 +800,233 @@ function Parse-EfiSignatureList {
 
 #endregion
 
+#region Event Log Functions
+
+function Get-SecureBootUpdateEvents {
+    <#
+    .SYNOPSIS
+        Collects Secure Boot DB and DBX variable update events
+    .DESCRIPTION
+        Retrieves events related to Secure Boot certificate updates from Windows Event Log.
+        Based on Microsoft documentation: https://support.microsoft.com/en-us/topic/secure-boot-db-and-dbx-variable-update-events-37e47cf8-608b-4a87-8175-bdead630eb69
+        
+        Event Sources and IDs:
+        - Microsoft-Windows-Kernel-Boot (System log):
+          - Event ID 280: Secure Boot DB update attempted
+          - Event ID 281: Secure Boot DBX update attempted
+        
+        - Microsoft-Windows-TPM-WMI (Application log):
+          - Event ID 1032: DB update success
+          - Event ID 1033: DB update failure
+          - Event ID 1034: DBX update success
+          - Event ID 1035: DBX update failure
+          - Event ID 1036: KEK update success
+          - Event ID 1037: KEK update failure
+        
+        - Microsoft-Windows-SecureBoot-Servicing/Operational:
+          - Various events related to Secure Boot servicing
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $false)]
+        [int]$DaysToLookBack = 90
+    )
+    
+    Write-Log -Message "Collecting Secure Boot update events (last $DaysToLookBack days)..."
+    
+    $startTime = (Get-Date).AddDays(-$DaysToLookBack)
+    $events = @()
+    
+    # Define event sources and their relevant event IDs
+    $eventSources = @(
+        @{
+            LogName = 'System'
+            ProviderName = 'Microsoft-Windows-Kernel-Boot'
+            EventIds = @(280, 281)
+            Description = 'Kernel Boot Secure Boot events'
+        },
+        @{
+            LogName = 'System'
+            ProviderName = 'Microsoft-Windows-TPM-WMI'
+            EventIds = @(1032, 1033, 1034, 1035, 1036, 1037, 1043, 1044, 1045, 1799, 1801, 1808)
+            Description = 'TPM-WMI Secure Boot update events'
+        },
+        @{
+            LogName = 'Microsoft-Windows-SecureBoot-Servicing/Operational'
+            ProviderName = $null
+            EventIds = $null  # Collect all events from this log
+            Description = 'Secure Boot Servicing events'
+        }
+    )
+    
+    # Event ID descriptions for better reporting
+    $eventDescriptions = @{
+        280 = 'Secure Boot DB update attempted'
+        281 = 'Secure Boot DBX update attempted'
+        1032 = 'DB update SUCCESS'
+        1033 = 'DB update FAILURE'
+        1034 = 'DBX update SUCCESS'
+        1035 = 'DBX update FAILURE'
+        1036 = 'KEK update SUCCESS'
+        1037 = 'KEK update FAILURE'
+        1043 = 'KEK updated with Microsoft KEK CA 2023 SUCCESS'
+        1044 = 'DB updated with Microsoft Option ROM UEFI CA 2023 SUCCESS'
+        1045 = 'DB updated with Microsoft UEFI CA 2023 SUCCESS'
+        1799 = 'Boot Manager signed with CA 2023 installed SUCCESS'
+        1801 = 'Secure Boot variable update event'
+        1808 = 'All new Secure Boot certificates applied - UPDATE COMPLETE'
+    }
+    
+    foreach ($source in $eventSources) {
+        try {
+            Write-Log -Message "Querying $($source.Description) from $($source.LogName)..." -Level Debug
+            
+            # Build filter hashtable
+            $filter = @{
+                LogName = $source.LogName
+                StartTime = $startTime
+            }
+            
+            if ($source.ProviderName) {
+                $filter['ProviderName'] = $source.ProviderName
+            }
+            
+            if ($source.EventIds) {
+                $filter['Id'] = $source.EventIds
+            }
+            
+            $logEvents = $null
+            try {
+                $logEvents = @(Get-WinEvent -FilterHashtable $filter -ErrorAction Stop)
+            }
+            catch [Exception] {
+                if ($_.Exception.Message -match 'No events were found') {
+                    Write-Log -Message "No events found in $($source.LogName)" -Level Debug
+                    continue
+                }
+                throw
+            }
+            
+            if ($logEvents -and $logEvents.Count -gt 0) {
+                Write-Log -Message "Found $($logEvents.Count) events in $($source.LogName)"
+                
+                # Log each event for debugging
+                foreach ($evt in $logEvents) {
+                    Write-Log -Message "  -> Event ID: $($evt.Id), Time: $($evt.TimeCreated), Provider: $($evt.ProviderName)" -Level Debug
+                }
+                
+                foreach ($event in $logEvents) {
+                    $eventDescription = if ($eventDescriptions.ContainsKey($event.Id)) {
+                        $eventDescriptions[$event.Id]
+                    } else {
+                        $event.Message.Substring(0, [Math]::Min(200, $event.Message.Length))
+                    }
+                    
+                    # Determine if this is a success or failure event
+                    # Success events: 280, 281 (attempted), 1032, 1034, 1036 (success), 1043-1045, 1799, 1801, 1808 (2023 cert updates)
+                    $isSuccess = $event.Id -in @(280, 281, 1032, 1034, 1036, 1043, 1044, 1045, 1799, 1801, 1808)
+                    $isFailure = $event.Id -in @(1033, 1035, 1037)
+                    
+                    # Is this a CA 2023 related event?
+                    $isCA2023Event = $event.Id -in @(1043, 1044, 1045, 1799, 1801, 1808)
+                    
+                    # Determine update type
+                    $updateType = switch ($event.Id) {
+                        { $_ -in @(280, 1032, 1033, 1044, 1045) } { 'DB' }  # 1044, 1045 are DB updates for 2023 certs
+                        { $_ -in @(281, 1034, 1035) } { 'DBX' }
+                        { $_ -in @(1036, 1037, 1043) } { 'KEK' }  # 1043 is KEK update for 2023 cert
+                        1799 { 'BootManager' }  # Boot Manager update
+                        1808 { 'Complete' }  # Full update complete
+                        default { 'Unknown' }
+                    }
+                    
+                    $events += @{
+                        EventId = $event.Id
+                        TimeCreated = $event.TimeCreated.ToString('o')
+                        Level = $event.LevelDisplayName
+                        LevelValue = $event.Level
+                        Source = $event.ProviderName
+                        LogName = $source.LogName
+                        Message = $event.Message
+                        EventDescription = $eventDescription
+                        UpdateType = $updateType
+                        IsSuccess = $isSuccess
+                        IsFailure = $isFailure
+                        IsCA2023Event = $isCA2023Event
+                        MachineName = $event.MachineName
+                        UserId = if ($event.UserId) { $event.UserId.Value } else { $null }
+                    }
+                }
+            }
+        }
+        catch {
+            Write-Log -Message "Failed to query $($source.LogName): $_" -Level Warning
+        }
+    }
+    
+    # Ensure events is always an array, filter out nulls, and sort by time (newest first)
+    $events = @($events | Where-Object { $_ -ne $null })
+    if ($events.Count -gt 0) {
+        $events = @($events | Sort-Object { [datetime]$_.TimeCreated } -Descending)
+    }
+    
+    # Calculate summary statistics (use @() to ensure arrays for .Count)
+    $ca2023Events = @($events | Where-Object { $_.IsCA2023Event -eq $true })
+    $hasKEKCA2023 = (@($events | Where-Object { $_.EventId -eq 1043 })).Count -gt 0
+    $hasOptionROMCA2023 = (@($events | Where-Object { $_.EventId -eq 1044 })).Count -gt 0
+    $hasUEFICA2023 = (@($events | Where-Object { $_.EventId -eq 1045 })).Count -gt 0
+    $hasBootManagerCA2023 = (@($events | Where-Object { $_.EventId -eq 1799 })).Count -gt 0
+    $hasUpdateComplete = (@($events | Where-Object { $_.EventId -eq 1808 })).Count -gt 0
+    
+    # Helper function to safely get first item's TimeCreated
+    $getFirstTime = {
+        param($arr)
+        if ($arr -and $arr.Count -gt 0) { $arr[0].TimeCreated } else { $null }
+    }
+    
+    $dbEvents = @($events | Where-Object { $_.UpdateType -eq 'DB' })
+    $dbxEvents = @($events | Where-Object { $_.UpdateType -eq 'DBX' })
+    $kekEvents = @($events | Where-Object { $_.UpdateType -eq 'KEK' })
+    $successEvents = @($events | Where-Object { $_.IsSuccess -eq $true })
+    $failureEvents = @($events | Where-Object { $_.IsFailure -eq $true })
+    
+    $summary = @{
+        TotalEvents = $events.Count
+        DBUpdateAttempts = $dbEvents.Count
+        DBXUpdateAttempts = $dbxEvents.Count
+        KEKUpdateAttempts = $kekEvents.Count
+        SuccessfulUpdates = $successEvents.Count
+        FailedUpdates = $failureEvents.Count
+        LastDBUpdateTime = if ($dbEvents.Count -gt 0) { $dbEvents[0].TimeCreated } else { $null }
+        LastDBXUpdateTime = if ($dbxEvents.Count -gt 0) { $dbxEvents[0].TimeCreated } else { $null }
+        LastKEKUpdateTime = if ($kekEvents.Count -gt 0) { $kekEvents[0].TimeCreated } else { $null }
+        LastSuccessTime = if ($successEvents.Count -gt 0) { $successEvents[0].TimeCreated } else { $null }
+        LastFailureTime = if ($failureEvents.Count -gt 0) { $failureEvents[0].TimeCreated } else { $null }
+        # CA 2023 Certificate Update Status
+        CA2023EventsCount = $ca2023Events.Count
+        HasKEKCA2023 = $hasKEKCA2023
+        HasOptionROMCA2023 = $hasOptionROMCA2023
+        HasUEFICA2023 = $hasUEFICA2023
+        HasBootManagerCA2023 = $hasBootManagerCA2023
+        HasUpdateComplete = $hasUpdateComplete
+        CA2023UpdateStatus = if ($hasUpdateComplete) { 'Complete' } 
+                             elseif ($hasKEKCA2023 -and $hasUEFICA2023) { 'InProgress' }
+                             elseif ($ca2023Events.Count -gt 0) { 'Started' }
+                             else { 'NotStarted' }
+    }
+    
+    Write-Log -Message "Collected $($events.Count) Secure Boot update events (Success: $($summary.SuccessfulUpdates), Failures: $($summary.FailedUpdates))"
+    
+    return @{
+        Events = $events
+        Summary = $summary
+        CollectedAtUtc = (Get-Date).ToUniversalTime().ToString('o')
+        LookbackDays = $DaysToLookBack
+    }
+}
+
+#endregion
+
 #region Main Report Functions
 
 function Build-SecureBootReport {
@@ -770,6 +1041,7 @@ function Build-SecureBootReport {
     $deviceDetails = Get-DeviceDetails
     $registryDetails = Get-SecureBootRegistryDetails
     $certificates = Get-SecureBootCertificates
+    $updateEvents = Get-SecureBootUpdateEvents -DaysToLookBack 90
     
     # Build flattened report for Log Analytics
     $report = @{
@@ -839,6 +1111,32 @@ function Build-SecureBootReport {
         
         # Error tracking
         CertificateEnumerationError = $certificates.ErrorMessage
+        
+        # Secure Boot Update Events Summary
+        UpdateEventsTotalCount = $updateEvents.Summary.TotalEvents
+        DBUpdateAttempts = $updateEvents.Summary.DBUpdateAttempts
+        DBXUpdateAttempts = $updateEvents.Summary.DBXUpdateAttempts
+        KEKUpdateAttempts = $updateEvents.Summary.KEKUpdateAttempts
+        SuccessfulUpdates = $updateEvents.Summary.SuccessfulUpdates
+        FailedUpdates = $updateEvents.Summary.FailedUpdates
+        LastDBUpdateTime = $updateEvents.Summary.LastDBUpdateTime
+        LastDBXUpdateTime = $updateEvents.Summary.LastDBXUpdateTime
+        LastKEKUpdateTime = $updateEvents.Summary.LastKEKUpdateTime
+        LastSuccessfulUpdateTime = $updateEvents.Summary.LastSuccessTime
+        LastFailedUpdateTime = $updateEvents.Summary.LastFailureTime
+        EventsLookbackDays = $updateEvents.LookbackDays
+        
+        # CA 2023 Certificate Update Status
+        CA2023UpdateStatus = $updateEvents.Summary.CA2023UpdateStatus
+        CA2023EventsCount = $updateEvents.Summary.CA2023EventsCount
+        HasKEKCA2023 = $updateEvents.Summary.HasKEKCA2023
+        HasOptionROMCA2023 = $updateEvents.Summary.HasOptionROMCA2023
+        HasUEFICA2023 = $updateEvents.Summary.HasUEFICA2023
+        HasBootManagerCA2023 = $updateEvents.Summary.HasBootManagerCA2023
+        HasUpdateComplete = $updateEvents.Summary.HasUpdateComplete
+        
+        # Update Events detail (JSON string for complex data)
+        SecureBootUpdateEvents = if ($updateEvents.Events) { ($updateEvents.Events | ConvertTo-Json -Compress -Depth 5) } else { '[]' }
     }
     
     Write-Log -Message "Report built successfully for $($report.MachineName)"
@@ -956,6 +1254,153 @@ try {
         }
         else {
             Write-Log -Message "--- DB (Signature Database) Certificates: None found ---"
+        }
+        
+        Write-Log -Message "========================================"
+        
+        # Show Secure Boot Update Events Summary
+        Write-Log -Message " "
+        Write-Log -Message "========================================"
+        Write-Log -Message "Secure Boot Update Events (last $($report.EventsLookbackDays) days)"
+        Write-Log -Message "========================================"
+        Write-Log -Message "  Total Events: $($report.UpdateEventsTotalCount)"
+        Write-Log -Message "  DB Update Attempts: $($report.DBUpdateAttempts)"
+        Write-Log -Message "  DBX Update Attempts: $($report.DBXUpdateAttempts)"
+        Write-Log -Message "  KEK Update Attempts: $($report.KEKUpdateAttempts)"
+        Write-Log -Message "  Successful Updates: $($report.SuccessfulUpdates)"
+        Write-Log -Message "  Failed Updates: $($report.FailedUpdates)"
+        
+        # Show breakdown by Event ID
+        if ($report.SecureBootUpdateEvents -and $report.SecureBootUpdateEvents -ne '[]') {
+            Write-Log -Message " "
+            Write-Log -Message "  --- Events by Event ID ---"
+            $allEvents = $report.SecureBootUpdateEvents | ConvertFrom-Json
+            $eventGroups = @($allEvents) | Group-Object -Property EventId | Sort-Object -Property Count -Descending
+            foreach ($group in $eventGroups) {
+                $evtId = $group.Name
+                $evtCount = $group.Count
+                # Get description from first event in group
+                $evtDesc = ($group.Group | Select-Object -First 1).EventDescription
+                Write-Log -Message "    Event $evtId : $evtCount occurrence(s) - $evtDesc"
+            }
+        }
+        
+        # Show all events found (detailed list)
+        if ($report.SecureBootUpdateEvents -and $report.SecureBootUpdateEvents -ne '[]') {
+            Write-Log -Message " "
+            Write-Log -Message "  --- All Events Found ---"
+            $allEvents = $report.SecureBootUpdateEvents | ConvertFrom-Json
+            foreach ($evt in @($allEvents)) {
+                $statusTag = if ($evt.IsFailure) { "[FAIL]" } elseif ($evt.IsSuccess) { "[OK]" } else { "[INFO]" }
+                $ca2023Tag = if ($evt.IsCA2023Event) { " [CA2023]" } else { "" }
+                Write-Log -Message "  $statusTag Event $($evt.EventId)$ca2023Tag - $($evt.TimeCreated)"
+                Write-Log -Message "       Source: $($evt.Source) | Log: $($evt.LogName)"
+                Write-Log -Message "       Description: $($evt.EventDescription)"
+                if ($evt.Message -and $evt.Message.Length -gt 0) {
+                    $msgPreview = if ($evt.Message.Length -gt 150) { $evt.Message.Substring(0, 150) + "..." } else { $evt.Message }
+                    Write-Log -Message "       Message: $msgPreview"
+                }
+                Write-Log -Message " "
+            }
+        }
+        
+        if ($report.LastDBUpdateTime) {
+            Write-Log -Message "  Last DB Update: $($report.LastDBUpdateTime)"
+        }
+        if ($report.LastDBXUpdateTime) {
+            Write-Log -Message "  Last DBX Update: $($report.LastDBXUpdateTime)"
+        }
+        if ($report.LastKEKUpdateTime) {
+            Write-Log -Message "  Last KEK Update: $($report.LastKEKUpdateTime)"
+        }
+        
+        if ($report.FailedUpdates -gt 0) {
+            Write-Log -Message " " -Level Warning
+            Write-Log -Message "  WARNING: $($report.FailedUpdates) failed update(s) detected!" -Level Warning
+            if ($report.LastFailedUpdateTime) {
+                Write-Log -Message "  Last Failure: $($report.LastFailedUpdateTime)" -Level Warning
+            }
+            
+            # Show recent failures
+            if ($report.SecureBootUpdateEvents -and $report.SecureBootUpdateEvents -ne '[]') {
+                $events = $report.SecureBootUpdateEvents | ConvertFrom-Json
+                $failures = @($events | Where-Object { $_.IsFailure }) | Select-Object -First 5
+                if ($failures.Count -gt 0) {
+                    Write-Log -Message " " -Level Warning
+                    Write-Log -Message "  Recent Failures:" -Level Warning
+                    foreach ($failure in $failures) {
+                        Write-Log -Message "    [$($failure.TimeCreated)] Event $($failure.EventId): $($failure.EventDescription)" -Level Warning
+                    }
+                }
+            }
+        }
+        else {
+            Write-Log -Message " "
+            Write-Log -Message "  No failed updates detected - Certificate updates appear healthy"
+        }
+        
+        Write-Log -Message "========================================"
+        
+        # Show CA 2023 Certificate Update Status
+        Write-Log -Message " "
+        Write-Log -Message "========================================"
+        Write-Log -Message "Microsoft CA 2023 Certificate Update Status"
+        Write-Log -Message "========================================"
+        
+        $ca2023Status = $report.CA2023UpdateStatus
+        $statusColor = switch ($ca2023Status) {
+            'Complete' { 'Info' }
+            'InProgress' { 'Info' }
+            'Started' { 'Warning' }
+            'NotStarted' { 'Warning' }
+            default { 'Info' }
+        }
+        
+        Write-Log -Message "  Overall Status: $ca2023Status" -Level $statusColor
+        Write-Log -Message "  CA 2023 Events Found: $($report.CA2023EventsCount)"
+        Write-Log -Message " "
+        Write-Log -Message "  Certificate Components:"
+        
+        # KEK CA 2023 (Event 1043)
+        $kekStatus = if ($report.HasKEKCA2023) { "[OK] Installed" } else { "[--] Not Detected" }
+        $kekLevel = if ($report.HasKEKCA2023) { 'Info' } else { 'Warning' }
+        Write-Log -Message "    KEK: Microsoft KEK CA 2023           $kekStatus" -Level $kekLevel
+        
+        # Option ROM CA 2023 (Event 1044)
+        $optionRomStatus = if ($report.HasOptionROMCA2023) { "[OK] Installed" } else { "[--] Not Detected" }
+        $optionRomLevel = if ($report.HasOptionROMCA2023) { 'Info' } else { 'Warning' }
+        Write-Log -Message "    DB:  Microsoft Option ROM CA 2023    $optionRomStatus" -Level $optionRomLevel
+        
+        # UEFI CA 2023 (Event 1045)
+        $uefiStatus = if ($report.HasUEFICA2023) { "[OK] Installed" } else { "[--] Not Detected" }
+        $uefiLevel = if ($report.HasUEFICA2023) { 'Info' } else { 'Warning' }
+        Write-Log -Message "    DB:  Microsoft UEFI CA 2023          $uefiStatus" -Level $uefiLevel
+        
+        # Boot Manager (Event 1799)
+        $bootMgrStatus = if ($report.HasBootManagerCA2023) { "[OK] Installed" } else { "[--] Not Detected" }
+        $bootMgrLevel = if ($report.HasBootManagerCA2023) { 'Info' } else { 'Warning' }
+        Write-Log -Message "    Boot Manager (CA 2023 signed)        $bootMgrStatus" -Level $bootMgrLevel
+        
+        Write-Log -Message " "
+        
+        # Event 1808 - Complete
+        if ($report.HasUpdateComplete) {
+            Write-Log -Message "  [SUCCESS] Event 1808 detected: All new Secure Boot certificates applied!"
+            Write-Log -Message "            Device has completed the CA 2023 certificate transition."
+        }
+        else {
+            if ($report.HasKEKCA2023 -and $report.HasUEFICA2023) {
+                Write-Log -Message "  [INFO] Key certificates installed but final confirmation (Event 1808) not yet received." -Level Warning
+                Write-Log -Message "         Windows may still be waiting to complete the transition." -Level Warning
+            }
+            elseif ($report.CA2023EventsCount -gt 0) {
+                Write-Log -Message "  [INFO] CA 2023 update is in progress. Some certificates have been installed." -Level Warning
+            }
+            else {
+                Write-Log -Message "  [INFO] No CA 2023 certificate update events detected yet." -Level Warning
+                Write-Log -Message "         The device may not have started the update process," -Level Warning
+                Write-Log -Message "         or the events may have been cleared from the event log." -Level Warning
+            }
         }
         
         Write-Log -Message "========================================"
