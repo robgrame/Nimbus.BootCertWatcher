@@ -176,18 +176,13 @@ function Get-Configuration {
                 )
                 Sinks = @{
                     ExecutionStrategy = $configJson.SecureBootWatcher.Sinks.ExecutionStrategy ?? 'FirstSuccess'
-                    SinkPriority = $configJson.SecureBootWatcher.Sinks.SinkPriority ?? 'WebApi,AzureQueue,FileShare'
+                    SinkPriority = $configJson.SecureBootWatcher.Sinks.SinkPriority ?? 'WebApi,AzureFunction,FileShare'
                     EnableFileShare = $configJson.SecureBootWatcher.Sinks.EnableFileShare ?? $false
-                    EnableAzureQueue = $configJson.SecureBootWatcher.Sinks.EnableAzureQueue ?? $false
                     EnableWebApi = $configJson.SecureBootWatcher.Sinks.EnableWebApi ?? $true
+                    EnableAzureFunction = $configJson.SecureBootWatcher.Sinks.EnableAzureFunction ?? $false
                     FileShare = @{
                         RootPath = $configJson.SecureBootWatcher.Sinks.FileShare.RootPath ?? ''
                         FileExtension = $configJson.SecureBootWatcher.Sinks.FileShare.FileExtension ?? '.json'
-                    }
-                    AzureQueue = @{
-                        QueueServiceUri = $configJson.SecureBootWatcher.Sinks.AzureQueue.QueueServiceUri ?? ''
-                        QueueName = $configJson.SecureBootWatcher.Sinks.AzureQueue.QueueName ?? 'secureboot-reports'
-                        AuthenticationMethod = $configJson.SecureBootWatcher.Sinks.AzureQueue.AuthenticationMethod ?? 'ManagedIdentity'
                     }
                     WebApi = @{
                         BaseAddress = $configJson.SecureBootWatcher.Sinks.WebApi.BaseAddress ?? ''
@@ -872,14 +867,14 @@ function Send-ReportToFileShare {
     }
 }
 
-function Send-ReportToAzureQueue {
+function Send-ReportToAzureFunction {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
         [PSCustomObject]$Report
     )
     
-    Write-Log -Message "Azure Queue sink is not implemented in PowerShell client" -Level Warning
+    Write-Log -Message "Azure Function sink is not yet implemented in PowerShell client" -Level Warning
     Write-Log -Message "Please use WebApi or FileShare sink instead" -Level Warning
     
     return $false
@@ -907,7 +902,7 @@ function Send-Report {
         $enabled = switch ($sinkName) {
             'WebApi' { $sinks.EnableWebApi }
             'FileShare' { $sinks.EnableFileShare }
-            'AzureQueue' { $sinks.EnableAzureQueue }
+            'AzureFunction' { $sinks.EnableAzureFunction }
             default { $false }
         }
         
@@ -920,7 +915,7 @@ function Send-Report {
             $result = switch ($sinkName) {
                 'WebApi' { Send-ReportToWebApi -Report $Report }
                 'FileShare' { Send-ReportToFileShare -Report $Report }
-                'AzureQueue' { Send-ReportToAzureQueue -Report $Report }
+                'AzureFunction' { Send-ReportToAzureFunction -Report $Report }
                 default { $false }
             }
             

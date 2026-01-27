@@ -356,7 +356,6 @@ namespace SecureBootWatcher.Client
 			services.AddSingleton<SecureBootWatcherService>();
 
 			services.AddSingleton<FileShareReportSink>();
-			services.AddSingleton<AzureQueueReportSink>();
 			services.AddSingleton<WebApiReportSink>();
 			services.AddSingleton<AzureFunctionReportSink>();
 
@@ -370,7 +369,6 @@ namespace SecureBootWatcher.Client
                 var allSinks = new List<IReportSink>
 				{
 					sp.GetRequiredService<FileShareReportSink>(),
-					sp.GetRequiredService<AzureQueueReportSink>(),
 					sp.GetRequiredService<WebApiReportSink>(),
 					sp.GetRequiredService<AzureFunctionReportSink>()
 				};
@@ -416,27 +414,6 @@ namespace SecureBootWatcher.Client
 			{
 				Log.Information("    Root Path: {Path}", options.Sinks.FileShare.RootPath ?? "NOT SET");
 				Log.Information("    File Extension: {Extension}", options.Sinks.FileShare.FileExtension);
-			}
-			
-			Log.Information("  Azure Queue Sink: {Enabled}", options.Sinks.EnableAzureQueue ? "Enabled" : "Disabled");
-			if (options.Sinks.EnableAzureQueue)
-			{
-				Log.Information("    Queue Service URI: {Uri}", options.Sinks.AzureQueue.QueueServiceUri?.ToString() ?? "NOT SET");
-				Log.Information("    Queue Name: {Name}", options.Sinks.AzureQueue.QueueName);
-				Log.Information("    Authentication Method: {Method}", options.Sinks.AzureQueue.AuthenticationMethod);
-				
-				if (options.Sinks.AzureQueue.AuthenticationMethod.Equals("Certificate", StringComparison.OrdinalIgnoreCase))
-				{
-					Log.Information("    Certificate Store: {Location}\\{Store}", 
-						options.Sinks.AzureQueue.CertificateStoreLocation, 
-						options.Sinks.AzureQueue.CertificateStoreName);
-					
-					if (!string.IsNullOrEmpty(options.Sinks.AzureQueue.CertificateThumbprint))
-					{
-						Log.Information("    Certificate Thumbprint: {Thumbprint}", 
-							options.Sinks.AzureQueue.CertificateThumbprint);
-					}
-				}
 			}
 			
 			Log.Information("  Web API Sink: {Enabled}", options.Sinks.EnableWebApi ? "Enabled" : "Disabled");
@@ -488,7 +465,6 @@ namespace SecureBootWatcher.Client
 			// Log active sinks
 			var activeSinks = new List<string>();
 			if (options.Sinks.EnableFileShare) activeSinks.Add("FileShare");
-			if (options.Sinks.EnableAzureQueue) activeSinks.Add("AzureQueue");
 			if (options.Sinks.EnableWebApi) activeSinks.Add("WebApi");
 			if (options.Sinks.EnableAzureFunction) activeSinks.Add("AzureFunction");
 
@@ -502,7 +478,6 @@ namespace SecureBootWatcher.Client
 				Log.Warning("   Reports will not be sent anywhere.");
 				Log.Warning("   Enable at least one sink in appsettings.json:");
 				Log.Warning("   - EnableFileShare: true");
-				Log.Warning("   - EnableAzureQueue: true");
 				Log.Warning("   - EnableWebApi: true");
 				Log.Warning("   - EnableAzureFunction: true");
 			}

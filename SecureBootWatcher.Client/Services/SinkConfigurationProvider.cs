@@ -173,8 +173,8 @@ namespace SecureBootWatcher.Client.Services
         {
             _logger.LogDebug("Sink Configuration from Database:");
             _logger.LogDebug("  FileShare: {Enabled}", config.EnableFileShare);
-            _logger.LogDebug("  AzureQueue: {Enabled}", config.EnableAzureQueue);
             _logger.LogDebug("  WebApi: {Enabled}", config.EnableWebApi);
+            _logger.LogDebug("  AzureFunction: {Enabled}", config.EnableAzureFunction);
             _logger.LogDebug("  Strategy: {Strategy}", config.ExecutionStrategy);
             _logger.LogDebug("  Priority: {Priority}", config.SinkPriority);
             _logger.LogDebug("  Max Retries: {Retries}", config.MaxRetryAttempts);
