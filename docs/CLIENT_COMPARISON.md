@@ -74,10 +74,17 @@ This guide helps you choose the right client for your environment.
 ### Inventory Collection
 Both clients collect identical inventory data:
 - ✅ Device identity (manufacturer, model, firmware, OS)
-- ✅ Secure Boot registry snapshot
-- ✅ Device attributes and telemetry policy
+- ✅ Secure Boot registry snapshot (root, Servicing, State, SBAT sub-keys)
+- ✅ Device attributes (15+ attributes including firmware info, OEM details)
+- ✅ Telemetry policy
 - ✅ Event logs
 - ✅ UEFI certificate enumeration
+
+**Note**: As of v1.14, the PowerShell client has been updated to match the .NET client's registry collection capabilities, including:
+- Servicing sub-key data (UefiCa2023Status, BucketHash, ConfidenceLevel, reboot flags)
+- State sub-key data (UEFISecureBootEnabled, PolicyPublisher, PolicyVersion)
+- SBAT sub-key data (SbatLevel, UpdateStatus)
+- Complete device attributes from correct registry path
 
 **Difference**: The .NET client has more sophisticated certificate parsing logic, but both provide sufficient detail for dashboard reporting.
 
