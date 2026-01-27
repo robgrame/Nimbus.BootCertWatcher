@@ -708,6 +708,33 @@ try
     builder.Services.AddScoped<IApplicationSettingsService, ApplicationSettingsService>();
     builder.Services.AddScoped<IApiConfigurationService, ApiConfigurationService>();
     builder.Services.AddScoped<ICertificateValidationService, CertificateValidationService>();
+    
+    // Configure HTTP client for Web pages to access API endpoints on same application
+    // In unified mode, this points to localhost (same app) to reuse existing page code
+    Log.Information("Configuring HTTP client for API access...");
+    builder.Services.AddHttpClient<ISecureBootApiClient, SecureBootApiClient>()
+        .ConfigurePrimaryHttpMessageHandler(sp =>
+        {
+            var handler = new HttpClientHandler();
+            if (builder.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("ApiSettings:BypassSslValidation"))
+            {
+                handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+            }
+            return handler;
+        });
+    
+    // Update ApiSettings to point to same application (will be set via appsettings or default to current URL)
+    builder.Services.Configure<ApiSettings>(options =>
+    {
+        // In unified mode, API is on the same base URL
+        var baseUrl = builder.Configuration["ApiSettings:BaseUrl"];
+        if (string.IsNullOrEmpty(baseUrl))
+        {
+            // Default to localhost on the same port as the unified app
+            options.BaseUrl = "https://localhost:7001";
+        }
+    });
+    Log.Information("API client configured to use: {BaseUrl}", builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7001");
 
     // Configure Azure Queue Processor
     Log.Information("Configuring Queue Processor...");
