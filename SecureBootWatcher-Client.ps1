@@ -1016,6 +1016,8 @@ function Send-ReportToAzureFunction {
         $url = $config.FunctionUrl
         if ($config.UseApiKeyAsQueryParameter) {
             $separator = if ($url -like '*?*') { '&' } else { '?' }
+            # Note: 'code' is the standard Azure Function API key parameter name
+            # See: https://docs.microsoft.com/azure/azure-functions/functions-bindings-http-webhook-trigger
             $url = "$url$separator`code=$([Uri]::EscapeDataString($config.ApiKey))"
             Write-Log -Message "API key will be sent as query parameter" -Level Verbose
         }
@@ -1110,7 +1112,7 @@ function Test-SinkConfiguration {
     
     # Check if at least one sink is enabled
     if (-not $hasAnySinkEnabled) {
-        $warnings += "WARNING: No sinks are enabled! Reports will not be sent anywhere."
+        $warnings += "No sinks are enabled! Reports will not be sent anywhere."
         $warnings += "  Recommendation: Enable at least one sink (AzureFunction, WebApi, or FileShare)"
     }
     
