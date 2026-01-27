@@ -335,7 +335,7 @@ function Deploy-Application {
     if (-not (Test-Path $publishPath)) {
         Write-Warning "Applicazione non trovata in $publishPath"
         Write-Info "Pubblicare l'applicazione con:"
-        Write-Info "  dotnet publish SecureBootDashboard.Api/SecureBootDashboard.Api.csproj -c Release -o publish"
+        Write-Info "  dotnet publish SecureBootDashboard.Web/SecureBootDashboard.Web.csproj -c Release -o publish"
         
         $response = Read-Host "Continuare senza deployment app? (s/n)"
         if ($response -ne 's') {
@@ -464,7 +464,7 @@ function Deploy-Application {
         <add name="aspNetCore" path="*" verb="*" modules="AspNetCoreModuleV2" resourceType="Unspecified" />
       </handlers>
       <aspNetCore processPath="dotnet" 
-                  arguments=".\SecureBootDashboard.Api.dll" 
+                  arguments=".\SecureBootDashboard.Web.dll" 
                   stdoutLogEnabled="true" 
                   stdoutLogFile=".\logs\stdout" 
                   hostingModel="inprocess">

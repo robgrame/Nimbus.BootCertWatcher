@@ -161,7 +161,7 @@ Test-Check -Name "Application Root" -Test {
   -FailMessage "Not found at $AppPath"
 
 Test-Check -Name "Application Files" -Test {
-    Test-Path "$AppPath\App\SecureBootDashboard.Api.dll"
+    Test-Path "$AppPath\App\SecureBootDashboard.Web.dll"
 } -PassMessage "Application DLL found" `
   -FailMessage "Application DLL not found"
 

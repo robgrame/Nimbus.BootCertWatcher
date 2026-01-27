@@ -91,10 +91,12 @@ sqlcmd -S localhost\SQLEXPRESS -Q $query
 cd C:\Users\nefario\source\repos\robgrame\Nimbus.BootCertWatcher
 
 # Build Release
-dotnet publish SecureBootDashboard.Api/SecureBootDashboard.Api.csproj `
+dotnet publish SecureBootDashboard.Web/SecureBootDashboard.Web.csproj `
     -c Release `
     -o C:\SecureBootWatcher\App
 ```
+
+**Nota:** Il progetto `SecureBootDashboard.Web` è l'applicazione unificata che contiene sia l'interfaccia web che gli endpoint API.
 
 ### 4. Configura IIS (3 min)
 

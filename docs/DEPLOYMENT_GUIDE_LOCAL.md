@@ -251,8 +251,8 @@ git pull origin copilot/merge-web-app-and-api
 # Build in modalità Release
 dotnet build -c Release
 
-# Pubblicare l'applicazione unificata
-dotnet publish SecureBootDashboard.Api/SecureBootDashboard.Api.csproj `
+# Pubblicare l'applicazione unificata (Web + API)
+dotnet publish SecureBootDashboard.Web/SecureBootDashboard.Web.csproj `
     -c Release `
     -o C:\Publish\SecureBootWatcher `
     --self-contained false
@@ -260,6 +260,8 @@ dotnet publish SecureBootDashboard.Api/SecureBootDashboard.Api.csproj `
 # Verificare output
 Get-ChildItem C:\Publish\SecureBootWatcher
 ```
+
+**Nota:** Il progetto `SecureBootDashboard.Web` contiene sia l'interfaccia web (Razor Pages) che tutti gli endpoint API. È l'applicazione unificata completa.
 
 ### 4.2 Configurare appsettings.Production.json
 
@@ -383,7 +385,7 @@ $binding = Get-WebBinding -Name "SecureBootWatcher" -Protocol "https"
 $binding.AddSslCertificate($cert.GetCertHashString(), "my")
 ```
 
-### 5.3 Configurare URL Rewrite per API Routes
+### 5.3 Configurare web.config
 
 Creare `web.config` nella root dell'applicazione (se non presente):
 
@@ -396,7 +398,7 @@ Creare `web.config` nella root dell'applicazione (se non presente):
         <add name="aspNetCore" path="*" verb="*" modules="AspNetCoreModuleV2" resourceType="Unspecified" />
       </handlers>
       <aspNetCore processPath="dotnet" 
-                  arguments=".\SecureBootDashboard.Api.dll" 
+                  arguments=".\SecureBootDashboard.Web.dll" 
                   stdoutLogEnabled="true" 
                   stdoutLogFile=".\logs\stdout" 
                   hostingModel="inprocess">
@@ -411,6 +413,8 @@ Creare `web.config` nella root dell'applicazione (se non presente):
   </location>
 </configuration>
 ```
+
+**Importante:** Il file `web.config` viene generato automaticamente durante la pubblicazione, ma è possibile personalizzarlo se necessario.
 
 ### 5.4 Configurare Permessi Cartelle
 
@@ -442,16 +446,25 @@ cd C:\SecureBootWatcher\App
 # Verificare connection string
 $env:ASPNETCORE_ENVIRONMENT = "Production"
 
-# Applicare migrazioni usando l'assembly pubblicato
-# Nota: potrebbe essere necessario installare dotnet-ef tool
+# Opzione 1: Migrazioni automatiche al primo avvio
+# L'applicazione applicherà automaticamente le migrazioni pending al primo avvio.
+# Verificare i log per confermare l'applicazione delle migrazioni.
+
+# Opzione 2: Applicare migrazioni manualmente (richiede dotnet-ef tool)
+# Installare dotnet-ef tool se non presente
 dotnet tool install --global dotnet-ef
 
-# Applicare migrazioni
-dotnet ef database update --project "SecureBootDashboard.Api.dll"
+# Applicare migrazioni usando l'assembly pubblicato
+# Nota: questo comando potrebbe non funzionare con DLL pubblicata.
+# È consigliato usare l'opzione 1 (migrazioni automatiche) o applicare
+# le migrazioni prima della pubblicazione sul PC di sviluppo.
 
-# Oppure eseguire direttamente dall'app al primo avvio
-# (l'app applicherà automaticamente le migrazioni pending)
+# Opzione 3: Applicare migrazioni dal progetto sorgente (su PC sviluppo)
+# cd SecureBootDashboard.Web
+# dotnet ef database update --connection "Server=localhost\SQLEXPRESS;Database=SecureBootWatcher;User Id=SecureBootWatcherApp;Password=StrongPassword123!@#;TrustServerCertificate=True"
 ```
+
+**Raccomandazione:** Utilizzare l'opzione 1 (migrazioni automatiche) per semplicità. L'applicazione è configurata per applicare automaticamente le migrazioni al primo avvio.
 
 ### 5.6 Avviare il Sito
 

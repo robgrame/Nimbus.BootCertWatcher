@@ -45,7 +45,8 @@ cd scripts
 # Accedere a: http://localhost
 ```
 **Tempo**: ~5 minuti  
-**Guida**: QUICKSTART_LOCAL.md
+**Guida**: QUICKSTART_LOCAL.md  
+**Progetto deployato**: SecureBootDashboard.Web (applicazione unificata Web+API)
 
 ---
 
@@ -59,7 +60,8 @@ cd scripts
 # Oppure step by step seguendo DEPLOYMENT_GUIDE_LOCAL.md
 ```
 **Tempo**: ~30 minuti  
-**Guida**: DEPLOYMENT_GUIDE_LOCAL.md
+**Guida**: DEPLOYMENT_GUIDE_LOCAL.md  
+**Progetto deployato**: SecureBootDashboard.Web (applicazione unificata Web+API)
 
 ---
 
@@ -108,6 +110,15 @@ cd scripts
 
 ## 🏗️ Architettura Post-Deployment
 
+**⚠️ Importante:** Sul branch `copilot/merge-web-app-and-api`, il progetto **SecureBootDashboard.Web** è l'applicazione unificata che contiene:
+- ✅ Interfaccia Web (Razor Pages)
+- ✅ API Controllers (tutti gli endpoint REST)
+- ✅ SignalR Hubs (real-time updates)
+- ✅ Database Layer (EF Core Context e Migrations)
+- ✅ Servizi Backend (business logic)
+
+Il progetto `SecureBootDashboard.Api` esiste ancora nella solution ma non viene utilizzato per il deployment.
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                   Client Devices                        │
@@ -125,7 +136,8 @@ cd scripts
 ┌─────────────────────────────────────────────────────────┐
 │              Server IIS (localhost)                     │
 │  ┌────────────────────────────────────────────────┐    │
-│  │  SecureBootDashboard (Unified App)             │    │
+│  │  SecureBootDashboard.Web                       │    │
+│  │  (Applicazione Unificata Web + API)            │    │
 │  │  ┌──────────────────────────────────────────┐ │    │
 │  │  │  Web UI (Razor Pages)                    │ │    │
 │  │  │  - Dashboard                             │ │    │
