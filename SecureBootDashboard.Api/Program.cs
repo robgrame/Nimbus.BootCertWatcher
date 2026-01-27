@@ -684,34 +684,6 @@ try
     Log.Information("Configuring Certificate Validation Service...");
     builder.Services.AddScoped<ICertificateValidationService, CertificateValidationService>();
 
-    // Configure Azure Queue Processor
-    Log.Information("Configuring Queue Processor...");
-    
-    // Register Options Provider to load configuration from database with fallback to appsettings.json
-    Log.Information("Registering Queue Processor Options Provider (Database ? appsettings.json)...");
-    builder.Services.AddSingleton<Microsoft.Extensions.Options.IConfigureOptions<QueueProcessorOptions>, QueueProcessorOptionsProvider>();
-    
-    var queueConfig = builder.Configuration.GetSection("QueueProcessor");
-    var queueEnabled = queueConfig.GetValue<bool>("Enabled");
-    Log.Information("Queue Processor Enabled (from appsettings.json): {Enabled}", queueEnabled);
-    
-    if (queueEnabled)
-    {
-        var queueUri = queueConfig.GetValue<string>("QueueServiceUri");
-        var queueName = queueConfig.GetValue<string>("QueueName");
-        var authMethod = queueConfig.GetValue<string>("AuthenticationMethod");
-        
-        Log.Information("  Queue URI (appsettings.json): {QueueUri}", queueUri);
-        Log.Information("  Queue Name (appsettings.json): {QueueName}", queueName);
-        Log.Information("  Auth Method (appsettings.json): {AuthMethod}", authMethod);
-        Log.Information("  NOTE: These values may be overridden by database configuration if available");
-    }
-    
-    // Load default configuration from appsettings.json
-    // This will be overridden by QueueProcessorOptionsProvider if database config is available
-    builder.Services.Configure<QueueProcessorOptions>(queueConfig);
-    builder.Services.AddHostedService<QueueProcessorService>();
-
     // Configure Device Cleanup Service
     Log.Information("Configuring Device Cleanup Service...");
     builder.Services.AddHostedService<DeviceCleanupService>();

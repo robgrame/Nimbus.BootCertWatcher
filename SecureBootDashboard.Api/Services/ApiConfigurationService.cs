@@ -7,7 +7,7 @@ namespace SecureBootDashboard.Api.Services;
 
 /// <summary>
 /// Service for retrieving API configuration from database with caching.
-/// Provides dynamic configuration for Queue Processor, File Store, and Device Cleanup.
+/// Provides dynamic configuration for File Store and Device Cleanup.
 /// </summary>
 public interface IApiConfigurationService
 {
@@ -15,11 +15,6 @@ public interface IApiConfigurationService
     /// Gets the active API configuration from database with caching.
     /// </summary>
     Task<ApiConfigurationEntity?> GetActiveConfigurationAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets queue processor options from active configuration.
-    /// </summary>
-    Task<QueueProcessorOptions> GetQueueProcessorOptionsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Invalidates the configuration cache, forcing a refresh from database on next access.
@@ -78,45 +73,6 @@ public sealed class ApiConfigurationService : IApiConfigurationService
             config.FileReportStoreEnabled);
 
         return config;
-    }
-
-    public async Task<QueueProcessorOptions> GetQueueProcessorOptionsAsync(CancellationToken cancellationToken = default)
-    {
-        var config = await GetActiveConfigurationAsync(cancellationToken);
-
-        if (config == null)
-        {
-            _logger.LogWarning("No active API configuration found, returning default Queue Processor options");
-            return new QueueProcessorOptions
-            {
-                Enabled = false
-            };
-        }
-
-        // Map ApiConfigurationEntity to QueueProcessorOptions
-        return new QueueProcessorOptions
-        {
-            Enabled = config.QueueProcessorEnabled,
-            QueueServiceUri = string.IsNullOrEmpty(config.QueueServiceUri) 
-                ? null 
-                : new Uri(config.QueueServiceUri),
-            QueueName = config.QueueName,
-            AuthenticationMethod = config.QueueAuthenticationMethod,
-            ConnectionString = config.QueueConnectionString,
-            ClientId = config.QueueClientId,
-            TenantId = config.QueueTenantId,
-            ClientSecret = config.QueueClientSecret,
-            CertificatePath = config.QueueCertificatePath,
-            CertificatePassword = config.QueueCertificatePassword,
-            CertificateThumbprint = config.QueueCertificateThumbprint,
-            CertificateStoreLocation = config.QueueCertificateStoreLocation,
-            CertificateStoreName = config.QueueCertificateStoreName,
-            MaxMessages = config.QueueMaxMessages,
-            ProcessingInterval = TimeSpan.FromSeconds(config.QueueProcessingIntervalSeconds),
-            EmptyQueuePollInterval = TimeSpan.FromSeconds(config.QueueEmptyQueuePollIntervalSeconds),
-            VisibilityTimeout = TimeSpan.FromSeconds(config.QueueVisibilityTimeoutSeconds),
-            MaxDequeueCount = config.QueueMaxDequeueCount
-        };
     }
 
     public void InvalidateCache()
