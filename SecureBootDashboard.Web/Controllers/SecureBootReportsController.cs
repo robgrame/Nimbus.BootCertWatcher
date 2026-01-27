@@ -54,15 +54,15 @@ namespace SecureBootDashboard.Api.Controllers
             }
 
             _logger.LogDebug("IngestAsync: Report validation successful for device {MachineName}, proceeding to save", 
-                report.Device.MachineName);
+                report.Device?.MachineName ?? "Unknown");
 
             try
             {
-                _logger.LogTrace("IngestAsync: Saving report to store for device {MachineName}", report.Device.MachineName);
+                _logger.LogTrace("IngestAsync: Saving report to store for device {MachineName}", report.Device?.MachineName ?? "Unknown");
                 var id = await _reportStore.SaveAsync(report, HttpContext.RequestAborted).ConfigureAwait(false);
                 
                 _logger.LogInformation("Successfully ingested report {ReportId} for device {MachineName} (Domain: {DomainName})", 
-                    id, report.Device.MachineName, report.Device.DomainName ?? "None");
+                    id, report.Device?.MachineName ?? "Unknown", report.Device?.DomainName ?? "None");
                 
                 _logger.LogDebug("IngestAsync: Report details - Events: {EventCount}, Certificates: {HasCertificates}, UefiCa2023Status: {Status}", 
                     report.Events?.Count ?? 0, 
@@ -72,20 +72,21 @@ namespace SecureBootDashboard.Api.Controllers
                 // Broadcast new report notification via SignalR
                 try
                 {
-                    _logger.LogTrace("IngestAsync: Broadcasting SignalR notification for device {MachineName}", report.Device.MachineName);
+                    _logger.LogTrace("IngestAsync: Broadcasting SignalR notification for device {MachineName}", report.Device?.MachineName ?? "Unknown");
                     
                     // Generate a consistent device identifier from machine name using MD5 hash
+                    var machineName = report.Device?.MachineName ?? "Unknown";
                     var hashBytes = System.Security.Cryptography.MD5.HashData(
-                        System.Text.Encoding.UTF8.GetBytes(report.Device.MachineName.ToLowerInvariant()));
-                    var deviceIdentifier = new Guid(hashBytes);
-                    
-                    await _hubContext.BroadcastNewReport(
-                        deviceIdentifier,
-                        id,
-                        report.Device.MachineName);
-                    
-                    _logger.LogDebug("IngestAsync: Successfully broadcasted SignalR notification for device {MachineName}, DeviceId={DeviceId}", 
-                        report.Device.MachineName, deviceIdentifier);
+                        System.Text.Encoding.UTF8.GetBytes(machineName.ToLowerInvariant()));
+                var deviceIdentifier = new Guid(hashBytes);
+                
+                await _hubContext.BroadcastNewReport(
+                    deviceIdentifier,
+                    id,
+                    machineName);
+                
+                _logger.LogDebug("IngestAsync: Successfully broadcasted SignalR notification for device {MachineName}, DeviceId={DeviceId}", 
+                    machineName, deviceIdentifier);
                 }
                 catch (Exception signalREx)
                 {
@@ -100,7 +101,7 @@ namespace SecureBootDashboard.Api.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "IngestAsync: Failed to ingest secure boot report for machine {Machine}, CorrelationId={CorrelationId}", 
-                    report.Device.MachineName, report.CorrelationId ?? "None");
+                    report.Device?.MachineName ?? "Unknown", report.CorrelationId ?? "None");
                 return StatusCode(500, new { Error = "Failed to persist report." });
             }
         }

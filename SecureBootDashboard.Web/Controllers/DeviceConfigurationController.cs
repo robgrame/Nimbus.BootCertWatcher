@@ -355,7 +355,7 @@ namespace SecureBootDashboard.Api.Controllers
                 {
                     MicrosoftUpdateManagedOptIn = report.Registry?.MicrosoftUpdateManagedOptIn,
                     AllowTelemetry = report.TelemetryPolicy?.AllowTelemetry,
-                    WindowsUEFICA2023Capable = report.Registry?.Servicing.WindowsUEFICA2023Capable,
+                    WindowsUEFICA2023Capable = report.Registry?.Servicing?.WindowsUEFICA2023Capable,
                     SnapshotTimestampUtc = latestReport.CreatedAtUtc
                 };
             }

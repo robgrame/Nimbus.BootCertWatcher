@@ -126,7 +126,8 @@ public class ExportService(ILogger<ExportService> logger) : IExportService
             worksheet.SheetView.FreezeRows(1);
 
             // Add filter to header row
-            worksheet.RangeUsed().SetAutoFilter();
+            var rangeUsed = worksheet.RangeUsed();
+            rangeUsed?.SetAutoFilter();
 
             // Add summary at the bottom
             row += 2;
@@ -249,7 +250,8 @@ public class ExportService(ILogger<ExportService> logger) : IExportService
             worksheet.SheetView.FreezeRows(1);
 
             // Add filter to header row
-            worksheet.RangeUsed().SetAutoFilter();
+            var rangeUsed = worksheet.RangeUsed();
+            rangeUsed?.SetAutoFilter();
 
             // Add summary
             row += 2;

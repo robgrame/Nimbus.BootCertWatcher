@@ -418,10 +418,10 @@ namespace SecureBootDashboard.Api.Services
                     if (!string.IsNullOrWhiteSpace(options.CertificatePath))
                     {
                         var password = options.CertificatePassword;
-                        // Use X509Certificate2 constructor for .NET 8 compatibility
+                        // Use X509CertificateLoader for .NET 10
                         certificate = string.IsNullOrWhiteSpace(password)
-                            ? new X509Certificate2(options.CertificatePath)
-                            : new X509Certificate2(options.CertificatePath, password, X509KeyStorageFlags.DefaultKeySet);
+                            ? X509CertificateLoader.LoadCertificateFromFile(options.CertificatePath)
+                            : X509CertificateLoader.LoadPkcs12FromFile(options.CertificatePath, password);
                         _logger.LogInformation("Loaded certificate from file: {Path}", options.CertificatePath);
                     }
                     // From Windows Certificate Store

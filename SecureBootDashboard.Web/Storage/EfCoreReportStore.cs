@@ -251,7 +251,7 @@ namespace SecureBootDashboard.Api.Storage
                     : SecureBootDeploymentState.NotStarted.ToString();
             }
 
-            return registry.UefiCa2023Status.ToString();
+            return registry.UefiCa2023Status?.ToString() ?? SecureBootDeploymentState.Unknown.ToString();
         }
 
         private static ReportDetail Map(SecureBootReportEntity entity)

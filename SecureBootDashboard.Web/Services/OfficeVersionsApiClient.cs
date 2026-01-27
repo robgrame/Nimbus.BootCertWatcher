@@ -173,8 +173,12 @@ public class OfficeVersionsApiClient : IOfficeVersionsApiClient
 
             var summary = new WindowsSummary
             {
-                Windows10Versions = win10Response.IsSuccess ? win10Response.Data : new List<WindowsVersionInfo>(),
-                Windows11Versions = win11Response.IsSuccess ? win11Response.Data : new List<WindowsVersionInfo>(),
+                Windows10Versions = win10Response.IsSuccess && win10Response.Data != null 
+                    ? win10Response.Data 
+                    : new List<WindowsVersionInfo>(),
+                Windows11Versions = win11Response.IsSuccess && win11Response.Data != null 
+                    ? win11Response.Data 
+                    : new List<WindowsVersionInfo>(),
                 TotalVersions = (win10Response.Data?.Count ?? 0) + (win11Response.Data?.Count ?? 0),
                 LastUpdated = DateTime.UtcNow
             };
