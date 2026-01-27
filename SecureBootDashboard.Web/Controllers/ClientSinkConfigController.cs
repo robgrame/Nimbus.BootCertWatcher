@@ -329,7 +329,6 @@ public sealed class ClientSinkConfigController : ControllerBase
         return new SinkOptions
         {
             EnableFileShare = config.EnableFileShare,
-            EnableAzureQueue = config.EnableAzureQueue,
             EnableWebApi = config.EnableWebApi,
             EnableAzureFunction = config.EnableAzureFunction,
             ExecutionStrategy = config.ExecutionStrategy,
@@ -343,26 +342,6 @@ public sealed class ClientSinkConfigController : ControllerBase
                 RootPath = config.FileShareRootPath,
                 FileExtension = config.FileShareExtension,
                 AppendTimestampToFileName = config.FileShareAppendTimestamp
-            },
-            
-            AzureQueue = new AzureQueueSinkOptions
-            {
-                QueueServiceUri = !string.IsNullOrWhiteSpace(config.AzureQueueServiceUri) 
-                    ? new Uri(config.AzureQueueServiceUri) 
-                    : null,
-                QueueName = config.AzureQueueName,
-                AuthenticationMethod = config.AzureQueueAuthMethod,
-                ConnectionString = config.AzureQueueConnectionString,
-                ClientId = config.AzureQueueClientId,
-                TenantId = config.AzureQueueTenantId,
-                ClientSecret = config.AzureQueueClientSecret,
-                CertificatePath = config.AzureQueueCertPath,
-                CertificatePassword = config.AzureQueueCertPassword,
-                CertificateThumbprint = config.AzureQueueCertThumbprint,
-                CertificateStoreLocation = config.AzureQueueCertStoreLocation,
-                CertificateStoreName = config.AzureQueueCertStoreName,
-                VisibilityTimeout = TimeSpan.FromSeconds(config.AzureQueueVisibilityTimeoutSeconds),
-                MaxSendRetryCount = config.AzureQueueMaxSendRetryCount
             },
             
             WebApi = new WebApiSinkOptions
