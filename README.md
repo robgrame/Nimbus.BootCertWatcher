@@ -2,7 +2,7 @@
 
 > **Monitor and govern the expiration and deployment of Secure Boot certificates across Windows fleets with real-time analytics.**
 
-**Version 1.11** - Windows Version Tracking & Build Security!
+**Version 1.14** - Unified Deployment Architecture!
 
 This solution monitors Secure Boot certificate status on Windows devices by capturing registry snapshots and Windows event logs, then transmitting reports to a centralized dashboard for compliance tracking, real-time monitoring, and alerting.
 
@@ -22,6 +22,25 @@ Interactive Chart.js visualizations showing compliance trends and deployment sta
 ---
 
 ## ✨ Key Features
+
+### 🔴 **NEW in v1.14** - Unified Deployment Architecture
+- **Single Application Deployment**: Web Dashboard and API merged into one application
+  - Simplified deployment with one application instead of two
+  - Single configuration file and connection string
+  - Reduced infrastructure costs (one App Service/VM instead of two)
+  - Perfect for small to medium environments (1-1000 devices)
+- **Loopback HTTP Architecture**: Razor Pages call API endpoints on localhost
+  - No HTTP overhead - all on same process
+  - Automatic API endpoint discovery
+  - Swagger UI included at `/swagger` for API testing
+- **Backward Compatible**: Existing clients (PowerShell) continue to work
+  - API endpoints remain at `/api/*`
+  - Same authentication and data submission
+  - No client updates required
+- **Flexible Deployment**: Choose between unified or separate deployments
+  - Unified: Best for most environments (default)
+  - Separate: Available for high-scale or specialized scenarios
+  - Full documentation in [`docs/UNIFIED_DEPLOYMENT.md`](docs/UNIFIED_DEPLOYMENT.md)
 
 ### 🔴 **NEW in v1.11** - Windows Version Tracking & Build Security
 - **Windows Version Database**: Track Windows 10/11 versions and builds
