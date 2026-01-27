@@ -1044,6 +1044,98 @@ function Send-ReportToAzureFunction {
     }
 }
 
+function Test-SinkConfiguration {
+    <#
+    .SYNOPSIS
+        Validates sink configuration and warns about unsupported or problematic settings.
+    
+    .DESCRIPTION
+        Checks the configured sinks and provides warnings for:
+        - AzureQueue sink (not supported in PowerShell)
+        - Missing or invalid configuration values
+        - Recommended sink priorities for PowerShell
+    #>
+    [CmdletBinding()]
+    param()
+    
+    $sinks = $script:Config.SecureBootWatcher.Sinks
+    $hasAnySinkEnabled = $false
+    $warnings = @()
+    
+    Write-LogSection -Title "Validating Sink Configuration"
+    
+    # Check AzureQueue
+    if ($sinks.EnableAzureQueue) {
+        $warnings += "AzureQueue sink is enabled but NOT SUPPORTED in PowerShell client"
+        $warnings += "  Reason: PowerShell lacks Azure.Storage.Queues SDK and complex authentication"
+        $warnings += "  Recommendation: Use AzureFunction, WebApi, or FileShare instead"
+        $warnings += "  Action: Set EnableAzureQueue to false in configuration"
+    }
+    
+    # Check AzureFunction
+    if ($sinks.EnableAzureFunction) {
+        $hasAnySinkEnabled = $true
+        if (-not $sinks.AzureFunction.FunctionUrl) {
+            $warnings += "AzureFunction is enabled but FunctionUrl is not configured"
+        }
+        if (-not $sinks.AzureFunction.ApiKey) {
+            $warnings += "AzureFunction is enabled but ApiKey is not configured"
+        }
+        else {
+            Write-Log -Message "✓ AzureFunction sink: Enabled and configured" -Level Information
+        }
+    }
+    
+    # Check WebApi
+    if ($sinks.EnableWebApi) {
+        $hasAnySinkEnabled = $true
+        if (-not $sinks.WebApi.BaseAddress) {
+            $warnings += "WebApi is enabled but BaseAddress is not configured"
+        }
+        else {
+            Write-Log -Message "✓ WebApi sink: Enabled and configured" -Level Information
+        }
+    }
+    
+    # Check FileShare
+    if ($sinks.EnableFileShare) {
+        $hasAnySinkEnabled = $true
+        if (-not $sinks.FileShare.RootPath) {
+            $warnings += "FileShare is enabled but RootPath is not configured"
+        }
+        else {
+            Write-Log -Message "✓ FileShare sink: Enabled and configured" -Level Information
+        }
+    }
+    
+    # Check if at least one sink is enabled
+    if (-not $hasAnySinkEnabled) {
+        $warnings += "WARNING: No sinks are enabled! Reports will not be sent anywhere."
+        $warnings += "  Recommendation: Enable at least one sink (AzureFunction, WebApi, or FileShare)"
+    }
+    
+    # Check sink priority
+    $priority = $sinks.SinkPriority
+    if ($priority -like '*AzureQueue*') {
+        $warnings += "SinkPriority includes 'AzureQueue' which is not supported in PowerShell"
+        $warnings += "  Recommended priority: 'AzureFunction,WebApi,FileShare'"
+    }
+    
+    # Display warnings
+    if ($warnings.Count -gt 0) {
+        Write-Log -Message "⚠ Sink configuration warnings found:" -Level Warning
+        foreach ($warning in $warnings) {
+            Write-Log -Message "  $warning" -Level Warning
+        }
+    }
+    else {
+        Write-Log -Message "✓ Sink configuration is valid" -Level Information
+    }
+    
+    Write-Log -Message "Execution Strategy: $($sinks.ExecutionStrategy)" -Level Information
+    Write-Log -Message "Sink Priority: $($sinks.SinkPriority)" -Level Information
+}
+
 function Send-Report {
     [CmdletBinding()]
     param(
@@ -1369,6 +1461,9 @@ function Start-SecureBootWatcher {
     
     # Load configuration
     $script:Config = Get-Configuration -Path $ConfigPath
+    
+    # Validate sink configuration
+    Test-SinkConfiguration
     
     $runMode = $script:Config.SecureBootWatcher.RunMode
     $runOnce = $runMode -eq 'Once'
