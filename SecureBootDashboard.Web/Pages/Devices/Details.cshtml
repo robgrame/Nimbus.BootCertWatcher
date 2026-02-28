@@ -369,6 +369,104 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Firmware Confidence -->
+                    <div class="col-md-12 mb-3">
+                        @{
+                            var fwCardBorderClass = Model.Device.FirmwareConfidence switch
+                            {
+                                SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.High => "border-success",
+                                SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.Medium => "border-warning",
+                                SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.Low => "border-danger",
+                                _ => "border-secondary"
+                            };
+                            var fwBadgeClass = Model.Device.FirmwareConfidence switch
+                            {
+                                SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.High => "bg-success",
+                                SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.Medium => "bg-warning text-dark",
+                                SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.Low => "bg-danger",
+                                _ => "bg-secondary"
+                            };
+                            var fwIconClass = Model.Device.FirmwareConfidence switch
+                            {
+                                SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.High => "fa-circle-check",
+                                SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.Medium => "fa-triangle-exclamation",
+                                SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.Low => "fa-circle-xmark",
+                                _ => "fa-circle-question"
+                            };
+                            var fwLabel = Model.Device.FirmwareConfidence switch
+                            {
+                                SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.High => "High Confidence",
+                                SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.Medium => "Medium Confidence",
+                                SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.Low => "Low Confidence",
+                                _ => "Unknown"
+                            };
+                        }
+                        <div class="card @fwCardBorderClass">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-microchip"></i> Firmware Compatibility Confidence
+                                    </h6>
+                                    <span class="badge @fwBadgeClass">
+                                        <i class="fa-solid @fwIconClass"></i> @fwLabel
+                                    </span>
+                                </div>
+                                <p class="mb-2 small">@Model.Device.FirmwareEvaluationDetails</p>
+                                
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <div class="progress" style="height: 25px;">
+                                            @if (Model.Device.FirmwareConfidence == SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.High)
+                                            {
+                                                <div class="progress-bar bg-success" role="progressbar" style="width: 100%">
+                                                    <i class="fa-solid fa-circle-check"></i> HIGH - Released after Jan 2025
+                                                </div>
+                                            }
+                                            else if (Model.Device.FirmwareConfidence == SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.Medium)
+                                            {
+                                                <div class="progress-bar bg-warning text-dark" role="progressbar" style="width: 66%">
+                                                    <i class="fa-solid fa-triangle-exclamation"></i> MEDIUM - Released in 2024
+                                                </div>
+                                            }
+                                            else if (Model.Device.FirmwareConfidence == SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.Low)
+                                            {
+                                                <div class="progress-bar bg-danger" role="progressbar" style="width: 33%">
+                                                    <i class="fa-solid fa-circle-xmark"></i> LOW - Released before 2024
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="progress-bar bg-secondary" role="progressbar" style="width: 10%">
+                                                    <i class="fa-solid fa-circle-question"></i> UNKNOWN
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                @if (Model.Device.FirmwareConfidence == SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.Low)
+                                {
+                                    <div class="alert alert-danger mt-3 mb-0">
+                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                        <strong>Firmware Update Recommended:</strong> 
+                                        The firmware on this device was released before 2024 and may not fully support 
+                                        the latest Secure Boot certificate requirements. Consider updating the firmware 
+                                        before proceeding with Secure Boot certificate updates.
+                                    </div>
+                                }
+                                else if (Model.Device.FirmwareConfidence == SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.Medium)
+                                {
+                                    <div class="alert alert-warning mt-3 mb-0">
+                                        <i class="fa-solid fa-info-circle"></i>
+                                        <strong>Verification Recommended:</strong> 
+                                        The firmware was released during 2024. While it likely supports Secure Boot 
+                                        certificate updates, verification with the manufacturer is recommended.
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Actions -->
@@ -399,6 +497,14 @@
                                 {
                                     <li>Schedule update for OEM certificates in critical expiration (&lt;90 days)</li>
                                 }
+                            }
+                            @if (Model.Device.FirmwareConfidence == SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.Low)
+                            {
+                                <li><strong>Update firmware:</strong> The firmware was released before 2024 and may not support the latest Secure Boot certificate requirements. Contact the device manufacturer for firmware updates.</li>
+                            }
+                            @if (Model.Device.FirmwareConfidence == SecureBootWatcher.Shared.Models.FirmwareConfidenceLevel.Unknown)
+                            {
+                                <li>Verify firmware release date - the device needs to send an updated report with firmware information</li>
                             }
                         </ul>
                     </div>
@@ -457,6 +563,88 @@
                                         default:
                                             <span class="badge bg-secondary">@registryState.UefiCa2023Status</span>
                                             break;
+                                    }
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <!-- Servicing & Enterprise Policy Settings -->
+                    <div class="row mt-4 pt-3 border-top">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-cog"></i> Servicing Configuration</h6>
+                            <dl class="row mb-0 small">
+                                <dt class="col-sm-6">Confidence Level:</dt>
+                                <dd class="col-sm-6">
+                                    @if (!string.IsNullOrEmpty(registryState.ConfidenceLevel))
+                                    {
+                                        @switch (registryState.ConfidenceLevel.ToLower())
+                                        {
+                                            case "high":
+                                                <span class="badge bg-success">@registryState.ConfidenceLevel</span>
+                                                break;
+                                            case "medium":
+                                                <span class="badge bg-warning text-dark">@registryState.ConfidenceLevel</span>
+                                                break;
+                                            case "low":
+                                                <span class="badge bg-danger">@registryState.ConfidenceLevel</span>
+                                                break;
+                                            default:
+                                                <span class="text-muted">Not assessed</span>
+                                                break;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Not assessed</span>
+                                    }
+                                </dd>
+                                
+                                <dt class="col-sm-6">Bucket Hash:</dt>
+                                <dd class="col-sm-6">
+                                    @if (!string.IsNullOrEmpty(registryState.BucketHash))
+                                    {
+                                        <code class="text-muted small">@registryState.BucketHash.Substring(0, Math.Min(16, registryState.BucketHash.Length))...</code>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-shield-alt"></i> Enterprise Policy Settings</h6>
+                            <dl class="row mb-0 small">
+                                <dt class="col-sm-8">High Confidence Opt-Out:</dt>
+                                <dd class="col-sm-4">
+                                    @if (registryState.HighConfidenceOptOut == true)
+                                    {
+                                        <span class="badge bg-info">Opted Out</span>
+                                    }
+                                    else if (registryState.HighConfidenceOptOut == false)
+                                    {
+                                        <span class="badge bg-secondary">Opted In</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </dd>
+                                
+                                <dt class="col-sm-8">Microsoft Managed Opt-In:</dt>
+                                <dd class="col-sm-4">
+                                    @if (registryState.MicrosoftUpdateManagedOptIn == true)
+                                    {
+                                        <span class="badge bg-info">Opted In</span>
+                                    }
+                                    else if (registryState.MicrosoftUpdateManagedOptIn == false)
+                                    {
+                                        <span class="badge bg-secondary">Opted Out</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
                                     }
                                 </dd>
                             </dl>

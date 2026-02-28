@@ -52,12 +52,12 @@ namespace SecureBootWatcher.Client.Services
 
             // Enumerate certificates
             SecureBootCertificateCollection? certificates = null;
+
             try
             {
                 _logger.LogTrace("ReportBuilder.BuildAsync: Enumerating Secure Boot certificates");
                 certificates = await _certificateEnumerator.EnumerateAsync(cancellationToken).ConfigureAwait(false);
-                _logger.LogDebug("ReportBuilder.BuildAsync: Successfully enumerated {CertCount} certificates", 
-                    certificates?.TotalCertificateCount ?? 0);
+                _logger.LogDebug("ReportBuilder.BuildAsync: Successfully enumerated {CertCount} certificates", certificates?.TotalCertificateCount ?? 0);
             }
             catch (Exception ex)
             {
@@ -136,7 +136,7 @@ namespace SecureBootWatcher.Client.Services
             {
                 // Remove commit hash (everything after '+') if present
                 // Example: "1.1.1.48182+a1b2c3d" -> "1.1.1.48182"
-                var plusIndex = informationalVersion.IndexOf('+');
+                var plusIndex = informationalVersion!.IndexOf('+');
                 if (plusIndex > 0)
                 {
                     return informationalVersion.Substring(0, plusIndex);
@@ -271,6 +271,7 @@ namespace SecureBootWatcher.Client.Services
                 identity.Manufacturer ?? "N/A",
                 identity.Model ?? "N/A", 
                 identity.FirmwareVersion ?? "N/A",
+                identity.FirmwareReleaseDate?.ToString("yyyy-MM-dd") ?? "N/A",
                 identity.OperatingSystem ?? "N/A",
                 identity.OSVersion ?? "N/A",
                 identity.OSProductType?.ToString() ?? "N/A",
@@ -283,12 +284,12 @@ namespace SecureBootWatcher.Client.Services
         {
             var alerts = new List<string>();
 
-            if (report.Registry.UefiCa2023Status == SecureBootDeploymentState.Error)
+            if (report.Registry.Servicing.UefiCa2023Status == SecureBootDeploymentState.Error)
             {
-                alerts.Add($"Secure Boot update reported error code {report.Registry.UefiCa2023Error ?? 0}.");
+                alerts.Add($"Secure Boot update reported error code {report.Registry.Servicing.UefiCa2023Error ?? 0}.");
             }
 
-            if (report.Registry.UefiCa2023Status == SecureBootDeploymentState.NotStarted)
+            if (report.Registry.Servicing.UefiCa2023Status == SecureBootDeploymentState.NotStarted)
             {
                 alerts.Add("Secure Boot certificate update has not started on this device.");
             }
@@ -316,13 +317,13 @@ namespace SecureBootWatcher.Client.Services
                 }
             }
 
-            if (report.Events.Count == 0 && report.Registry.UefiCa2023Status != SecureBootDeploymentState.Updated)
+            if (report.Events.Count == 0 && report.Registry.Servicing.UefiCa2023Status != SecureBootDeploymentState.Updated)
             {
                 alerts.Add("No Secure Boot events detected within the lookback window.");
             }
 
             if (report.Registry.AvailableUpdates.HasValue)
-            {
+            { 
                 var progressionState = SecureBootUpdateFlagsExtensions.GetProgressionState(report.Registry.AvailableUpdates);
                 var completionPercentage = SecureBootUpdateFlagsExtensions.GetCompletionPercentage(report.Registry.AvailableUpdates);
                 
@@ -388,7 +389,7 @@ namespace SecureBootWatcher.Client.Services
             {
                 _logger.LogInformation("Auto-download enabled. Downloading update from: {Url}", updateCheck.DownloadUrl);
                 
-                var downloadResult = await _updateService.DownloadUpdateAsync(updateCheck.DownloadUrl, cancellationToken);
+                var downloadResult = await _updateService.DownloadUpdateAsync(updateCheck.DownloadUrl!, cancellationToken);
                 
                 if (!downloadResult.Success)
                 {
@@ -403,12 +404,12 @@ namespace SecureBootWatcher.Client.Services
                 {
                     _logger.LogInformation("Auto-install enabled. Scheduling update...");
                     
-                    var scheduled = await _updateService.ScheduleUpdateAsync(downloadResult.LocalPath, cancellationToken);
+                    var scheduled = await _updateService.ScheduleUpdateAsync(downloadResult.LocalPath!, cancellationToken);
                     
                     if (scheduled)
                     {
                         _logger.LogInformation("Update scheduled successfully. Will be applied after current execution completes.");
-                    }
+                      }
                     else
                     {
                         _logger.LogWarning("Failed to schedule update");

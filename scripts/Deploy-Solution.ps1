@@ -348,8 +348,7 @@ function Invoke-ProjectPublish {
         'publish',
         $ProjectPath,
         '-c', $Configuration,
-        '-o', $LocalPublishPath,
-        '--no-self-contained'
+        '-o', $LocalPublishPath
     )
     
     if ($VerboseMode) {

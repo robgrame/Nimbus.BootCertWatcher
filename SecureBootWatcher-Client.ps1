@@ -48,7 +48,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 # Script version
-$script:ClientVersion = '1.0.0'
+$script:ClientVersion = '1.14.0'
 
 # Get script directory
 $script:ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
@@ -66,14 +66,31 @@ function Write-Log {
         [string]$Level = 'Information',
         
         [Parameter(Mandatory = $false)]
-        [System.Exception]$Exception
+        [object]$Exception
     )
     
     $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss.fff zzz'
     $logMessage = "[$timestamp] [$Level] $Message"
     
     if ($Exception) {
-        $logMessage += "`n  Exception: $($Exception.Message)`n  StackTrace: $($Exception.StackTrace)"
+        # Handle both Exception and ErrorRecord types
+        if ($Exception -is [System.Management.Automation.ErrorRecord]) {
+            $exceptionMessage = $Exception.Exception.Message
+            $exceptionStack = $Exception.ScriptStackTrace
+        }
+        elseif ($Exception -is [System.Exception]) {
+            $exceptionMessage = $Exception.Message
+            $exceptionStack = $Exception.StackTrace
+        }
+        else {
+            $exceptionMessage = $Exception.ToString()
+            $exceptionStack = ""
+        }
+        
+        $logMessage += "`n  Exception: $exceptionMessage"
+        if ($exceptionStack) {
+            $logMessage += "`n  StackTrace: $exceptionStack"
+        }
     }
     
     # Write to console
@@ -85,19 +102,25 @@ function Write-Log {
         default { Write-Host $logMessage }
     }
     
-    # Write to log file if configured
-    if ($script:Config -and $script:Config.Logging.File.Enabled) {
-        $logPath = $script:Config.Logging.File.Path
-        if (-not [System.IO.Path]::IsPathRooted($logPath)) {
-            $logPath = Join-Path $script:ScriptRoot $logPath
+    # Write to log file if configured (only if $script:Config has been initialized)
+    if ((Test-Path variable:script:Config) -and $script:Config -and $script:Config.Logging -and $script:Config.Logging.File -and $script:Config.Logging.File.Enabled) {
+        try {
+            $logPath = $script:Config.Logging.File.Path
+            if (-not [System.IO.Path]::IsPathRooted($logPath)) {
+                $logPath = Join-Path $script:ScriptRoot $logPath
+            }
+            
+            $logDir = Split-Path -Parent $logPath
+            if (-not (Test-Path $logDir)) {
+                New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+            }
+            
+            $logMessage | Out-File -FilePath $logPath -Append -Encoding UTF8
         }
-        
-        $logDir = Split-Path -Parent $logPath
-        if (-not (Test-Path $logDir)) {
-            New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+        catch {
+            # Silently ignore file logging errors to avoid recursion
+            Write-Host "[Write-Log] Failed to write to log file: $_" -ForegroundColor DarkYellow
         }
-        
-        $logMessage | Out-File -FilePath $logPath -Append -Encoding UTF8
     }
 }
 
@@ -214,10 +237,12 @@ function Get-DeviceIdentity {
     Write-Log -Message "Collecting device identity information"
     
     $identity = @{
+        MachineName = $env:COMPUTERNAME
         DomainName = $env:USERDOMAIN
         UserPrincipalName = $env:USERNAME
         ClientVersion = $script:ClientVersion
-        Tags = @{}
+        Tags = @{
+        }
     }
     
     # Add FleetId if configured
@@ -243,7 +268,12 @@ function Get-DeviceIdentity {
         if ($bios) {
             $identity.FirmwareVersion = $bios.SMBIOSBIOSVersion
             if ($bios.ReleaseDate) {
-                $identity.FirmwareReleaseDate = $bios.ReleaseDate.ToString('o')
+                try {
+                    $identity.FirmwareReleaseDate = [datetime]$bios.ReleaseDate
+                }
+                catch {
+                    $identity.FirmwareReleaseDate = $bios.ReleaseDate.ToString('o')
+                }
             }
         }
     }
@@ -259,13 +289,14 @@ function Get-DeviceIdentity {
             $identity.OSVersion = $os.Version
             $identity.OSBuildNumber = $os.BuildNumber
             
-            # Map ProductType to OSProductType enum
+            # Map ProductType to OSProductType enum (numeric values)
             # 1 = Workstation, 2 = DomainController, 3 = Server
+            # API expects int: 0=Unknown, 1=Workstation, 2=DomainController, 3=Server
             $identity.OSProductType = switch ($os.ProductType) {
-                1 { 'Workstation' }
-                2 { 'DomainController' }
-                3 { 'Server' }
-                default { 'Unknown' }
+                1 { 1 }  # Workstation
+                2 { 2 }  # DomainController
+                3 { 3 }  # Server
+                default { 0 }  # Unknown
             }
         }
     }
@@ -357,7 +388,7 @@ function Get-SecureBootRegistrySnapshot {
     $statePath = "$basePath\State"
     
     $snapshot = @{
-        UefiCa2023Status = 'NotStarted'
+        UefiCa2023Status = 0  # Unknown
         UefiCa2023Error = $null
         AvailableUpdates = $null
         PendingDeploymentType = $null
@@ -370,15 +401,18 @@ function Get-SecureBootRegistrySnapshot {
     $uefiDbUpdatePath = "$basePath\UEFIDBUpdate"
     
     if (Test-Path $uefiDbUpdatePath) {
-        # Status: 0=NotStarted, 1=InProgress, 2=Updated, 3=Error
+        # Status: 0=Unknown, 1=NotStarted, 2=InProgress, 3=Updated, 4=Error (enum values)
         $status = Get-RegistryValue -Path $uefiDbUpdatePath -Name 'Status'
         if ($null -ne $status) {
+            # Map registry values to enum values
+            # Registry: 0=NotStarted, 1=InProgress, 2=Updated, 3=Error
+            # Enum: 0=Unknown, 1=NotStarted, 2=InProgress, 3=Updated, 4=Error
             $snapshot.UefiCa2023Status = switch ($status) {
-                0 { 'NotStarted' }
-                1 { 'InProgress' }
-                2 { 'Updated' }
-                3 { 'Error' }
-                default { 'NotStarted' }
+                0 { 1 }  # NotStarted
+                1 { 2 }  # InProgress
+                2 { 3 }  # Updated
+                3 { 4 }  # Error
+                default { 0 }  # Unknown
             }
         }
         
@@ -705,11 +739,22 @@ function Build-SecureBootReport {
     # Populate alerts
     $alerts = @()
     
-    if ($registry.UefiCa2023Status -eq 'Error') {
+    # Map enum values for readability
+    # 0=Unknown, 1=NotStarted, 2=InProgress, 3=Updated, 4=Error
+    $statusName = switch ($registry.UefiCa2023Status) {
+        0 { 'Unknown' }
+        1 { 'NotStarted' }
+        2 { 'InProgress' }
+        3 { 'Updated' }
+        4 { 'Error' }
+        default { 'Unknown' }
+    }
+    
+    if ($registry.UefiCa2023Status -eq 4) {  # Error
         $alerts += "Secure Boot update reported error code $($registry.UefiCa2023Error ?? 0)."
     }
     
-    if ($registry.UefiCa2023Status -eq 'NotStarted') {
+    if ($registry.UefiCa2023Status -eq 1) {  # NotStarted
         $alerts += "Secure Boot certificate update has not started on this device."
     }
     
@@ -728,7 +773,7 @@ function Build-SecureBootReport {
         $alerts += "✓ Telemetry level ($($telemetryPolicy.TelemetryLevelDescription)) meets CFR requirements."
     }
     
-    if ($events.Count -eq 0 -and $registry.UefiCa2023Status -ne 'Updated') {
+    if ($events.Count -eq 0 -and $registry.UefiCa2023Status -ne 3) {  # Not Updated
         $alerts += "No Secure Boot events detected within the lookback window."
     }
     
@@ -750,7 +795,7 @@ function Build-SecureBootReport {
     
     $report.Alerts = $alerts
     
-    Write-Log -Message "Report built successfully with $($alerts.Count) alerts"
+    Write-Log -Message "Report built successfully with $($alerts.Count) alerts (Status: $statusName)"
     
     return [PSCustomObject]$report
 }

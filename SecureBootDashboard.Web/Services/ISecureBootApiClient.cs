@@ -87,6 +87,17 @@ public sealed record DeviceSummary(
     public bool HasNoOemCertificates { get; init; }
 
     /// <summary>
+    /// Indicates if device has legacy Microsoft certificates (e.g., Windows Production PCA 2011) 
+    /// that will expire in April 2026 and needs to be updated to Windows UEFI CA 2023
+    /// </summary>
+    public bool HasLegacyCertificatesExpiring2026 { get; init; }
+
+    /// <summary>
+    /// Number of legacy Microsoft certificates expiring in 2026
+    /// </summary>
+    public int LegacyCertificateCount2026 { get; init; }
+
+    /// <summary>
     /// Number of expired OEM certificates
     /// </summary>
     public int ExpiredOemCertificateCount { get; init; }
@@ -115,6 +126,20 @@ public sealed record DeviceSummary(
     /// Detailed certificate evaluation message
     /// </summary>
     public string CertificateEvaluationDetails { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Firmware compatibility confidence level based on release date.
+    /// HIGH: Released after Jan 1, 2025 (Green)
+    /// MEDIUM: Released during 2024 (Yellow)
+    /// LOW: Released before 2024 (Red)
+    /// UNKNOWN: Release date not available (Gray)
+    /// </summary>
+    public FirmwareConfidenceLevel FirmwareConfidence { get; init; }
+
+    /// <summary>
+    /// Detailed firmware evaluation message including confidence level explanation
+    /// </summary>
+    public string FirmwareEvaluationDetails { get; init; } = string.Empty;
 }
 
 public sealed record DeviceDetail(
@@ -160,6 +185,17 @@ public sealed record DeviceDetail(
     public bool HasNoOemCertificates { get; init; }
 
     /// <summary>
+    /// Indicates if device has legacy Microsoft certificates (e.g., Windows Production PCA 2011) 
+    /// that will expire in April 2026 and needs to be updated to Windows UEFI CA 2023
+    /// </summary>
+    public bool HasLegacyCertificatesExpiring2026 { get; init; }
+
+    /// <summary>
+    /// Number of legacy Microsoft certificates expiring in 2026
+    /// </summary>
+    public int LegacyCertificateCount2026 { get; init; }
+
+    /// <summary>
     /// Number of expired OEM certificates
     /// </summary>
     public int ExpiredOemCertificateCount { get; init; }
@@ -188,6 +224,20 @@ public sealed record DeviceDetail(
     /// Detailed certificate evaluation message
     /// </summary>
     public string CertificateEvaluationDetails { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Firmware compatibility confidence level based on release date.
+    /// HIGH: Released after Jan 1, 2025 (Green)
+    /// MEDIUM: Released during 2024 (Yellow)
+    /// LOW: Released before 2024 (Red)
+    /// UNKNOWN: Release date not available (Gray)
+    /// </summary>
+    public FirmwareConfidenceLevel FirmwareConfidence { get; init; }
+
+    /// <summary>
+    /// Detailed firmware evaluation message including confidence level explanation
+    /// </summary>
+    public string FirmwareEvaluationDetails { get; init; } = string.Empty;
 }
 
 public sealed record ReportHistoryItem(

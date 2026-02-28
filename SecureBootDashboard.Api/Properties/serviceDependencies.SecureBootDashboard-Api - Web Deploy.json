@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "mssql2": {
+      "serviceConnectorResourceId": "/subscriptions/[parameters('subscriptionId')]/resourcegroups/[parameters('serviceConnectorResourceGroupName')]/providers/Microsoft.Web/sites/SecureBootDashboard-Api/providers/Microsoft.ServiceLinker/linkers/ConnectionStringsSqlServer2_5F66E9CA16",
+      "secretStore": "AzureAppSettings",
+      "resourceId": "/subscriptions/[parameters('subscriptionId')]/resourcegroups/[parameters('resourceGroupName')]/providers/Microsoft.Sql/servers/securebootdashboard-sql/databases/SecureBootDashboard",
+      "type": "mssql.azure",
+      "connectionId": "ConnectionStrings:SqlServer2",
+      "dynamicId": null
+    }
+  }
+}

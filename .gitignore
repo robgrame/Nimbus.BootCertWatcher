@@ -44,3 +44,5 @@ external/
 
 # Client package (generated build artifact)
 client-package/SecureBootWatcher-Client.zip
+/deploy/packages/SecureBootDashboard-Deploy-v1.5.0/binaries
+/deploy/packages

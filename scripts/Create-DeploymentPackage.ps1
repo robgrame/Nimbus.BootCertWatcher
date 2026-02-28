@@ -1,4 +1,4 @@
-# ===============================================================================
+﻿# ===============================================================================
 # Create-DeploymentPackage.ps1
 # 
 # Creates a complete deployment package for SecureBootDashboard
@@ -10,14 +10,31 @@
 # - dotnet-ef tools (for database migrations)
 #
 # Usage:
+#   # Standard deployment (with tests)
 #   .\Create-DeploymentPackage.ps1 -Version "1.5.0" -Configuration "Release"
+#
+#   # Skip test execution (compile test projects but don't run)
+#   .\Create-DeploymentPackage.ps1 -Version "1.5.0" -Configuration "Release" -SkipTests
+#
+#   # Exclude test projects entirely (don't build/run tests - FASTEST)
+#   .\Create-DeploymentPackage.ps1 -Version "1.5.0" -Configuration "Release" -ExcludeTestProjects
+#
+# Parameters:
+#   -Version                    Package version (default: 1.5.2)
+#   -Configuration              Release or Debug (default: Release)
+#   -OutputPath                 Where to save package (default: .\deploy\packages)
+#   -GenerateAzureCertificate   Generate Azure App Reg certificate
+#   -AzureCertificatePassword   Password for Azure cert (default: AzureAppReg!Cert123)
+#   -SkipTests                  Don't run tests (still compiles them)
+#   -ExcludeTestProjects        Don't build test projects at all (FASTEST)
+#   -SkipDatabaseScripts        Don't generate database migration scripts
 #
 # ===============================================================================
 
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $false)]
-    [string]$Version = "1.5.0",
+    [string]$Version = "1.5.2",
     
     [Parameter(Mandatory = $false)]
     [ValidateSet("Debug", "Release")]
@@ -36,6 +53,9 @@ param(
     [switch]$SkipTests,
     
     [Parameter(Mandatory = $false)]
+    [switch]$ExcludeTestProjects,
+    
+    [Parameter(Mandatory = $false)]
     [switch]$SkipDatabaseScripts
 )
 
@@ -47,6 +67,13 @@ $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
 $solutionRoot = Split-Path -Parent $PSScriptRoot
+
+# Convert OutputPath to absolute path based on current location
+# This ensures the path remains valid even when the script changes directories
+if (-not [System.IO.Path]::IsPathRooted($OutputPath)) {
+    $OutputPath = Join-Path (Get-Location) $OutputPath
+}
+
 $packageName = "SecureBootDashboard-Deploy-v$Version"
 $packagePath = Join-Path $OutputPath $packageName
 $zipFile = "$packagePath.zip"
@@ -86,9 +113,9 @@ function Test-Prerequisites {
     # Check .NET SDK
     try {
         $dotnetVersion = dotnet --version
-        Write-Log "? .NET SDK version: $dotnetVersion" -Level Success
+        Write-Log ".NET SDK version: $dotnetVersion" -Level Success
     } catch {
-        Write-Log "? .NET SDK not found. Install from https://dotnet.microsoft.com/download" -Level Error
+        Write-Log ".NET SDK not found. Install from https://dotnet.microsoft.com/download" -Level Error
         throw
     }
     
@@ -96,21 +123,21 @@ function Test-Prerequisites {
     if (-not $SkipDatabaseScripts) {
         try {
             $efVersion = dotnet ef --version 2>&1 | Select-Object -First 1
-            Write-Log "? Entity Framework Core tools: $efVersion" -Level Success
+            Write-Log "Entity Framework Core tools: $efVersion" -Level Success
         } catch {
-            Write-Log "? EF Core tools not found. Installing..." -Level Warning
+            Write-Log "EF Core tools not found. Installing..." -Level Warning
             dotnet tool install --global dotnet-ef
-            Write-Log "? EF Core tools installed" -Level Success
+            Write-Log "EF Core tools installed" -Level Success
         }
     }
     
     # Check solution file
     $solutionFile = Get-ChildItem -Path $solutionRoot -Filter "*.sln" | Select-Object -First 1
     if (-not $solutionFile) {
-        Write-Log "? Solution file not found in $solutionRoot" -Level Error
+        Write-Log "Solution file not found in $solutionRoot" -Level Error
         throw "Solution file not found"
     }
-    Write-Log "? Solution file: $($solutionFile.Name)" -Level Success
+    Write-Log "Solution file: $($solutionFile.Name)" -Level Success
     
     return $solutionFile.FullName
 }
@@ -147,7 +174,7 @@ function Initialize-PackageStructure {
         Write-Log "  Created: $dir"
     }
     
-    Write-Log "? Package structure created" -Level Success
+    Write-Log "Package structure created" -Level Success
 }
 
 function Build-Solution {
@@ -159,27 +186,61 @@ function Build-Solution {
     Write-Log "Restoring NuGet packages..."
     dotnet restore $SolutionPath
     
-    # Run tests if not skipped
-    if (-not $SkipTests) {
-        Write-Log "Running tests..."
-        dotnet test $SolutionPath --configuration $Configuration --no-restore --verbosity minimal
-        if ($LASTEXITCODE -ne 0) {
-            Write-Log "? Some tests failed, but continuing..." -Level Warning
-        } else {
-            Write-Log "? All tests passed" -Level Success
+    # If ExcludeTestProjects is set, build only non-test projects
+    if ($ExcludeTestProjects) {
+        Write-Log "Building non-test projects (test projects excluded)..."
+        
+        # Get the solution directory
+        $slnDir = Split-Path -Parent $SolutionPath
+        
+        # Build only non-test projects
+        $projectPatterns = @(
+            "**/SecureBootDashboard.Api.csproj",
+            "**/SecureBootDashboard.Web.csproj",
+            "**/SecureBootWatcher.Client.csproj",
+            "**/SecureBootWatcher.Shared.csproj"
+        )
+        
+        foreach ($pattern in $projectPatterns) {
+            $projects = Get-ChildItem -Path $slnDir -Filter (Split-Path -Leaf $pattern) -Recurse
+            foreach ($project in $projects) {
+                # Skip test projects
+                if ($project.FullName -notmatch "\.Tests\.csproj$") {
+                    Write-Log "  Building: $($project.Name)"
+                    dotnet build $project.FullName --configuration $Configuration --no-restore
+                    
+                    if ($LASTEXITCODE -ne 0) {
+                        Write-Log "Build failed for $($project.Name)" -Level Error
+                        throw "Build failed"
+                    }
+                }
+            }
         }
+        
+        Write-Log "Non-test projects built successfully" -Level Success
+    } else {
+        # Run tests if not skipped
+        if (-not $SkipTests) {
+            Write-Log "Running tests..."
+            dotnet test $SolutionPath --configuration $Configuration --no-restore --verbosity minimal
+            if ($LASTEXITCODE -ne 0) {
+                Write-Log "Some tests failed, but continuing..." -Level Warning
+            } else {
+                Write-Log "All tests passed" -Level Success
+            }
+        }
+        
+        # Build solution
+        Write-Log "Building solution in $Configuration mode..."
+        dotnet build $SolutionPath --configuration $Configuration --no-restore
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Log "Build failed" -Level Error
+            throw "Build failed"
+        }
+        
+        Write-Log "Solution built successfully" -Level Success
     }
-    
-    # Build solution
-    Write-Log "Building solution in $Configuration mode..."
-    dotnet build $SolutionPath --configuration $Configuration --no-restore
-    
-    if ($LASTEXITCODE -ne 0) {
-        Write-Log "? Build failed" -Level Error
-        throw "Build failed"
-    }
-    
-    Write-Log "? Solution built successfully" -Level Success
 }
 
 function Publish-ApiProject {
@@ -195,7 +256,7 @@ dotnet publish "$apiProjectPath\SecureBootDashboard.Api.csproj" `
     --runtime win-x64
     
 if ($LASTEXITCODE -ne 0) {
-    Write-Log "? API publish failed" -Level Error
+    Write-Log "API publish failed" -Level Error
     throw
 }
     
@@ -205,7 +266,7 @@ if ($LASTEXITCODE -ne 0) {
         Remove-Item $devSettings -Force
     }
     
-    Write-Log "? API published to binaries\api" -Level Success
+    Write-Log "API published to binaries\api" -Level Success
 }
 
 function Publish-WebProject {
@@ -221,7 +282,7 @@ dotnet publish "$webProjectPath\SecureBootDashboard.Web.csproj" `
     --runtime win-x64
     
 if ($LASTEXITCODE -ne 0) {
-    Write-Log "? Web publish failed" -Level Error
+    Write-Log "Web publish failed" -Level Error
     throw
 }
     
@@ -231,26 +292,26 @@ if ($LASTEXITCODE -ne 0) {
         Remove-Item $devSettings -Force
     }
     
-    Write-Log "? Web published to binaries\web" -Level Success
+    Write-Log "Web published to binaries\web" -Level Success
 }
 
 function Publish-ClientProject {
-Write-Log "Publishing Client project..." -Level Info
+    Write-Log "Publishing Client project..." -Level Info
     
-$clientProjectPath = Join-Path $solutionRoot "SecureBootWatcher.Client"
-$clientOutputPath = Join-Path $packagePath "binaries\client"
+    $clientProjectPath = Join-Path $solutionRoot "SecureBootWatcher.Client"
+    $clientOutputPath = Join-Path $packagePath "binaries\client"
     
-dotnet publish "$clientProjectPath\SecureBootWatcher.Client.csproj" `
-    --configuration $Configuration `
-    --output $clientOutputPath `
-    --self-contained false `
-    --runtime win-x64 `
-    --framework net48
+    dotnet publish "$clientProjectPath\SecureBootWatcher.Client.csproj" `
+        --configuration $Configuration `
+        --output $clientOutputPath `
+        --self-contained false `
+        --runtime win-x64 `
+        --framework net48
     
-if ($LASTEXITCODE -ne 0) {
-    Write-Log "? Client publish failed" -Level Error
-    throw
-}
+    if ($LASTEXITCODE -ne 0) {
+        Write-Log "Client publish failed" -Level Error
+        throw
+    }
     
     # Remove appsettings.local.json from output
     $localSettings = Join-Path $clientOutputPath "appsettings.local.json"
@@ -258,7 +319,249 @@ if ($LASTEXITCODE -ne 0) {
         Remove-Item $localSettings -Force
     }
     
-    Write-Log "? Client published to binaries\client" -Level Success
+    Write-Log "Client published to binaries\client" -Level Success
+}
+
+function Create-ClientPackageZip {
+    Write-Log "Creating standalone client package ZIP..." -Level Info
+    
+    $clientBinariesPath = Join-Path $packagePath "binaries\client"
+    $clientPackageZip = Join-Path $OutputPath "SecureBootWatcher-Client-v$Version.zip"
+    
+    # Validate client binaries exist
+    if (-not (Test-Path $clientBinariesPath)) {
+        Write-Log "Client binaries not found at: $clientBinariesPath" -Level Error
+        throw "Client binaries directory not found"
+    }
+    
+    try {
+        # Remove existing client package if present
+        if (Test-Path $clientPackageZip) {
+            Remove-Item $clientPackageZip -Force
+        }
+        
+        # Create temporary staging directory for packaging
+        $tempStagingPath = Join-Path $env:TEMP "SecureBootWatcher-ClientPackage-$(Get-Date -Format 'yyyyMMddHHmmss')"
+        New-Item -ItemType Directory -Path $tempStagingPath -Force | Out-Null
+        
+        try {
+            # Copy client binaries to staging
+            Write-Log "Copying client binaries to staging directory..."
+            Copy-Item -Path "$clientBinariesPath\*" -Destination $tempStagingPath -Recurse -Force
+            
+            # Include Azure certificate if it was generated
+            if ($GenerateAzureCertificate) {
+                $certSourcePath = Join-Path $packagePath "certificates\AzureAppRegistration.pfx"
+                
+                Write-Log "  Checking for Azure certificate at: $certSourcePath"
+                
+                if (Test-Path $certSourcePath) {
+                    # Create certificates subfolder in staging
+                    $certStagingPath = Join-Path $tempStagingPath "certificates"
+                    New-Item -ItemType Directory -Path $certStagingPath -Force | Out-Null
+                    
+                    # Copy Azure certificate to staging
+                    Copy-Item -Path $certSourcePath -Destination $certStagingPath -Force
+                    Write-Log "  Azure certificate included in client package" -Level Success
+                    Write-Log "  Certificate will be installed by Deploy-Client.ps1"
+                    
+                    # Create certificate installation instructions file
+                    $certInstructionsPath = Join-Path $certStagingPath "INSTALL-CERTIFICATE.txt"
+                    $certInstructions = @"
+Azure Storage Account Authentication Certificate
+================================================
+
+This package includes the Azure App Registration certificate required
+for authenticating to Azure Storage Queue.
+
+Certificate File: AzureAppRegistration.pfx
+Password: $AzureCertificatePassword
+
+AUTOMATIC INSTALLATION
+======================
+
+The Deploy-Client.ps1 script will automatically install this certificate
+when you use the -CreateScheduledTask parameter.
+
+The certificate will be installed to:
+- Store Location: LocalMachine\My
+- Accessible by: SYSTEM account (for scheduled task)
+
+MANUAL INSTALLATION (if needed)
+================================
+
+If you need to install the certificate manually:
+
+1. Open PowerShell as Administrator
+
+2. Run the following commands:
+
+   `$password = ConvertTo-SecureString -String "$AzureCertificatePassword" -Force -AsPlainText
+   `$pfxPath = ".\certificates\AzureAppRegistration.pfx"
+   
+   Import-PfxCertificate ``
+       -FilePath `$pfxPath ``
+       -CertStoreLocation "Cert:\LocalMachine\My" ``
+       -Password `$password ``
+       -Exportable
+
+3. Verify installation:
+
+   Get-ChildItem Cert:\LocalMachine\My | Where-Object { `$_.Subject -like "*SecureBootDashboard*" }
+
+4. Note the certificate thumbprint for appsettings.json configuration
+
+SECURITY NOTES
+==============
+
+⚠️  The certificate password is: $AzureCertificatePassword
+
+⚠️  This certificate provides access to Azure Storage Queue
+⚠️  Protect this file and password appropriately
+⚠️  Consider using Azure Key Vault in production environments
+⚠️  Rotate certificates before expiration (check NotAfter date)
+
+For more information, see:
+- docs/AZURE_QUEUE_CONFIGURATION.md
+- docs/CLIENT_DEPLOYMENT.md
+
+"@
+                    Set-Content -Path $certInstructionsPath -Value $certInstructions
+                    Write-Log "  Certificate installation instructions created"
+                } else {
+                    Write-Log "  Warning: Azure certificate was requested but not found at: $certSourcePath" -Level Warning
+                    Write-Log "  Verify that Generate-AzureAppRegistrationCertificate ran before Create-ClientPackageZip" -Level Warning
+                }
+            } else {
+                Write-Log "  Azure certificate not included (-GenerateAzureCertificate not specified)"
+            }
+            
+            # Create ZIP from staging directory
+            Compress-Archive -Path "$tempStagingPath\*" -DestinationPath $clientPackageZip -Force
+            
+            # Calculate checksum
+            $checksum = Get-FileHash -Path $clientPackageZip -Algorithm SHA256
+            
+            # Create checksum file
+            $checksumFile = "$clientPackageZip.sha256"
+            Set-Content -Path $checksumFile -Value "$($checksum.Hash)  $(Split-Path -Leaf $clientPackageZip)"
+            
+            # Get file size
+            $fileSize = (Get-Item $clientPackageZip).Length
+            $fileSizeMB = [math]::Round($fileSize / 1MB, 2)
+            
+            Write-Log "Client package ZIP created" -Level Success
+            Write-Log "  Path: $clientPackageZip"
+            Write-Log "  Size: $fileSizeMB MB"
+            Write-Log "  SHA256: $($checksum.Hash)"
+            
+            # Verify certificate inclusion by checking staging directory
+            $certIncluded = Test-Path (Join-Path $tempStagingPath "certificates\AzureAppRegistration.pfx")
+            if ($certIncluded) {
+                Write-Log "  Includes: Azure certificate for Storage Account authentication" -Level Success
+            } elseif ($GenerateAzureCertificate) {
+                Write-Log "  Warning: Certificate was NOT included in package" -Level Warning
+            }
+            
+            # Create README for client package
+            $clientReadmePath = Join-Path $OutputPath "SecureBootWatcher-Client-v$Version-README.txt"
+        $clientReadmeContent = @"
+SecureBootWatcher Client Package v$Version
+==========================================
+
+Generated: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+Configuration: $Configuration
+Package: $(Split-Path -Leaf $clientPackageZip)
+
+This is a standalone client deployment package that can be used with Deploy-Client.ps1
+
+## Quick Deployment
+
+### Option 1: Install locally with default settings
+``````powershell
+.\Deploy-Client.ps1 -PackageZipPath "$clientPackageZip" -CreateScheduledTask
+``````
+
+### Option 2: Install with custom API URL
+``````powershell
+.\Deploy-Client.ps1 ``
+    -PackageZipPath "$clientPackageZip" ``
+    -ApiBaseUrl "https://api.yourdomain.com" ``
+    -CreateScheduledTask
+``````
+
+### Option 3: Install with custom schedule (every 4 hours)
+``````powershell
+.\Deploy-Client.ps1 ``
+    -PackageZipPath "$clientPackageZip" ``
+    -ApiBaseUrl "https://api.yourdomain.com" ``
+    -FleetId "production-fleet" ``
+    -CreateScheduledTask ``
+    -ScheduleType Custom ``
+    -RepeatEveryHours 4
+``````
+
+## Package Contents
+
+- SecureBootWatcher.Client.exe
+- appsettings.json (configuration template)
+- All required dependencies
+$(if ($GenerateAzureCertificate) {
+"- certificates/AzureAppRegistration.pfx (Azure Storage authentication)
+- certificates/INSTALL-CERTIFICATE.txt (Installation instructions)"
+})
+
+## Configuration
+
+The appsettings.json file will be automatically configured during deployment
+if you provide -ApiBaseUrl and -FleetId parameters to Deploy-Client.ps1.
+
+For manual configuration after deployment, edit:
+C:\Program Files\SecureBootWatcher\appsettings.json
+
+## Schedule Options
+
+- Once: Run once at specified time
+- Daily: Run daily at specified time (default)
+- Hourly: Run every hour
+- Custom: Run every N hours (1-24)
+
+## File Integrity
+
+SHA256: $($checksum.Hash)
+
+Verify with:
+``````powershell
+`$hash = Get-FileHash -Path "$(Split-Path -Leaf $clientPackageZip)" -Algorithm SHA256
+if (`$hash.Hash -eq "$($checksum.Hash)") {
+    Write-Host "Package verified successfully" -ForegroundColor Green
+} else {
+    Write-Host "Package verification FAILED" -ForegroundColor Red
+}
+``````
+
+## Documentation
+
+For complete deployment documentation, see:
+- docs/CLIENT_DEPLOYMENT.md
+- docs/CLIENT_DEPLOYMENT_SCRIPTS.md
+
+"@
+        
+        Set-Content -Path $clientReadmePath -Value $clientReadmeContent
+        Write-Log "Client README created: $(Split-Path -Leaf $clientReadmePath)"
+        
+        # Cleanup staging directory
+        } finally {
+            if (Test-Path $tempStagingPath) {
+                Remove-Item -Path $tempStagingPath -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+        
+    } catch {
+        Write-Log " Failed to create client package ZIP: $_" -Level Error
+        throw
+    }
 }
 
 function Generate-DatabaseScripts {
@@ -279,11 +582,11 @@ function Generate-DatabaseScripts {
         dotnet ef migrations script --idempotent --output "$databaseOutputPath\migrations.sql"
         
         if ($LASTEXITCODE -ne 0) {
-            Write-Log "? Failed to generate migrations script" -Level Error
+            Write-Log " Failed to generate migrations script" -Level Error
             throw
         }
         
-        Write-Log "? Migrations script generated" -Level Success
+        Write-Log " Migrations script generated" -Level Success
     } finally {
         Pop-Location
     }
@@ -292,9 +595,9 @@ function Generate-DatabaseScripts {
     $createDbScript = Join-Path $solutionRoot "scripts\database\Create-Database.sql"
     if (Test-Path $createDbScript) {
         Copy-Item $createDbScript -Destination $databaseOutputPath -Force
-        Write-Log "? Create-Database.sql copied" -Level Success
+        Write-Log " Create-Database.sql copied" -Level Success
     } else {
-        Write-Log "? Create-Database.sql not found, creating template..." -Level Warning
+        Write-Log "  Create-Database.sql not found, creating template..." -Level Warning
         
         $createDbTemplate = @"
 -- =============================================================================
@@ -335,7 +638,7 @@ GO
 ALTER DATABASE [SecureBootDashboard] SET RECOVERY SIMPLE;
 GO
 
--- Imposta compatibilit� SQL Server 2019+
+-- Imposta compatibilità SQL Server 2019+
 ALTER DATABASE [SecureBootDashboard] SET COMPATIBILITY_LEVEL = 150;
 GO
 
@@ -358,7 +661,7 @@ GO
 "@
         
         Set-Content -Path "$databaseOutputPath\Create-Database.sql" -Value $createDbTemplate
-        Write-Log "? Create-Database.sql template created" -Level Success
+        Write-Log "  Create-Database.sql template created" -Level Success
     }
 }
 
@@ -373,7 +676,7 @@ function Generate-AzureAppRegistrationCertificate {
     $certOutputPath = Join-Path $packagePath "certificates"
     
     # Generate self-signed certificate for Azure App Registration
-    $certSubject = "CN=SecureBootDashboard-AzureAppReg, O=Your Organization, C=IT"
+    $certSubject = "CN=SecureBootDashboard, O=MSLABS, C=IT"
     
     $cert = New-SelfSignedCertificate `
         -Subject $certSubject `
@@ -453,7 +756,7 @@ Installation Instructions:
     # Remove certificate from CurrentUser store (keeping only exported files)
     Remove-Item -Path "Cert:\CurrentUser\My\$($cert.Thumbprint)" -Force
     
-    Write-Log "? Azure certificate generated:" -Level Success
+    Write-Log "  Azure certificate generated:" -Level Success
     Write-Log "  .pfx: $pfxPath"
     Write-Log "  .cer: $cerPath"
     Write-Log "  Info: $certInfoPath"
@@ -515,7 +818,7 @@ function Copy-ConfigurationTemplates {
 "@
     
     Set-Content -Path "$apiConfigPath\appsettings.Production.json" -Value $apiConfigTemplate
-    Write-Log "? API configuration template created"
+    Write-Log "  API configuration template created"
     
     # Web Configuration Template
     $webConfigPath = Join-Path $packagePath "config\web"
@@ -550,7 +853,7 @@ function Copy-ConfigurationTemplates {
 "@
     
     Set-Content -Path "$webConfigPath\appsettings.Production.json" -Value $webConfigTemplate
-    Write-Log "? Web configuration template created"
+    Write-Log "Web configuration template created"
     
     # Client Configuration Template
     $clientConfigPath = Join-Path $packagePath "config\client"
@@ -593,7 +896,7 @@ function Copy-ConfigurationTemplates {
 "@
     
     Set-Content -Path "$clientConfigPath\appsettings.json" -Value $clientConfigTemplate
-    Write-Log "? Client configuration template created"
+    Write-Log "Client configuration template created"
 }
 
 function Copy-DeploymentScripts {
@@ -616,9 +919,11 @@ function Copy-DeploymentScripts {
         }
     }
     
-    # Deployment scripts
+    # Deployment scripts (IIS deployment)
     $deploymentScriptsPath = Join-Path $scriptsDestPath "deployment"
     @(
+        "Deploy-ApiServer.ps1",
+        "Deploy-WebDashboard.ps1",
         "Deploy-API.ps1",
         "Deploy-Web.ps1",
         "Deploy-Client.ps1"
@@ -627,6 +932,8 @@ function Copy-DeploymentScripts {
         if (Test-Path $sourcePath) {
             Copy-Item $sourcePath -Destination $deploymentScriptsPath -Force
             Write-Log "  Copied: $_"
+        } else {
+            Write-Log "  Warning: $_ not found, skipping" -Level Warning
         }
     }
     
@@ -643,7 +950,7 @@ function Copy-DeploymentScripts {
         }
     }
     
-    Write-Log "? Deployment scripts copied" -Level Success
+    Write-Log "Deployment scripts copied" -Level Success
 }
 
 function Copy-Documentation {
@@ -658,7 +965,7 @@ function Copy-Documentation {
         Write-Log "  Copied: $($_.Name)"
     }
     
-    Write-Log "? Documentation copied" -Level Success
+    Write-Log "Documentation copied" -Level Success
 }
 
 function Create-ReadmeFile {
@@ -754,7 +1061,13 @@ Import-PfxCertificate -FilePath ""certificates\AzureAppRegistration.pfx"" ``
 # Update configuration
 # Edit config/api/appsettings.Production.json
 
-# Deploy to IIS
+# Deploy to IIS (recommended - automated script)
+.\scripts\deployment\Deploy-ApiServer.ps1 `
+    -HostHeader "api.yourdomain.com" `
+    -SslCertificateThumbprint "YOUR_SSL_CERT_THUMBPRINT" `
+    -SourcePath "binaries\api"
+
+# Alternative: Manual deployment
 .\scripts\deployment\Deploy-API.ps1 -PhysicalPath "C:\inetpub\SecureBootDashboard.Api"
 ``````
 
@@ -763,15 +1076,42 @@ Import-PfxCertificate -FilePath ""certificates\AzureAppRegistration.pfx"" ``
 # Update configuration
 # Edit config/web/appsettings.Production.json
 
-# Deploy to IIS
+# Deploy to IIS (recommended - automated script)
+.\scripts\deployment\Deploy-WebDashboard.ps1 `
+    -HostHeader "dashboard.yourdomain.com" `
+    -SslCertificateThumbprint "YOUR_SSL_CERT_THUMBPRINT" `
+    -SourcePath "binaries\web"
+
+# Alternative: Manual deployment
 .\scripts\deployment\Deploy-Web.ps1 -PhysicalPath "C:\inetpub\SecureBootDashboard.Web"
 ``````
 
 ### 6. Client Deployment
-``````powershell
-# Update configuration
-# Edit config/client/appsettings.json
 
+**Option A: Using standalone client ZIP (recommended)**
+``````powershell
+# The package includes a standalone client ZIP: SecureBootWatcher-Client-v$Version.zip
+# This can be deployed using the Deploy-Client.ps1 script
+
+# Install locally with default settings
+.\scripts\deployment\Deploy-Client.ps1 ``
+    -PackageZipPath "SecureBootWatcher-Client-v$Version.zip" ``
+    -CreateScheduledTask
+
+# Install with custom API and schedule
+.\scripts\deployment\Deploy-Client.ps1 ``
+    -PackageZipPath "SecureBootWatcher-Client-v$Version.zip" ``
+    -ApiBaseUrl "https://api.yourdomain.com" ``
+    -FleetId "production-fleet" ``
+    -CreateScheduledTask ``
+    -ScheduleType Custom ``
+    -RepeatEveryHours 4
+``````
+
+**Option B: Deploy from binaries folder**
+``````powershell
+# Extract client from binaries\client folder
+# Update config/client/appsettings.json
 # Deploy via SCCM/Intune
 # See docs/CLIENT_DEPLOYMENT.md
 ``````
@@ -858,7 +1198,7 @@ For issues or questions:
 "@
     
     Set-Content -Path $readmePath -Value $readmeContent
-    Write-Log "? README.md created" -Level Success
+    Write-Log "README.md created" -Level Success
 }
 
 function Create-VersionFile {
@@ -910,7 +1250,7 @@ Checksum (SHA256):
 "@
     
     Set-Content -Path $versionPath -Value $versionContent
-    Write-Log "? VERSION.txt created" -Level Success
+    Write-Log "VERSION.txt created" -Level Success
 }
 
 function Create-ZipPackage {
@@ -936,7 +1276,7 @@ function Create-ZipPackage {
     $fileSize = (Get-Item $zipFile).Length
     $fileSizeMB = [math]::Round($fileSize / 1MB, 2)
     
-    Write-Log "? ZIP package created: $zipFile" -Level Success
+    Write-Log "ZIP package created: $zipFile" -Level Success
     Write-Log "  Size: $fileSizeMB MB"
     Write-Log "  SHA256: $($checksum.Hash)"
 }
@@ -967,6 +1307,12 @@ function Show-Summary {
     Write-Log "  ? Configuration Templates"
     Write-Log "  ? Deployment Scripts"
     Write-Log "  ? Documentation"
+    Write-Log "  ? Standalone Client ZIP Package"
+    Write-Log ""
+    Write-Log "Client Package:"
+    Write-Log "  Standalone ZIP: SecureBootWatcher-Client-v$Version.zip"
+    Write-Log "  Location: $OutputPath"
+    Write-Log "  Use with Deploy-Client.ps1 -PackageZipPath parameter"
     Write-Log ""
     Write-Log "Next Steps:"
     Write-Log "  1. Extract $zipFile on deployment server"
@@ -987,15 +1333,15 @@ function Show-Summary {
 # ===============================================================================
 
 try {
+    # Create output directory FIRST (before any Write-Log calls)
+    if (-not (Test-Path $OutputPath)) {
+        New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null
+    }
+    
     Write-Log "===============================================================================" -Level Info
     Write-Log "SecureBootDashboard - Deployment Package Creator v$Version" -Level Info
     Write-Log "===============================================================================" -Level Info
     Write-Log ""
-    
-    # Create output directory
-    if (-not (Test-Path $OutputPath)) {
-        New-Item -Path $OutputPath -ItemType Directory -Force | Out-Null
-    }
     
     # Step 1: Prerequisites
     $solutionPath = Test-Prerequisites
@@ -1015,31 +1361,35 @@ try {
     Generate-DatabaseScripts
     
     # Step 6: Generate Azure certificate (if requested)
+    # NOTE: This must be done BEFORE creating the client ZIP so the certificate can be included
     Generate-AzureAppRegistrationCertificate
     
-    # Step 7: Copy configuration templates
+    # Step 7: Create standalone client package ZIP (after certificate generation)
+    Create-ClientPackageZip
+    
+    # Step 8: Copy configuration templates
     Copy-ConfigurationTemplates
     
-    # Step 8: Copy deployment scripts
+    # Step 9: Copy deployment scripts
     Copy-DeploymentScripts
     
-    # Step 9: Copy documentation
+    # Step 10: Copy documentation
     Copy-Documentation
     
-    # Step 10: Create README and VERSION files
+    # Step 11: Create README and VERSION files
     Create-ReadmeFile
     Create-VersionFile
     
-    # Step 11: Create ZIP package
+    # Step 12: Create ZIP package
     Create-ZipPackage
     
-    # Step 12: Show summary
+    # Step 13: Show summary
     Show-Summary
     
     exit 0
     
 } catch {
-    Write-Log "? Deployment package creation failed: $_" -Level Error
+    Write-Log "Deployment package creation failed: $_" -Level Error
     Write-Log "Stack trace: $($_.ScriptStackTrace)" -Level Error
     exit 1
 }

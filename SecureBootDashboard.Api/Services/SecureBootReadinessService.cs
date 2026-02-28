@@ -9,7 +9,7 @@ using SecureBootWatcher.Shared.Models;
 namespace SecureBootDashboard.Api.Services
 {
     /// <summary>
-    /// Service for evaluating Secure Boot readiness based on certificates and OS version.
+    /// Service for evaluating Secure Boot readiness based on certificates, OS version, and firmware.
     /// </summary>
     public interface ISecureBootReadinessService
     {
@@ -19,7 +19,8 @@ namespace SecureBootDashboard.Api.Services
         ReadinessEvaluation EvaluateReadiness(
             SecureBootCertificateCollection? certificates,
             string? osVersion,
-            string? osBuildNumber);
+            string? osBuildNumber,
+            DateTime? firmwareReleaseDate = null);
     }
 
     public sealed class SecureBootReadinessService : ISecureBootReadinessService
@@ -38,13 +39,17 @@ namespace SecureBootDashboard.Api.Services
         public ReadinessEvaluation EvaluateReadiness(
             SecureBootCertificateCollection? certificates,
             string? osVersion,
-            string? osBuildNumber)
+            string? osBuildNumber,
+            DateTime? firmwareReleaseDate = null)
         {
             var evaluation = new ReadinessEvaluation();
 
             // Evaluate OS version readiness
             evaluation.IsOSReady = EvaluateOSVersion(osVersion, osBuildNumber);
             evaluation.OSEvaluationDetails = GetOSEvaluationDetails(osVersion, osBuildNumber);
+
+            // Evaluate firmware confidence based on release date
+            EvaluateFirmwareConfidence(firmwareReleaseDate, evaluation);
 
             // Evaluate certificate readiness
             if (certificates != null)
@@ -58,11 +63,21 @@ namespace SecureBootDashboard.Api.Services
                 evaluation.CertificateEvaluationDetails = "No certificate data available";
             }
 
-            // Overall readiness
+            // Overall readiness - now includes firmware confidence consideration
+            // A device is ready to update if:
+            // 1. OS version meets minimum requirements
+            // 2. OEM certificates are valid (not expired/critical)
+            // 3. Firmware certificates (KEK/PK) are valid (not expired/critical)
+            // 4. Firmware confidence is not LOW (or firmware date is unknown - we allow it with warning)
+            // 
             // Note: Windows UEFI CA 2023 is not required for readiness as it gets provisioned
             // AFTER the secure boot certificate upgrade, not before.
+            bool firmwareAcceptable = evaluation.FirmwareConfidence != FirmwareConfidenceLevel.Low;
+            
             evaluation.IsReadyToUpdate = evaluation.IsOSReady &&
-                                         evaluation.AreOemCertificatesValid;
+                                         evaluation.AreOemCertificatesValid &&
+                                         evaluation.AreFirmwareCertificatesValid &&
+                                         firmwareAcceptable;
 
             return evaluation;
         }
@@ -304,11 +319,70 @@ namespace SecureBootDashboard.Api.Services
             }
         }
 
+        private void EvaluateFirmwareConfidence(DateTime? firmwareReleaseDate, ReadinessEvaluation evaluation)
+        {
+            // Date thresholds for firmware confidence levels
+            // HIGH: Released on or after January 1, 2025
+            // MEDIUM: Released during 2024 (Jan 1, 2024 to Dec 31, 2024)
+            // LOW: Released before 2024
+            var highConfidenceDate = new DateTime(2025, 1, 1);
+            var mediumConfidenceStartDate = new DateTime(2024, 1, 1);
+
+            if (!firmwareReleaseDate.HasValue)
+            {
+                evaluation.FirmwareConfidence = FirmwareConfidenceLevel.Unknown;
+                evaluation.FirmwareEvaluationDetails = "❓ Firmware release date not available. Unable to assess firmware compatibility confidence.";
+                
+                _logger.LogDebug("Firmware release date is null - confidence level: Unknown");
+                return;
+            }
+
+            var releaseDate = firmwareReleaseDate.Value;
+
+            if (releaseDate >= highConfidenceDate)
+            {
+                // Released after Jan 1, 2025 - HIGH confidence
+                evaluation.FirmwareConfidence = FirmwareConfidenceLevel.High;
+                evaluation.FirmwareEvaluationDetails = $"✅ Firmware released on {releaseDate:yyyy-MM-dd} (after Jan 2025). " +
+                    "High confidence: Expected to fully support Secure Boot certificate updates.";
+                
+                _logger.LogDebug(
+                    "Firmware release date {ReleaseDate:yyyy-MM-dd} >= {HighDate:yyyy-MM-dd} - HIGH confidence",
+                    releaseDate, highConfidenceDate);
+            }
+            else if (releaseDate >= mediumConfidenceStartDate)
+            {
+                // Released during 2024 - MEDIUM confidence
+                evaluation.FirmwareConfidence = FirmwareConfidenceLevel.Medium;
+                evaluation.FirmwareEvaluationDetails = $"⚠️ Firmware released on {releaseDate:yyyy-MM-dd} (during 2024). " +
+                    "Medium confidence: Likely supports updates, but verification recommended.";
+                
+                _logger.LogDebug(
+                    "Firmware release date {ReleaseDate:yyyy-MM-dd} in 2024 range - MEDIUM confidence",
+                    releaseDate);
+            }
+            else
+            {
+                // Released before 2024 - LOW confidence
+                evaluation.FirmwareConfidence = FirmwareConfidenceLevel.Low;
+                evaluation.FirmwareEvaluationDetails = $"❌ Firmware released on {releaseDate:yyyy-MM-dd} (before 2024). " +
+                    "Low confidence: Firmware update strongly recommended before proceeding with Secure Boot certificate update.";
+                
+                _logger.LogWarning(
+                    "Firmware release date {ReleaseDate:yyyy-MM-dd} is before 2024 - LOW confidence. " +
+                    "Firmware update recommended before Secure Boot certificate update.",
+                    releaseDate);
+            }
+        }
+
         private void EvaluateCertificates(SecureBootCertificateCollection certificates, ReadinessEvaluation evaluation)
         {
             var now = DateTimeOffset.UtcNow;
             var warningThreshold = now.AddDays(_options.CertificateExpirationWarningDays);
             var criticalThreshold = now.AddDays(_options.CertificateExpirationCriticalDays);
+            
+            // Define the April 2026 deadline for legacy certificates
+            var april2026Deadline = new DateTimeOffset(2026, 4, 14, 0, 0, 0, TimeSpan.Zero);
 
             // Check for Windows UEFI CA 2023 in SignatureDatabase (db)
             var dbCertificates = certificates.SignatureDatabase ?? new List<SecureBootCertificate>();
@@ -316,6 +390,50 @@ namespace SecureBootDashboard.Api.Services
             evaluation.HasWindowsUEFICA2023 = dbCertificates.Any(cert =>
                 cert.Thumbprint?.Equals(_options.WindowsUEFICA2023Thumbprint, StringComparison.OrdinalIgnoreCase) == true ||
                 cert.Subject?.Contains("Windows UEFI CA 2023", StringComparison.OrdinalIgnoreCase) == true);
+
+            // Check for legacy Microsoft certificates expiring in 2026
+            // These are certificates like "Microsoft Windows Production PCA 2011"
+            var legacyCerts2026 = dbCertificates
+                .Where(cert => cert.IsMicrosoftCertificate == true && 
+                              cert.NotAfter.HasValue && 
+                              cert.NotAfter.Value.Year == 2026 &&
+                              (cert.Subject?.Contains("Production PCA 2011", StringComparison.OrdinalIgnoreCase) == true ||
+                               cert.Subject?.Contains("Microsoft Corporation UEFI CA 2011", StringComparison.OrdinalIgnoreCase) == true))
+                .ToList();
+
+            evaluation.HasLegacyCertificatesExpiring2026 = legacyCerts2026.Any();
+            evaluation.LegacyCertificateCount2026 = legacyCerts2026.Count;
+
+            if (legacyCerts2026.Any())
+            {
+                _logger.LogInformation(
+                    "Found {Count} legacy Microsoft certificate(s) expiring in 2026 that need update to Windows UEFI CA 2023",
+                    legacyCerts2026.Count);
+                
+                foreach (var cert in legacyCerts2026)
+                {
+                    _logger.LogDebug(
+                        "Legacy cert expiring 2026: {Subject}, Expires: {NotAfter}",
+                        cert.Subject, cert.NotAfter);
+                }
+            }
+
+            // NOTE: KEK (Key Exchange Keys) and DB (Signature Database) certificates that are expiring
+            // will be updated during the Secure Boot certificate upgrade, so we do NOT evaluate them
+            // as blockers for readiness. The upgrade process itself will replace:
+            // - KEK: Microsoft Corporation KEK CA 2011 → Microsoft Corporation KEK 2K CA 2023
+            // - DB: Microsoft Windows Production PCA 2011 → Windows UEFI CA 2023
+            // - DB: Microsoft Corporation UEFI CA 2011 → Microsoft UEFI CA 2023
+            //
+            // IMPORTANT: WindowsUEFICA2023Capable registry key is NOT a firmware capability indicator.
+            // It tracks whether "Windows UEFI CA 2023" certificate is present in the DB (values: 0, 1, or 2).
+            // This key is for limited deployment scenarios only. Use UEFICA2023Status instead for
+            // general readiness evaluation.
+
+            // Evaluate Platform Key (PK) certificates ONLY
+            // These are NOT updated by the Secure Boot upgrade and must be valid before upgrade
+            var pkCertificates = certificates.PlatformKeys ?? new List<SecureBootCertificate>();
+            EvaluatePlatformKeyCertificates(pkCertificates, evaluation, now, criticalThreshold);
 
             // Analyze OEM certificates
             var oemCertificates = dbCertificates
@@ -391,6 +509,12 @@ namespace SecureBootDashboard.Api.Services
                 _logger.LogWarning("No OEM certificates found in signature database - this may indicate a virtual machine, consumer device, or firmware read error");
             }
 
+            // Add firmware certificate status
+            if (!evaluation.AreFirmwareCertificatesValid)
+            {
+                evaluation.CertificateEvaluationDetails += "; ❌ Platform Key (PK) has expired or critical certificate(s)";
+            }
+
             // Add Windows UEFI CA 2023 status (informational only, not required for readiness)
             if (!evaluation.HasWindowsUEFICA2023)
             {
@@ -399,6 +523,61 @@ namespace SecureBootDashboard.Api.Services
             else
             {
                 evaluation.CertificateEvaluationDetails += "; ✅ Windows UEFI CA 2023 already present";
+            }
+            
+            // Add legacy certificate warning if present
+            if (evaluation.HasLegacyCertificatesExpiring2026)
+            {
+                evaluation.CertificateEvaluationDetails += $"; ⚠️ {evaluation.LegacyCertificateCount2026} legacy Microsoft certificate(s) expiring April 2026 - update required";
+            }
+        }
+
+        private void EvaluatePlatformKeyCertificates(
+            IList<SecureBootCertificate> pkCertificates,
+            ReadinessEvaluation evaluation,
+            DateTimeOffset now,
+            DateTimeOffset criticalThreshold)
+        {
+            if (!pkCertificates.Any())
+            {
+                _logger.LogDebug("No Platform Key (PK) certificates found");
+                return;
+            }
+
+            var expiredCount = 0;
+            var criticalCount = 0;
+
+            foreach (var cert in pkCertificates)
+            {
+                if (cert.IsExpired)
+                {
+                    expiredCount++;
+                    _logger.LogError(
+                        "Expired Platform Key (PK) certificate: {Subject}, Expired on: {NotAfter}. " +
+                        "PK is not updated by Secure Boot upgrade and must be valid before proceeding.",
+                        cert.Subject, cert.NotAfter);
+                }
+                else if (cert.NotAfter.HasValue && cert.NotAfter.Value < criticalThreshold)
+                {
+                    criticalCount++;
+                    _logger.LogError(
+                        "Critical Platform Key (PK) certificate (expires < {Days} days): {Subject}, Expires: {NotAfter}. " +
+                        "PK is not updated by Secure Boot upgrade and must be renewed before proceeding.",
+                        _options.CertificateExpirationCriticalDays, cert.Subject, cert.NotAfter);
+                }
+            }
+
+            evaluation.ExpiredPlatformKeyCertificateCount = expiredCount;
+            evaluation.CriticalPlatformKeyCertificateCount = criticalCount;
+
+            // Mark firmware certificates as invalid if PK has expired or critical certificates
+            if (expiredCount > 0 || criticalCount > 0)
+            {
+                evaluation.AreFirmwareCertificatesValid = false;
+                _logger.LogError(
+                    "Platform Key (PK) has {ExpiredCount} expired and {CriticalCount} critical certificate(s) - " +
+                    "PK is not updated by Secure Boot upgrade and device is not ready",
+                    expiredCount, criticalCount);
             }
         }
     }
@@ -410,6 +589,7 @@ namespace SecureBootDashboard.Api.Services
     {
         /// <summary>
         /// Overall readiness status.
+        /// Device is ready if OS, OEM certificates, and firmware confidence are all acceptable.
         /// </summary>
         public bool IsReadyToUpdate { get; set; }
 
@@ -434,6 +614,26 @@ namespace SecureBootDashboard.Api.Services
         public bool HasNoOemCertificates { get; set; }
 
         /// <summary>
+        /// Indicates if device has legacy Microsoft certificates (e.g., Windows Production PCA 2011) 
+        /// that will expire in April 2026 and needs to be updated to Windows UEFI CA 2023
+        /// </summary>
+        public bool HasLegacyCertificatesExpiring2026 { get; set; }
+
+        /// <summary>
+        /// Number of legacy Microsoft certificates expiring in 2026
+        /// </summary>
+        public int LegacyCertificateCount2026 { get; set; }
+
+        /// <summary>
+        /// Firmware compatibility confidence level based on release date.
+        /// HIGH: Released after Jan 1, 2025
+        /// MEDIUM: Released during 2024
+        /// LOW: Released before 2024
+        /// UNKNOWN: Release date not available
+        /// </summary>
+        public FirmwareConfidenceLevel FirmwareConfidence { get; set; } = FirmwareConfidenceLevel.Unknown;
+
+        /// <summary>
         /// Number of expired OEM certificates.
         /// </summary>
         public int ExpiredOemCertificateCount { get; set; }
@@ -454,6 +654,24 @@ namespace SecureBootDashboard.Api.Services
         public int ValidOemCertificateCount { get; set; }
 
         /// <summary>
+        /// Number of expired certificates in Platform Keys (PK).
+        /// Platform Keys are not updated by Secure Boot upgrade and must be valid before upgrade.
+        /// </summary>
+        public int ExpiredPlatformKeyCertificateCount { get; set; }
+
+        /// <summary>
+        /// Number of critical (expiring soon) certificates in Platform Keys (PK).
+        /// Platform Keys are not updated by Secure Boot upgrade and must be valid before upgrade.
+        /// </summary>
+        public int CriticalPlatformKeyCertificateCount { get; set; }
+
+        /// <summary>
+        /// Indicates if Platform Keys (PK) are valid (not expired/critical).
+        /// PK is not updated by Secure Boot upgrade, so it must be valid beforehand.
+        /// </summary>
+        public bool AreFirmwareCertificatesValid { get; set; } = true;
+
+        /// <summary>
         /// Detailed OS evaluation message.
         /// </summary>
         public string OSEvaluationDetails { get; set; } = string.Empty;
@@ -462,5 +680,11 @@ namespace SecureBootDashboard.Api.Services
         /// Detailed certificate evaluation message.
         /// </summary>
         public string CertificateEvaluationDetails { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Detailed firmware evaluation message including confidence level explanation.
+        /// </summary>
+        public string FirmwareEvaluationDetails { get; set; } = string.Empty;
     }
 }
+
