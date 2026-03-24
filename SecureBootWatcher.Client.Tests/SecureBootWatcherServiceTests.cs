@@ -66,12 +66,12 @@ public sealed class SecureBootWatcherServiceTests
             mockSink,
             optionsMonitor);
 
-        // Act
-        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+        // Act - use longer timeout to allow multiple iterations reliably
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         await service.RunAsync(cts.Token);
 
-        // Assert
-        Assert.IsGreaterThan(executionCount, 1);
+        // Assert - with 100ms intervals over 2s, expect at least 2 executions
+        Assert.IsGreaterThan(1, executionCount);
     }
 
     // Mock implementations

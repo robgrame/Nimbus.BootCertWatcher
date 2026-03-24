@@ -138,11 +138,14 @@ builder.Services.AddSwaggerGen(c =>
 // Add CORS policy for API endpoints
 builder.Services.AddCors(options =>
 {
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+        ?? ["https://localhost:7001"];
+
     options.AddDefaultPolicy(policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .WithMethods("GET", "HEAD", "OPTIONS");
     });
 });
 
